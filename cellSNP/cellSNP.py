@@ -42,6 +42,10 @@ def main():
         help="Minimum aggragated count [default: %default]")
     group.add_option("--minMAF", type="float", dest="min_MAF", default=0.10, 
         help="Minimum minor allele frequency [default: %default]")
+    group.add_option("--minMAPQ", type="int", dest="min_MAPQ", default=20, 
+        help="Minimum MAPQ for read filtering [default: %default]")
+    group.add_option("--maxFLAG", type="int", dest="max_FLAG", default=4096, 
+        help="Maximum FLAG for read filtering [default: %default]")
     parser.add_option_group(group)
 
     (options, args) = parser.parse_args()
@@ -57,7 +61,6 @@ def main():
         print("Error: No such file\n    -- %s" %options.barcode_file)
         sys.exit(1)
     else:
-        barcode_file = options.barcode_file
         fid = open(options.barcode_file, "r")
         barcodes = [x.rstrip().split("-")[0] for x in fid.readlines()]
         fid.close()
@@ -92,6 +95,8 @@ def main():
         
     nproc = options.nproc
     min_MAF = options.min_MAF
+    min_MAPQ = options.min_MAPQ
+    max_FLAG = options.max_FLAG
     min_COUNT = options.min_COUNT
     
     # pileup in each chrom
@@ -101,26 +106,27 @@ def main():
         for _chrom in chrom_all:
             chr_out_file = out_file + ".temp_%s_" %(_chrom)
             result.append(pool.apply_async(pileup_10X, (sam_file, barcodes, 
-                chr_out_file, _chrom, cell_tag, min_COUNT, min_MAF, True),
-                callback=show_progress))
+                chr_out_file, _chrom, cell_tag, min_COUNT, min_MAF, min_MAPQ, 
+                max_FLAG, True), callback=show_progress))
         pool.close()
         pool.join()
     else:
         for _chrom in chrom_all:
             chr_out_file = out_file + ".temp_%s_" %(_chrom)
             pileup_10X(sam_file, barcodes, chr_out_file, _chrom, cell_tag, 
-                       min_COUNT, min_MAF, True)
+                       min_COUNT, min_MAF, min_MAPQ, max_FLAG, True)
             show_progress(1)
     result = [res.get() if nproc > 1 else res for res in result]
     
     print("")
-    print("Whole genome pileupped, now merging all variants ...")
+    print("[cellSNP] Whole genome pileupped, now merging all variants ...")
     
     merge_vcf(out_file, chrom_all)
     
     run_time = time.time() - START_TIME
     print("")
-    print("all done within %d min %.1f sec" %(int(run_time / 60), run_time % 60))
+    print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 
+                                                  run_time % 60))
     
     # print("")
     # print("%.1f sec" %(time.time() - START_TIME))

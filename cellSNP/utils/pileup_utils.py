@@ -27,7 +27,8 @@ BASE_ZERO = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
 
 
 def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR", 
-               min_COUNT=20, min_MAF=0.1, verbose=True):
+               min_COUNT=20, min_MAF=0.1, min_MAPQ=20, max_FLAG=4096, 
+               verbose=True):
     """Pileup allelic specific expression from a list of pysam objects
     """
     if type(samFile) == str:
@@ -47,9 +48,6 @@ def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR",
         HEAD_LINE = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", 
                      "INFO", "FORMAT"] + barcodes
         fid.writelines("\t".join(HEAD_LINE) + "\n")
-    
-    base_idx = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
-    base_zero = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
     
     POS_CNT = 0
     vcf_lines_all = []
@@ -72,7 +70,9 @@ def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR",
                 continue
                 
             #TODO: check reads quality
-            _read = pileupread.alignment           
+            _read = pileupread.alignment
+            if _read.mapq < min_MAPQ or _read.flag > max_FLAG: 
+                continue
             _base = _read.query_sequence[pileupread.query_position - 1].upper()
             if cell_tag is not None and _read.has_tag(cell_tag):
                 # base_list.append(_base)
