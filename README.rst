@@ -2,7 +2,7 @@
 cellSNP
 =======
 
-Analysis of expressed alleles in single cells
+Analysis of expressed alleles in single cells with pysam
 
 
 Quick Start
@@ -15,7 +15,8 @@ Quick Start
   frequently
 - add ``--user`` if you don't have root permission
 
-**Arguments**
+**Command line**
 
+- ``cellSNP -s $SAM -b $BARCODE -o $OUT_FILE -p 22``
 - Type command line ``cellSNP -h``
 
