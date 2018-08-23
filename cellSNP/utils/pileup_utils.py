@@ -22,10 +22,12 @@ VCF_HEADER = (
     '##FORMAT=<ID=ALL,Number=5,Type=int,Description="total counts for all '
     'bases in order of A,C,G,T,N">\n')
 
+BASE_IDX = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
+BASE_ZERO = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
 
-def pileup_allele(samFile, chrom=None, start=None, stop=None, cell_tag="CR",
-                  min_count=10, min_MAF=0.05, min_MAC=2, verbose=True, 
-                  out_file=None):
+
+def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR", 
+               min_COUNT=20, min_MAF=0.1, verbose=True):
     """Pileup allelic specific expression from a list of pysam objects
     """
     if type(samFile) == str:
@@ -42,24 +44,28 @@ def pileup_allele(samFile, chrom=None, start=None, stop=None, cell_tag="CR",
     if out_file is not None:
         fid = open(out_file, "w")
         fid.writelines(VCF_HEADER)
+        HEAD_LINE = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", 
+                     "INFO", "FORMAT"] + barcodes
+        fid.writelines("\t".join(HEAD_LINE) + "\n")
     
-    pos_counter = 0
+    base_idx = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
+    base_zero = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
+    
+    POS_CNT = 0
     vcf_lines_all = []
-    for pileupcolumn in samFile.pileup(contig=chrom, start=start, stop=stop):
-        pos_counter += 1
-        if verbose and pos_counter % 1000000 == 0:
-            print("%s: %dM positions pileuped." %(chrom, pos_counter/1000000))
-            
-        if start is not None and pileupcolumn.pos < start: 
+    for pileupcolumn in samFile.pileup(contig=chrom):
+        POS_CNT += 1
+        if verbose and POS_CNT % 1000000 == 0:
+            print("%s: %dM positions processed." %(chrom, POS_CNT/1000000))
+        if pileupcolumn.n < min_COUNT:
             continue
-        if stop is not None and pileupcolumn.pos > stop: 
-            continue
-        if pileupcolumn.n < min_count:
-            continue
-            
-        cell_dict = {}
-        base_zero = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
-        base_merg = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
+           
+        # TODO: speedup the barcode search here to n*log(n), instead of n^2
+        # tags_list = []
+        # base_list = []
+        # base_cells = [[0] * 5] * len(barcodes) ### reference not copy!!!
+        base_merge = BASE_ZERO.copy()
+        base_cells = [[0,0,0,0,0] for x in barcodes]
         for pileupread in pileupcolumn.pileups:
             # query position is None if is_del or is_refskip is set.
             if pileupread.is_del or pileupread.is_refskip:
@@ -68,51 +74,59 @@ def pileup_allele(samFile, chrom=None, start=None, stop=None, cell_tag="CR",
             #TODO: check reads quality
             _read = pileupread.alignment           
             _base = _read.query_sequence[pileupread.query_position - 1].upper()
-            if cell_tag is not None:
-                if _read.has_tag(cell_tag):
-                    _tag = _read.get_tag(cell_tag)
-                    if _tag not in cell_dict:
-                        cell_dict[_tag] = base_zero.copy()
-                    cell_dict[_tag][_base] = + 1                    
-                else:
-                    continue
-            base_merg[_base] += 1
+            if cell_tag is not None and _read.has_tag(cell_tag):
+                # base_list.append(_base)
+                # tags_list.append(_read.get_tag(cell_tag))
+                
+                _tag = _read.get_tag(cell_tag)
+                if _tag in barcodes:
+                    _idx = barcodes.index(_tag)
+                    base_cells[_idx][BASE_IDX[_base]] += 1
+                    base_merge[_base] += 1
 
-        base_sorted = sorted(base_merg, key=base_merg.__getitem__, reverse=True)
+        base_sorted = sorted(base_merge, key=base_merge.__getitem__, reverse=True)
         REF = base_sorted[0]
         ALT = base_sorted[1]
-        min_cnt_2nd = max(min_MAF * sum(base_merg.values()), min_MAC)        
-        if sum(base_merg.values()) < min_count or base_merg[ALT] < min_cnt_2nd:
+        min_cnt_2nd = min_MAF * sum(base_merge.values())      
+        if sum(base_merge.values()) < min_COUNT or base_merge[ALT] < min_cnt_2nd:
             continue
             
-        for _tag in cell_dict.keys():
-            line = get_vcf_line(cell_dict[_tag], pileupcolumn.reference_name, 
-                                pileupcolumn.pos, REF, ALT, _tag)
-            if out_file is None:
-                vcf_lines_all.append(line)
-            else:
-                fid.writelines(line)
+        line = get_vcf_line(base_merge, base_cells, pileupcolumn.reference_name, 
+                            pileupcolumn.pos, REF, ALT)
+        if out_file is None:
+            vcf_lines_all.append(line)
+        else:
+            fid.writelines(line)
     
     if out_file is not None:
         fid.close()     
     return vcf_lines_all
             
-def get_vcf_line(alleles, chrom, POS, REF, ALT, barcode=None):
+def get_vcf_line(base_merge, base_cells, chrom, POS, REF, ALT):
     """Convert the counts for all bases into a vcf line
     """
     FORMAT = "AD:DP:OTH:ALL"
-    REF_cnt = alleles[REF]
-    ALT_cnt = alleles[ALT]
-    OTH_cnt = sum(alleles.values()) - REF_cnt - ALT_cnt
+    REF_cnt = base_merge[REF]
+    ALT_cnt = base_merge[ALT]
+    OTH_cnt = sum(base_merge.values()) - REF_cnt - ALT_cnt
     
-    INFO = "." if barcode is None else "CR=%s" %(barcode)
-    all_str = ",".join([str(alleles[x]) for x in ["A", "C", "G", "T", "N"]])
-    cnt_lst = [str(ALT_cnt), str(REF_cnt+ALT_cnt), str(OTH_cnt)]
-    outList = ":".join(cnt_lst + [all_str])
+    INFO = "AD=%d;DP=%d;OTH=%d" %(ALT_cnt, ALT_cnt+REF_cnt, OTH_cnt)
     
+    cells_str = []
+    for _base_cell in base_cells:
+        if sum(_base_cell) == 0:
+            cells_str.append(".:.:.:.")
+        else:
+            _REF_cnt = _base_cell[BASE_IDX[REF]]
+            _ALT_cnt = _base_cell[BASE_IDX[ALT]]
+            _OTH_cnt = sum(_base_cell) - _REF_cnt - _ALT_cnt
     
-    vcf_line_val = [chrom, str(POS), ".", REF, ALT, ".", "PASS", INFO, 
-                    FORMAT, outList]
-    vcf_line = "\t".join(vcf_line_val) + "\n"
+            all_str = ",".join([str(x) for x in _base_cell])
+            cnt_lst = [str(_ALT_cnt), str(_ALT_cnt + _REF_cnt), str(_OTH_cnt)]
+            out_lst = ":".join(cnt_lst + [all_str])
+            cells_str.append(out_lst)
+    
+    vcf_val = [chrom, str(POS), ".", REF, ALT, ".", "PASS", INFO, FORMAT]
+    vcf_line = "\t".join(vcf_val + cells_str) + "\n"
     
     return vcf_line
