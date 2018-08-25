@@ -9,6 +9,7 @@
 ## with CIGARs will be faster.
 
 import pysam
+from .base_utils import id_mapping, unique_list
 
 VCF_HEADER = (
     '##fileformat=VCFv4.2\n'
@@ -22,13 +23,15 @@ VCF_HEADER = (
     '##FORMAT=<ID=ALL,Number=5,Type=int,Description="total counts for all '
     'bases in order of A,C,G,T,N">\n')
 
+VCF_COLUMN = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", 
+              "INFO", "FORMAT"]
+
 BASE_IDX = {"A": 0, "C": 1, "G": 2, "T": 3, "N": 4}
 BASE_ZERO = {"A": 0, "C": 0, "G": 0, "T": 0, "N": 0}
 
-
 def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR", 
-               min_COUNT=20, min_MAF=0.1, min_MAPQ=20, max_FLAG=4096, 
-               verbose=True):
+               UMI_tag="UR", min_COUNT=20, min_MAF=0.1, min_MAPQ=20, 
+               max_FLAG=4096, verbose=True):
     """Pileup allelic specific expression from a list of pysam objects
     """
     if type(samFile) == str:
@@ -45,9 +48,7 @@ def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR",
     if out_file is not None:
         fid = open(out_file, "w")
         fid.writelines(VCF_HEADER)
-        HEAD_LINE = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", 
-                     "INFO", "FORMAT"] + barcodes
-        fid.writelines("\t".join(HEAD_LINE) + "\n")
+        fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
     
     POS_CNT = 0
     vcf_lines_all = []
@@ -58,53 +59,92 @@ def pileup_10X(samFile, barcodes, out_file, chrom=None, cell_tag="CR",
         if pileupcolumn.n < min_COUNT:
             continue
            
-        # TODO: speedup the barcode search here to n*log(n), instead of n^2
-        # tags_list = []
-        # base_list = []
-        # base_cells = [[0] * 5] * len(barcodes) ### reference not copy!!!
-        base_merge = BASE_ZERO.copy()
-        base_cells = [[0,0,0,0,0] for x in barcodes]
+        UMIs_list = []
+        cell_list = []
+        base_list = []
         for pileupread in pileupcolumn.pileups:
             # query position is None if is_del or is_refskip is set.
             if pileupread.is_del or pileupread.is_refskip:
                 continue
+            query_POS = pileupread.query_position
                 
-            #TODO: check reads quality
+            # Check reads quality and existence of cell and UMI tags
             _read = pileupread.alignment
             if _read.mapq < min_MAPQ or _read.flag > max_FLAG: 
                 continue
-            _base = _read.query_sequence[pileupread.query_position - 1].upper()
-            if cell_tag is not None and _read.has_tag(cell_tag):
-                # base_list.append(_base)
-                # tags_list.append(_read.get_tag(cell_tag))
-                
-                _tag = _read.get_tag(cell_tag)
-                if _tag in barcodes:
-                    _idx = barcodes.index(_tag)
-                    base_cells[_idx][BASE_IDX[_base]] += 1
-                    base_merge[_base] += 1
-
-        base_sorted = sorted(base_merge, key=base_merge.__getitem__, reverse=True)
-        REF = base_sorted[0]
-        ALT = base_sorted[1]
-        min_cnt_2nd = min_MAF * sum(base_merge.values())      
-        if sum(base_merge.values()) < min_COUNT or base_merge[ALT] < min_cnt_2nd:
+            if cell_tag is not None and _read.has_tag(cell_tag) == False: 
+                continue
+            if UMI_tag is not None and _read.has_tag(UMI_tag) == False: 
+                continue
+            if UMI_tag is not None:
+                UMIs_list.append(_read.get_tag(UMI_tag))
+            if cell_tag is not None:
+                cell_list.append(_read.get_tag(cell_tag))
+            base_list.append(_read.query_sequence[query_POS - 1].upper())
+        if len(cell_list) < min_COUNT:
             continue
             
-        line = get_vcf_line(base_merge, base_cells, pileupcolumn.reference_name, 
-                            pileupcolumn.pos, REF, ALT)
-        if out_file is None:
-            vcf_lines_all.append(line)
-        else:
-            fid.writelines(line)
+        base_merge, base_cells = map_barcodes(base_list, cell_list,
+            UMIs_list, barcodes)
+        
+        vcf_line = get_vcf_line(base_merge, base_cells, 
+            pileupcolumn.reference_name, pileupcolumn.pos, min_COUNT, min_MAF)
+
+        if vcf_line is not None:
+            if out_file is None:
+                vcf_lines_all.append(vcf_line)
+            else:
+                fid.writelines(vcf_line)
     
     if out_file is not None:
-        fid.close()     
+        fid.close() 
     return vcf_lines_all
-            
-def get_vcf_line(base_merge, base_cells, chrom, POS, REF, ALT):
+
+
+def map_barcodes(base_list, cell_list, UMIs_list, barcodes):
+    """map cell barcodes and pileup bases
+    """
+    base_merge = BASE_ZERO.copy()
+    base_cells = [[0,0,0,0,0] for x in barcodes]
+
+    ## Method 1
+    # for i in range(len(cell_list)):
+    #     _tag = cell_list[i]
+    #     _base = base_list[i]
+    #     if _tag in barcodes:
+    #         _idx = barcodes.index(_tag)
+    #         base_cells[_idx][BASE_IDX[_base]] += 1
+    #         base_merge[_base] += 1    
+
+    ## Method 2
+    # count UMI rather than reads
+    if len(UMIs_list) == len(base_list):
+        UMIs_uniq, UMIs_idx, tmp = unique_list(UMIs_list)
+        cell_list = [cell_list[i] for i in UMIs_idx]
+        base_list = [base_list[i] for i in UMIs_idx]
+
+    match_idx = id_mapping(cell_list, barcodes, uniq_ref_only=False, IDs2_sorted=True)
+    
+    for i in range(len(base_list)):
+        _idx = match_idx[i]
+        _base = base_list[i]
+        if _idx is not None:
+            base_cells[_idx][BASE_IDX[_base]] += 1
+            base_merge[_base] += 1
+
+    return base_merge, base_cells
+
+
+def get_vcf_line(base_merge, base_cells, chrom, POS, min_COUNT, min_MAF):
     """Convert the counts for all bases into a vcf line
     """
+    base_sorted = sorted(base_merge, key=base_merge.__getitem__, reverse=True)
+    REF = base_sorted[0]
+    ALT = base_sorted[1]
+    min_cnt_2nd = min_MAF * sum(base_merge.values())      
+    if sum(base_merge.values()) < min_COUNT or base_merge[ALT] < min_cnt_2nd:
+        return None
+
     FORMAT = "AD:DP:OTH:ALL"
     REF_cnt = base_merge[REF]
     ALT_cnt = base_merge[ALT]

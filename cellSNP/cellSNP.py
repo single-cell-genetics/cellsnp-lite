@@ -35,7 +35,9 @@ def main():
     group.add_option("--nproc", "-p", type="int", dest="nproc", default=1,
         help="Number of subprocesses [default: %default]")
     group.add_option("--cellTAG", dest="cell_tag", default="CR", 
-        help="The tag used for cell barcodes [default: %default]")
+        help="Tag for cell barcodes, turn off with None [default: %default]")
+    group.add_option("--UMItag", dest="UMI_tag", default="UR", 
+        help="Tag for UMI, turn off with None [default: %default]")
     group.add_option("--chrom", dest="chrom_all", default=None, 
         help="The chromosomes to use, comma separated [default: 1 to 22]")
     group.add_option("--minCOUNT", type="int", dest="min_COUNT", default=100, 
@@ -64,6 +66,7 @@ def main():
         fid = open(options.barcode_file, "r")
         barcodes = [x.rstrip().split("-")[0] for x in fid.readlines()]
         fid.close()
+        barcodes = sorted(barcodes)
         print("[cellSNP] %d effective cell barcodes are used." %len(barcodes))
         
     if options.sam_file is None:
@@ -88,6 +91,10 @@ def main():
         cell_tag = None
     else:
         cell_tag = options.cell_tag
+    if options.UMI_tag.upper() == "NONE":
+        UMI_tag = None
+    else:
+        UMI_tag = options.UMI_tag
     if options.chrom_all is None:
         chrom_all = [str(x) for x in range(1, 23)]
     else:
@@ -106,15 +113,15 @@ def main():
         for _chrom in chrom_all:
             chr_out_file = out_file + ".temp_%s_" %(_chrom)
             result.append(pool.apply_async(pileup_10X, (sam_file, barcodes, 
-                chr_out_file, _chrom, cell_tag, min_COUNT, min_MAF, min_MAPQ, 
-                max_FLAG, True), callback=show_progress))
+                chr_out_file, _chrom, cell_tag, UMI_tag, min_COUNT, min_MAF, 
+                min_MAPQ, max_FLAG, True), callback=show_progress))
         pool.close()
         pool.join()
     else:
         for _chrom in chrom_all:
             chr_out_file = out_file + ".temp_%s_" %(_chrom)
             pileup_10X(sam_file, barcodes, chr_out_file, _chrom, cell_tag, 
-                       min_COUNT, min_MAF, min_MAPQ, max_FLAG, True)
+                       UMI_tag, min_COUNT, min_MAF, min_MAPQ, max_FLAG, True)
             show_progress(1)
     result = [res.get() if nproc > 1 else res for res in result]
     
