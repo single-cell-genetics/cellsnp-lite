@@ -8,6 +8,7 @@
 ## Note, pileup is not the fastest way, fetch reads and deal 
 ## with CIGARs will be faster.
 
+import sys
 import pysam
 from .base_utils import id_mapping, unique_list
 
@@ -106,20 +107,23 @@ def filter_reads(read_list, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
     return RV
 
 
-def fetch_positions(samFile, chroms, positions, REF=None, ALT=None, 
-                    barcodes=None, out_file=None, cell_tag="CR", UMI_tag="UR", 
-                    min_COUNT=20, min_MAF=0.1, min_MAPQ=20, max_FLAG=255, 
-                    min_LEN=30, verbose=True):
-    """Fetch allelic expression for a list of variants.
+def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None, 
+                    barcodes=None, sample_ids=None, out_file=None, 
+                    cell_tag="CR", UMI_tag="UR", min_COUNT=20, min_MAF=0.1, 
+                    min_MAPQ=20, max_FLAG=255, min_LEN=30, verbose=True):
+    """Fetch allelic expression for a list of variants across multiple samples.
+    Option 1: one single-cell sam file, a list of barcodes
+    Option 2: multiple bulk sam files, multiple sample ids
+    No support for multiple sam files and barcodes.
     """
-    samFile, chrom = check_pysam_chrom(samFile, chroms[0])
+    samFile_list = [check_pysam_chrom(x, chroms[0])[0] for x in samFile_list]
     if out_file is not None:
         fid = open(out_file, "w")
         fid.writelines(VCF_HEADER + CONTIG)
-        if barcodes is None:
-            fid.writelines("\t".join(VCF_COLUMN) + "\tSample_x\n")
-        else:
+        if barcodes is not None:
             fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
+        else:
+            fid.writelines("\t".join(VCF_COLUMN + sample_ids) + "\n")
     
     POS_CNT = 0
     vcf_lines_all = []
@@ -127,18 +131,32 @@ def fetch_positions(samFile, chroms, positions, REF=None, ALT=None,
         POS_CNT += 1
         if verbose and POS_CNT % 10000 == 0:
             print("%.2fM positions processed." %(POS_CNT/1000000))
-
-        samFile, chrom = check_pysam_chrom(samFile, chroms[i])
-        base_list, read_list = fetch_bases(samFile, chrom, positions[i])
-        RV = filter_reads(read_list, cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
-                          min_LEN)
-        UMIs_list = RV["UMIs_list"]
-        cell_list = RV["cell_list"]
-        base_list = [base_list[ii] for ii in RV["idx_list"]]
-        read_list = [read_list[ii] for ii in RV["idx_list"]]
         
-        if len(cell_list) < min_COUNT:
-            continue
+        base_cells_sample = []
+        base_merge_sample = BASE_ZERO.copy()
+        for samFile in samFile_list:
+            samFile, chrom = check_pysam_chrom(samFile, chroms[i])
+            base_list, read_list = fetch_bases(samFile, chrom, positions[i])
+            RV = filter_reads(read_list, cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
+                              min_LEN)
+            UMIs_list = RV["UMIs_list"]
+            cell_list = RV["cell_list"]
+            base_list = [base_list[ii] for ii in RV["idx_list"]]
+            read_list = [read_list[ii] for ii in RV["idx_list"]]
+            base_merge, base_cells = map_barcodes(base_list, cell_list, 
+                                                  UMIs_list, barcodes)
+            
+            if barcodes is None:
+                for _key in base_merge_sample.keys():
+                    base_merge_sample[_key] += base_merge[_key]
+                base_cells_sample.append(base_cells[0])
+        
+        if barcodes is None:
+            base_merge, base_cells = base_merge_sample, base_cells_sample
+            
+        if sum(base_merge.values()) < min_COUNT:
+                continue  
+        
         if REF is not None and ALT is not None:
             _REF, _ALT = REF[i], ALT[i]
             #only support single nucleotide variants
@@ -146,9 +164,6 @@ def fetch_positions(samFile, chroms, positions, REF=None, ALT=None,
                 continue
         else:
             _REF, _ALT = None, None
-            
-        base_merge, base_cells = map_barcodes(base_list, cell_list,
-            UMIs_list, barcodes)
         vcf_line = get_vcf_line(base_merge, base_cells, 
             chrom, positions[i], min_COUNT, min_MAF, _REF, _ALT)
 
@@ -161,7 +176,6 @@ def fetch_positions(samFile, chroms, positions, REF=None, ALT=None,
     if out_file is not None:
         fid.close() 
     return vcf_lines_all
-
 
 
 def pileup_regions(samFile, barcodes, out_file=None, chrom=None, cell_tag="CR", 
@@ -217,6 +231,10 @@ def map_barcodes(base_list, cell_list, UMIs_list, barcodes):
     """
     base_merge = BASE_ZERO.copy()
     
+    if len(base_list) == 0:
+        base_cells = [[0,0,0,0,0]] # need check
+        return base_merge, base_cells
+    
     # count UMI rather than reads
     if len(UMIs_list) == len(base_list):
         UMIs_uniq, UMIs_idx, tmp = unique_list(UMIs_list)
@@ -237,8 +255,7 @@ def map_barcodes(base_list, cell_list, UMIs_list, barcodes):
     else:
         for i in range(len(base_list)):
             base_merge[base_list[i]] += 1
-            base_cells = [list(base_merge.values())]
-
+        base_cells = [[base_merge[x] for x in "ACGTN"]]
     return base_merge, base_cells
 
 
