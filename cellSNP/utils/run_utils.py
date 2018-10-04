@@ -37,10 +37,10 @@ def merge_vcf(out_file, out_files):
     return None
     
     
-def parse_vcf_file(vcf_file):
+def parse_vcf_file(vcf_file, SNP_only=True):
     """Parse vcf file
     """
-    if vcf_file[-3:] == ".gz":
+    if vcf_file[-3:] == ".gz" or vcf_file[-4:] == ".bgz":
         infile = gzip.open(vcf_file, "rb")
     else:
         infile = open(vcf_file, "r")
@@ -56,7 +56,10 @@ def parse_vcf_file(vcf_file):
             if line.startswith("#CHROM"):
                 list_val = line.rstrip().split("\t")[:8]
         else:
-            list_val = line.rstrip().split("\t")[:8]
+            list_val = line.rstrip().split("\t")[:5] #:8
+            if SNP_only:
+                if len(list_val[3]) > 1 or len(list_val[4]) > 1:
+                    continue
             chrom_list.append(list_val[0])
             pos_list.append(int(list_val[1]))
             ids_list.append(list_val[2])

@@ -101,7 +101,6 @@ def main():
         barcodes = [x.rstrip().split("-")[0] for x in fid.readlines()]
         fid.close()
         barcodes = sorted(barcodes)
-        print("[cellSNP] mode 1.2: pileup %d cell barcodes." %len(barcodes))
         
     if options.out_file is None:
         print("Error: need outFile for output file path and name.")
@@ -130,6 +129,7 @@ def main():
         else:
             print("[cellSNP] mode 3: fetch given SNPs in %d bulk samples." 
                   %(len(sam_file_list)))
+        print("[cellSNP] loading the VCF file for given SNPs ...")
         region_file = options.region_file
         vcf_RV = parse_vcf_file(region_file)
         pos_list = vcf_RV["pos"]

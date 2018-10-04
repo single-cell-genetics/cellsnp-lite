@@ -2,6 +2,15 @@
 History
 =======
 
+Release v0.0.7 (04/10/2018)
+===========================
+* change the header of the VCF file to be more suitable for bcftools
+* realise the issue of heavy memory consuming, which even kills the 
+  jobs in cluster. The menory taken increase linearly to the number 
+  of processors used. When using 20 CUPs, >20G memory is recomended 
+  for >5K cells. Solution for higher memory efficiency will be 
+  proposed in future.
+
 Release v0.0.6 (29/09/2018)
 ===========================
 * fix the bug in pileup a list of positions with ``pysam-fetch``: 

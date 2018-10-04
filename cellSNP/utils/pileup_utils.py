@@ -10,20 +10,28 @@
 
 import sys
 import pysam
+import cellSNP
 from .base_utils import id_mapping, unique_list
 
 VCF_HEADER = (
     '##fileformat=VCFv4.2\n'
-    '##source=cellSNP_v0.0.5\n'
+    '##source=cellSNP_v%s\n'
     '##FILTER=<ID=PASS,Description="All filters passed">\n'
-    '##FORMAT=<ID=DP,Number=1,Type=int,Description="total counts for ALT and '
+    '##FILTER=<ID=.,Description="Filter info not available">\n'
+    '##INFO=<ID=DP,Number=1,Type=Integer,Description="total counts for ALT and '
     'REF">\n'
-    '##FORMAT=<ID=AD,Number=1,Type=int,Description="total counts for ALT">\n'
-    '##FORMAT=<ID=OTH,Number=1,Type=int,Description="total counts for other '
+    '##INFO=<ID=AD,Number=1,Type=Integer,Description="total counts for ALT">\n'
+    '##INFO=<ID=OTH,Number=1,Type=Integer,Description="total counts for other '
     'bases from REF and ALT">\n'
-    '##FORMAT=<ID=ALL,Number=5,Type=int,Description="total counts for all '
-    'bases in order of A,C,G,T,N">\n')
-CONTIG = "".join(['##contig=<ID=%d,length=2147483647>\n' %x for x in range(1,23)])
+    '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="total counts for ALT and '
+    'REF">\n'
+    '##FORMAT=<ID=AD,Number=1,Type=Integer,Description="total counts for ALT">\n'
+    '##FORMAT=<ID=OTH,Number=1,Type=Integer,Description="total counts for other '
+    'bases from REF and ALT">\n'
+    '##FORMAT=<ID=ALL,Number=5,Type=Integer,Description="total counts for all '
+    'bases in order of A,C,G,T,N">\n' %cellSNP.__version__)
+
+CONTIG = "".join(['##contig=<ID=%s>\n' %x for x in list(range(1,23))+['X', 'Y']])
 header_line="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
 
 VCF_COLUMN = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", 
