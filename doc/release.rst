@@ -4,9 +4,12 @@ History
 
 Release v0.0.8 (21/12/2018)
 ===========================
-* Support output file in the same path of command line
-* Support input file in format of .cram
-* Update readme file, especially for compiled common variants from 1000 genome 
+* update the default setting that UMItag is not in use in bulk RNA-seq, as UMI 
+  is cell specific in pseudo-bulk RNA-seq, hence better turn it UMI off by
+  default 
+* support output file in the same path of command line
+* support cram input file, besides bam/sam 
+* update readme file, especially for processed common variants from 1000 genome 
   project (https://sourceforge.net/projects/cellsnp/files/SNPlist/)
 
 Release v0.0.7 (04/10/2018)

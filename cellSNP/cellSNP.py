@@ -1,6 +1,6 @@
 # pileup SNPs across the genome with pysam's fetch or pileup reads
 # Author: Yuanhua Huang
-# Date: 20-09-2018
+# Date: 21-12-2018
 
 import os
 import sys
@@ -48,8 +48,10 @@ def main():
         help="The chromosomes to use, comma separated [default: 1 to 22]")
     group1.add_option("--cellTAG", dest="cell_tag", default="CR", 
         help="Tag for cell barcodes, turn off with None [default: %default]")
-    group1.add_option("--UMItag", dest="UMI_tag", default="UR", 
-        help="Tag for UMI, turn off with None [default: %default]")
+    group1.add_option("--UMItag", dest="UMI_tag", default="Auto", 
+        help="Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes "
+        "is inputted, otherwise use None. None mode means no UMI but read "
+        "counts [default: %default]")
     group1.add_option("--minCOUNT", type="int", dest="min_COUNT", default=20, 
         help="Minimum aggragated count [default: %default]")
     group1.add_option("--minMAF", type="float", dest="min_MAF", default=0.0, 
@@ -140,11 +142,16 @@ def main():
         chrom_list = vcf_RV["chrom"]
         print("[cellSNP] fetching %d candidate variants ..." %len(pos_list))
     
-    if options.cell_tag.upper() == "NONE":
+    if options.cell_tag.upper() == "NONE" or barcodes is None:
         cell_tag = None
     else:
         cell_tag = options.cell_tag
-    if options.UMI_tag.upper() == "NONE":
+    if options.UMI_tag.upper() == "AUTO":
+        if barcodes is None:
+            UMI_tag = None
+        else:
+            UMI_tag = "UR"
+    elif options.UMI_tag.upper() == "NONE":
         UMI_tag = None
     else:
         UMI_tag = options.UMI_tag
