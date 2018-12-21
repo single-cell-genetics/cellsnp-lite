@@ -45,7 +45,17 @@ def check_pysam_chrom(samFile, chrom=None):
     """Chech if samFile is a file name or pysam object, and if chrom format. 
     """
     if type(samFile) == str:
-        samFile = pysam.Samfile(samFile)
+        ftype = samFile.split(".")[-1]
+        if ftype != "bam" and ftype != "sam" and ftype != "cram" :
+            print("Error: file type need suffix of bam, sam or cram.")
+            sys.exit(1)
+        if ftype == "cram":
+            samFile = pysam.AlignmentFile(samFile, "rc")
+        elif ftype == "bam":
+            samFile = pysam.AlignmentFile(samFile, "rb")
+        else:
+            samFile = pysam.AlignmentFile(samFile, "r")
+
     if chrom != None:
         if chrom not in samFile.references:
             if chrom.startswith("chr"):

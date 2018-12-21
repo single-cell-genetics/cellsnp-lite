@@ -2,6 +2,13 @@
 History
 =======
 
+Release v0.0.8 (21/12/2018)
+===========================
+* Support output file in the same path of command line
+* Support input file in format of .cram
+* Update readme file, especially for compiled common variants from 1000 genome 
+  project (https://sourceforge.net/projects/cellsnp/files/SNPlist/)
+
 Release v0.0.7 (04/10/2018)
 ===========================
 * change the header of the VCF file to be more suitable for bcftools

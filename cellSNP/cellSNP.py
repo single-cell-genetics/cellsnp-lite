@@ -105,11 +105,13 @@ def main():
     if options.out_file is None:
         print("Error: need outFile for output file path and name.")
         sys.exit(1)
-    elif os.path.isdir(os.path.dirname(options.out_file)) == False:
-        print("Error: No such directory for file\n -- %s" %options.out_file)
-        sys.exit(1)
+    elif os.path.dirname(options.out_file) == "":
+        out_file = "./" + options.out_file
     else:
         out_file = options.out_file
+    if os.path.isdir(os.path.dirname(out_file)) == False:
+        print("Error: No such directory for file\n -- %s" %out_file)
+        sys.exit(1)        
       
     if options.region_file is None or options.region_file == "None":
         region_file = None
