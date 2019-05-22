@@ -8,15 +8,17 @@ from setuptools import setup, find_packages
 # To use a consistent encoding
 from codecs import open
 from os import path
-import cellSNP
 
 here = path.abspath(path.dirname(__file__))
+
+# Set __version__ for the project.
+exec(open("./cellSNP/version.py").read())
 
 # Get the long description from the relevant file
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
     
-reqs = ['numpy>=1.9.0', 'pysam>=0.9.0']
+reqs = ['numpy>=1.9.0', 'pysam>=0.15.2']
 
 setup(
     name='cellSNP',
@@ -24,7 +26,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=cellSNP.__version__,
+    version=__version__,
 
     description='cellSNP - Analysis of expressed alleles in single cells',
     long_description=long_description,

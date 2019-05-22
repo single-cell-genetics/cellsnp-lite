@@ -2,6 +2,19 @@
 History
 =======
 
+Release v0.1.0 (21/05/2019)
+===========================
+* support the estimate the genotype and genotype likelihood for each cell.
+  The GT is for 0/0, 1/0, 1/1, while the genotype likelihood is for 0/0, 1/0,
+  1/1, and 0/0+1/0, 1/1+1/0.
+  The genotype estimate is based on the this paper (table 1; same as supp table
+  S3 in Demuxlet paper): https://doi.org/10.1016/j.ajhg.2012.09.004
+* cell tag changed from CR to CB and the lane info is kept
+* pileup whole genome uses the same reads filtering as pile up positions
+* add test files (note, the bam file is 19G)
+* require pysam>=0.15.2 to get the qqual for each base call in the reads
+
+
 Release v0.0.8 (21/12/2018)
 ===========================
 * update the default setting that UMItag is not in use in bulk RNA-seq, as UMI 

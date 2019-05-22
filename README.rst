@@ -34,12 +34,16 @@ Alternatively, you can download or clone this repository and type
 ``python setup.py install`` to install. In either case, add ``--user`` if you 
 don't have the permission as a root or for your Python environment.
 
+**Note**, cellSNP (>=0.1.0 requires pysam>=0.15.2), so make sure you are using 
+the right version of `pysam`. Try `pip uninstall pysam` and then reinstall 
+`pip install -U pysam`
+
 
 Quick usage
 -----------
 
-Once installed, check all arguments by type ``cellSNP -h``. There are three 
-modes of cellSNP:
+Once installed, check all arguments by type ``cellSNP -h`` (see a snapshot_)
+There are three modes of cellSNP:
 
 * **Mode 1: pileup a list of SNPs for single cells in a big BAM/SAM file**
 
@@ -105,6 +109,7 @@ All releases are included in pypi_. Notes for each release are recorded in
 
 .. _vireo: https://rawgit.com/PMBio/cardelino/master/inst/doc/vignette-donorid.html
 .. _cardelino: https://github.com/PMBio/cardelino
+.. _snapshot: https://github.com/huangyh09/cellSNP/blob/master/doc/manual.rst
 .. _pysam: https://github.com/pysam-developers/pysam
 .. _pypi: https://pypi.org/project/cellSNP/
 .. _gnomAD: http://gnomad.broadinstitute.org
@@ -113,4 +118,3 @@ All releases are included in pypi_. Notes for each release are recorded in
 .. _folder: https://sourceforge.net/projects/cellsnp/files/SNPlist/
 .. _LiftOver_vcf: https://github.com/huangyh09/cellSNP/tree/master/liftOver
 .. _release.rst: https://github.com/huangyh09/cellSNP/blob/master/doc/release.rst
-
