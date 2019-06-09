@@ -138,6 +138,8 @@ def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
 def fetch_bases(samFile, chrom, POS):
     """ Fetch all reads mapped to the genome position.
     """
+    if type(POS) != int:
+        POS = int(POS)
     base_list, qual_list, read_list = [], [], []
     for _read in samFile.fetch(chrom, POS-1, POS):
         try:

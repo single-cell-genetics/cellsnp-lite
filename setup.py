@@ -18,7 +18,7 @@ exec(open("./cellSNP/version.py").read())
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
     
-reqs = ['numpy>=1.9.0', 'pysam>=0.15.2']
+reqs = ['numpy>=1.9.0', 'pysam>=0.15.2', 'h5py']
 
 setup(
     name='cellSNP',

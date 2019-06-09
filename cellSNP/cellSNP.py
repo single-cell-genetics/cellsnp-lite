@@ -10,7 +10,7 @@ import pysam
 import subprocess
 import multiprocessing
 from optparse import OptionParser, OptionGroup
-from .utils.run_utils import merge_vcf, parse_vcf_file
+from .utils.vcf_utils import load_VCF, merge_vcf
 from .utils.pileup_utils import fetch_positions
 from .utils.pileup_regions import pileup_regions
 
@@ -140,11 +140,12 @@ def main():
                   %(len(sam_file_list)))
         print("[cellSNP] loading the VCF file for given SNPs ...")
         region_file = options.region_file
-        vcf_RV = parse_vcf_file(region_file)
-        pos_list = vcf_RV["pos"]
+        vcf_RV = load_VCF(region_file, biallelic_only=True, 
+                          load_sample=False)['FixedINFO']
+        pos_list = vcf_RV["POS"]
         REF_list = vcf_RV["REF"]
         ALT_list = vcf_RV["ALT"]
-        chrom_list = vcf_RV["chrom"]
+        chrom_list = vcf_RV["CHROM"]
         print("[cellSNP] fetching %d candidate variants ..." %len(pos_list))
     
     if options.cell_tag.upper() == "NONE" or barcodes is None:
@@ -206,7 +207,7 @@ def main():
                 min_MAPQ, max_FLAG, min_LEN, doubletGL, True) 
             show_progress(1)
         else:
-            LEN_div = int(len(vcf_RV["chrom"]) / nproc)
+            LEN_div = int(len(vcf_RV["CHROM"]) / nproc)
             pool = multiprocessing.Pool(processes=nproc)
             for ii in range(nproc):
                 out_file_tmp = out_file + ".temp_%d_" %(ii)

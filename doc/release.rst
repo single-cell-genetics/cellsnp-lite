@@ -2,6 +2,12 @@
 History
 =======
 
+Release v0.1.1 (09/06/2019)
+===========================
+* support output in hdf5 format for sparse matrix. To convert .vcf.gz to hdf5 
+  file, you can use this script: 
+  https://github.com/huangyh09/cellSNP/blob/master/test/VCF_convert.py
+
 Release v0.1.0 (21/05/2019)
 ===========================
 * support the estimate the genotype and genotype likelihood for each cell.
