@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.2 (10/06/2019)
+===========================
+* turn off the defaul HDF5 file output, but keep it optional.
+
 Release v0.1.1 (09/06/2019)
 ===========================
 * support output in hdf5 format for sparse matrix. To convert .vcf.gz to hdf5 

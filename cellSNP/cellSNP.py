@@ -61,6 +61,8 @@ def main():
     group1.add_option("--doubletGL", dest="doubletGL", action="store_true", 
         default=False, 
         help="If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5")
+    group1.add_option("--saveHDF5", dest="save_HDF5", action="store_true", 
+        default=False, help="If use, save an output file in HDF5 format.")
     
     group2 = OptionGroup(parser, "Read filtering")
     group2.add_option("--minLEN", type="int", dest="min_LEN", default=30, 
@@ -237,7 +239,7 @@ def main():
         print("[cellSNP] fetched %d variants, now merging temp files ... " 
               %(len(pos_list)))
     
-    merge_vcf(out_file, out_files)
+    merge_vcf(out_file, out_files, options.save_HDF5)
     
     run_time = time.time() - START_TIME
     print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 
