@@ -103,6 +103,7 @@ def load_VCF(vcf_file, biallelic_only=False, load_sample=True, sparse=True):
             for i in range(len(key_ids)):
                 FixedINFO[key_ids[i]].append(list_val[i])
             var_ids.append("_".join([list_val[x] for x in [0, 1, 3, 4]]))
+    infile.close()
 
     RV = {}
     RV["variants"]  = var_ids
