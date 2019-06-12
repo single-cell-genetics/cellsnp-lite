@@ -2,6 +2,10 @@
 History
 =======
 
+Release v0.1.3 (12/06/2019)
+===========================
+* Fix a minor bug for when loading unzipped vcf file.
+
 Release v0.1.2 (10/06/2019)
 ===========================
 * turn off the defaul HDF5 file output, but keep it optional.

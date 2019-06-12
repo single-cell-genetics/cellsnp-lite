@@ -70,8 +70,10 @@ def load_VCF(vcf_file, biallelic_only=False, load_sample=True, sparse=True):
     """
     if vcf_file[-3:] == ".gz" or vcf_file[-4:] == ".bgz":
         infile = gzip.open(vcf_file, "rb")
+        is_gzip = True
     else:
         infile = open(vcf_file, "r")
+        is_gzip = False
     
     FixedINFO = {}
     contig_lines = []
@@ -79,7 +81,8 @@ def load_VCF(vcf_file, biallelic_only=False, load_sample=True, sparse=True):
     var_ids, obs_ids, obs_dat = [], [], []
     
     for line in infile:
-        line = line.decode('utf-8')
+        if is_gzip:
+            line = line.decode('utf-8')
         if line.startswith("#"):
             if line.startswith("##contig="):
                 contig_lines.append(line.rstrip())
