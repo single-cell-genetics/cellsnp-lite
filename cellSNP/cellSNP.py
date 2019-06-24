@@ -209,7 +209,7 @@ def main():
                 min_MAPQ, max_FLAG, min_LEN, doubletGL, True) 
             show_progress(1)
         else:
-            LEN_div = int(len(vcf_RV["CHROM"]) / nproc)
+            LEN_div = int(len(chrom_list) / nproc)
             pool = multiprocessing.Pool(processes=nproc)
             for ii in range(nproc):
                 out_file_tmp = out_file + ".temp_%d_" %(ii)

@@ -2,6 +2,14 @@
 History
 =======
 
+Release v0.1.4 (24/06/2019)
+===========================
+* use bgzip by default if bgzip is executable, otherwise use gzip
+* change GL to PL: Phred-scaled genotype likelihoods and move to after OTH tag
+* filter_reads is not in use anymore and the filtering is combined into 
+  fetch_bases or pileup_bases
+* slightly optimise the memory by not keeping all reads but only positions
+
 Release v0.1.3 (12/06/2019)
 ===========================
 * Fix a minor bug for when loading unzipped vcf file.

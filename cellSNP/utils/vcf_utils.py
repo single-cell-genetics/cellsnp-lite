@@ -180,7 +180,11 @@ def merge_vcf(out_file, out_files, hdf5_out=True):
     fid_out.close()
     print("[cellSNP] %d lines in final vcf file" %CNT)
     
-    bashCommand = "gzip -f %s" %(out_file_use)
+    import shutil
+    if shutil.which("bgzip") is not None:
+        bashCommand = "bgzip -f %s" %(out_file_use)
+    else:
+        bashCommand = "gzip -f %s" %(out_file_use)
     pro = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     pro.communicate()[0]
 

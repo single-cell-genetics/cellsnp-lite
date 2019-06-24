@@ -36,12 +36,14 @@ from .pileup_utils import *
 #     return base_list, qual_list, read_list
 
 
-
-
-def pileup_bases(pileupColumn, real_POS=None):
-    """ pileup all reads mapped to the genome position.
+def pileup_bases(pileupColumn, real_POS, cell_tag, UMI_tag, min_MAPQ, 
+                 max_FLAG, min_LEN):
+    """ 
+    Pileup all reads mapped to the genome position.
+    Filtering is also applied, including cell and UMI tags and read mapping 
+    quality.
     """
-    base_list, read_list, qual_list = [], [], []
+    base_list, qual_list, UMIs_list, cell_list = [], [], [], []
     for pileupread in pileupColumn.pileups:
         # query position is None if is_del or is_refskip is set.
         if pileupread.is_del or pileupread.is_refskip:
@@ -59,11 +61,24 @@ def pileup_bases(pileupColumn, real_POS=None):
             query_POS = pileupread.query_position
             _qual = _read.qual[query_POS - 1]
             _base = _read.query_sequence[query_POS - 1].upper()
+
+        ## filtering reads
+        if (_read.mapq < min_MAPQ or _read.flag > max_FLAG or 
+            len(_read.positions) < min_LEN): 
+            continue
+        if cell_tag is not None and _read.has_tag(cell_tag) == False: 
+            continue
+        if UMI_tag is not None and _read.has_tag(UMI_tag) == False: 
+            continue
+
+        if UMI_tag is not None:
+            UMIs_list.append(_read.get_tag(UMI_tag))
+        if cell_tag is not None:
+            cell_list.append(_read.get_tag(cell_tag))
             
-        read_list.append(_read)
         base_list.append(_base)
         qual_list.append(_qual)
-    return base_list, qual_list, read_list
+    return base_list, qual_list, UMIs_list, cell_list
 
 
 def pileup_regions(samFile, barcodes, out_file=None, chrom=None, cell_tag="CR", 
@@ -87,17 +102,10 @@ def pileup_regions(samFile, barcodes, out_file=None, chrom=None, cell_tag="CR",
         if pileupcolumn.n < min_COUNT:
             continue
 
-        base_list, qual_list, read_list = pileup_bases(pileupcolumn, 
-                                                       pileupcolumn.pos)
-        RV = filter_reads(read_list, cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
-                          min_LEN)
-        UMIs_list = RV["UMIs_list"]
-        cell_list = RV["cell_list"]
-        base_list = [base_list[ii] for ii in RV["idx_list"]]
-        qual_list = [qual_list[ii] for ii in RV["idx_list"]]
-        read_list = [read_list[ii] for ii in RV["idx_list"]]
+        base_list, qual_list, UMIs_list, cell_list = pileup_bases(pileupcolumn, 
+            pileupcolumn.pos, cell_tag, UMI_tag, min_MAPQ, max_FLAG, min_LEN)
         
-        if len(cell_list) < min_COUNT:
+        if len(base_list) < min_COUNT:
             continue
         base_merge, base_cells, qual_cells = map_barcodes(base_list, qual_list, 
             cell_list, UMIs_list, barcodes)

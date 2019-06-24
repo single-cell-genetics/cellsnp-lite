@@ -25,7 +25,8 @@ VCF_HEADER = (
     '##INFO=<ID=OTH,Number=1,Type=Integer,Description="total counts for other '
     'bases from REF and ALT">\n'
     '##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">\n'
-    '##FORMAT=<ID=GL,Number=3,Type=String,Description="Genotype likelihood">\n'
+    '##FORMAT=<ID=PL,Number=G,Type=Integer,Description="List of Phred-scaled '
+    'genotype likelihoods">\n'
     '##FORMAT=<ID=DP,Number=1,Type=Integer,Description="total counts for ALT and '
     'REF">\n'
     '##FORMAT=<ID=AD,Number=1,Type=Integer,Description="total counts for ALT">\n'
@@ -33,6 +34,7 @@ VCF_HEADER = (
     'bases from REF and ALT">\n'
     '##FORMAT=<ID=ALL,Number=5,Type=Integer,Description="total counts for all '
     'bases in order of A,C,G,T,N">\n' %__version__)
+#'##FORMAT=<ID=GL,Number=G,Type=String,Description="Genotype likelihood">\n'
 
 CONTIG = "".join(['##contig=<ID=%s>\n' %x for x in list(range(1,23))+['X', 'Y']])
 header_line="#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT"
@@ -131,26 +133,46 @@ def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
         out_GL_list = [GL1, GL2, GL3]
 
     GT_out = ["0/0", "1/0", "1/1"][np.argmax([GL1, GL2, GL3])]
-    GL_out = ",".join(["%.2f" %x for x in out_GL_list])
-    return GT_out, GL_out
+    PL_out = ",".join(["%.0f" %(-10 * x  / np.log(10)) for x in out_GL_list])
+    #GL_out = ",".join(["%.2f" %(x / np.log(10)) for x in out_GL_list])
+
+    return GT_out, PL_out
 
 
-def fetch_bases(samFile, chrom, POS):
-    """ Fetch all reads mapped to the genome position.
+def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
+                max_FLAG=255, min_LEN=30):
+    """ Fetch bases from all reads mapped to a given genome position.
+    Filtering is also applied, including cell and UMI tags and read mapping 
+    quality.
     """
     if type(POS) != int:
         POS = int(POS)
-    base_list, qual_list, read_list = [], [], []
+
+    base_list, qual_list, UMIs_list, cell_list = [], [], [], []
     for _read in samFile.fetch(chrom, POS-1, POS):
         try:
             idx = _read.positions.index(POS-1)
         except:
             continue
+
+        ## filtering reads
+        if (_read.mapq < min_MAPQ or _read.flag > max_FLAG or 
+            len(_read.positions) < min_LEN): 
+            continue
+        if cell_tag is not None and _read.has_tag(cell_tag) == False: 
+            continue
+        if UMI_tag is not None and _read.has_tag(UMI_tag) == False: 
+            continue
+
+        if UMI_tag is not None:
+            UMIs_list.append(_read.get_tag(UMI_tag))
+        if cell_tag is not None:
+            cell_list.append(_read.get_tag(cell_tag))
+
         _base = _read.query_alignment_sequence[idx].upper()
-        read_list.append(_read)
         base_list.append(_base)
         qual_list.append(_read.qqual[idx])
-    return base_list, qual_list, read_list
+    return base_list, qual_list, UMIs_list, cell_list
 
 
 def filter_reads(read_list, cell_tag="CR", UMI_tag="UR", min_MAPQ=20, 
@@ -210,15 +232,10 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
         base_merge_sample = BASE_ZERO.copy()
         for samFile in samFile_list:
             samFile, chrom = check_pysam_chrom(samFile, chroms[i])
-            base_list, qual_list, read_list = fetch_bases(samFile, chrom, 
-                                                          positions[i])
-            RV = filter_reads(read_list, cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
-                              min_LEN)
-            UMIs_list = RV["UMIs_list"]
-            cell_list = RV["cell_list"]
-            base_list = [base_list[ii] for ii in RV["idx_list"]]
-            qual_list = [qual_list[ii] for ii in RV["idx_list"]]
-            read_list = [read_list[ii] for ii in RV["idx_list"]]
+            base_list, qual_list, UMIs_list, cell_list = fetch_bases(samFile, 
+                chrom, positions[i], cell_tag, UMI_tag, min_MAPQ, max_FLAG, 
+                min_LEN)
+
             base_merge, base_cells, qual_cells = map_barcodes(base_list, 
                 qual_list, cell_list, UMIs_list, barcodes)
             
@@ -271,9 +288,10 @@ def map_barcodes(base_list, qual_list, cell_list, UMIs_list, barcodes):
     # count UMI rather than reads
     if len(UMIs_list) == len(base_list):
         UMIs_uniq, UMIs_idx, tmp = unique_list(UMIs_list)
-        cell_list = [cell_list[i] for i in UMIs_idx]
         base_list = [base_list[i] for i in UMIs_idx]
         qual_list = [qual_list[i] for i in UMIs_idx]
+        if len(cell_list) > 0:
+            cell_list = [cell_list[i] for i in UMIs_idx]
         
     if barcodes is not None and len(cell_list) > 0:
         base_cells = [[0,0,0,0,0] for x in barcodes]
@@ -313,7 +331,7 @@ def get_vcf_line(base_merge, base_cells, qual_cells, chrom, POS, min_COUNT,
         base_merge[base_sorted[1]] < min_cnt_2nd):
         return None
 
-    FORMAT = "GT:GL:AD:DP:OTH:ALL"
+    FORMAT = "GT:AD:DP:OTH:PL:ALL"
     REF_cnt = base_merge[REF]
     ALT_cnt = base_merge[ALT]
     OTH_cnt = sum(base_merge.values()) - REF_cnt - ALT_cnt
@@ -337,7 +355,7 @@ def get_vcf_line(base_merge, base_cells, qual_cells, chrom, POS, min_COUNT,
     
             all_str = ",".join([str(x) for x in _base_cell])
             cnt_lst = [str(_ALT_cnt), str(_ALT_cnt + _REF_cnt), str(_OTH_cnt)]
-            out_lst = ":".join([_GT, _GL] + cnt_lst + [all_str])
+            out_lst = ":".join([_GT] + cnt_lst + [_GL, all_str])
             cells_str.append(out_lst)
     
     vcf_val = [chrom, str(POS), ".", REF, ALT, ".", "PASS", INFO, FORMAT]
