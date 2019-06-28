@@ -87,7 +87,7 @@ def check_pysam_chrom(samFile, chrom=None):
     return samFile, chrom
 
 
-def qual_vector(qual=None, capBQ=40):
+def qual_vector(qual=None, capBQ=40, minQ=0.00001):
     """convert the base call quality score to  related values for different genotypes
     http://emea.support.illumina.com/bulletins/2016/04/fastq-files-explained.html
     
@@ -97,7 +97,7 @@ def qual_vector(qual=None, capBQ=40):
     if qual is None:
         return [0, 0, 0, 0]
     BQ = min(capBQ, ord(qual) - 33)
-    Q = 0.1**(BQ / 10) # Sanger coding
+    Q = max(0.1**(BQ / 10), minQ) # Sanger coding
     RV = [np.log(1-Q), np.log(3/4 - 2/3*Q), np.log(1/2 - 1/3*Q), np.log(Q)]
     return RV
 
