@@ -2,6 +2,12 @@
 History
 =======
 
+Release v0.1.5 (02/07/2019)
+===========================
+* fix a bug in qual_vector when the Quality (Phred) scores is 0, i.e., ASCII 
+  Code "!", and it will give a P_error as 1, hence fail with log transformation.
+  Now, I limited the P_error to 0.9999.
+
 Release v0.1.4 (24/06/2019)
 ===========================
 * use bgzip by default if bgzip is executable, otherwise use gzip
