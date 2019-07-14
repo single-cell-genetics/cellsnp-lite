@@ -2,6 +2,13 @@
 cellSNP
 =======
 
+|PyPI| |Build Status|
+
+.. |PyPI| image:: https://img.shields.io/pypi/v/cellSNP.svg
+    :target: https://pypi.org/project/cellSNP
+.. |Build Status| image:: https://travis-ci.org/huangyh09/cellSNP.svg?branch=master
+   :target: https://travis-ci.org/huangyh09/cellSNP
+
 cellSNP aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed single-
 cell RNA-seq data, particularly with vireo_ in cardelino_ R package, which 
