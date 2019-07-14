@@ -99,7 +99,7 @@ def qual_vector(qual=None, capBQ=45, minBQ=0.25):
         return [0, 0, 0, 0]
     BQ = ord(qual) - 33
     BQ = max(min(capBQ, BQ), minBQ)
-    P = min(0.1**(BQ / 10)) # Sanger coding, error probability
+    P = 0.1**(BQ / 10) # Sanger coding, error probability
     RV = [np.log(1-P), np.log(3/4 - 2/3*P), np.log(1/2 - 1/3*P), np.log(P)]
     return RV
 

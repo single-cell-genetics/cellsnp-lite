@@ -26,5 +26,5 @@ REGION=$DAT_DIR/genome1K.subset.hg19.vcf.gz
 # cellSNP -s $BAM -o $OUT_FILE -R $REGION -p 20 -b $BARCODE #--UMItag None 
 
 OUT_DIR=$DAT_DIR/demux_B
-cellSNP -s $BAM -O $OUT_FILE -R $REGION -p 20 -b $BARCODE #--UMItag None 
+cellSNP -s $BAM -O $OUT_DIR -R $REGION -p 20 -b $BARCODE #--UMItag None 
 
