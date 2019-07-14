@@ -5,7 +5,6 @@
 import os
 import sys
 import gzip
-import h5py
 import subprocess
 import numpy as np
 
@@ -119,6 +118,8 @@ def write_VCF_to_hdf5(VCF_dat, out_file):
     """
     Write vcf data into hdf5 file
     """
+    import h5py
+    
     f = h5py.File(out_file, 'w')
     f.create_dataset("contigs", data=np.string_(VCF_dat['contigs']), 
                      compression="gzip", compression_opts=9)
@@ -194,3 +195,101 @@ def merge_vcf(out_file, out_files, hdf5_out=True):
         write_VCF_to_hdf5(vcf_dat, out_file_use + ".h5")
     
     return None
+
+def VCF_to_sparseMat(vcf_file, tags=["AD", "DP"], out_dir=None):
+    """
+    Write VCF sample info into sparse matrices with given tags
+    """
+
+    # out samples, out_var, tag_files
+    var_info = []
+    tag_mat_list = []
+    for _tag in tags:
+        _dict = {"data": [], "row": [], "col": []}
+        tag_mat_list.append(_dict)
+
+    if vcf_file[-3:] == ".gz" or vcf_file[-4:] == ".bgz":
+        infile = gzip.open(vcf_file, "rb")
+        is_gzip = True
+    else:
+        infile = open(vcf_file, "r")
+        is_gzip = False
+        
+    var_idx, obs_idx = 0, 0
+    for line in infile:
+        if is_gzip:
+            line = line.decode('utf-8')
+        if line.startswith("#"):
+            if line.startswith("#CHROM"):
+                samples = line.rstrip().split("\t")[9:]
+            continue
+        
+        ## variants line
+        var_idx += 1
+        list_val = line.rstrip().split("\t")
+        var_info.append(list_val[:8])
+        FORMAT = list_val[8].split(":")
+        
+        tag_idx = []
+        for _tag in tags:
+            if _tag in FORMAT:
+                tag_idx.append(FORMAT.index(_tag))
+            else:
+                tag_idx.append(None)
+
+        for obs_idx in range(len(list_val[9:])):
+            _samp_dat = list_val[9 + obs_idx]
+            if _samp_dat == ".":
+                continue
+            _samp_val = _samp_dat.split(":")
+            for ii in range(len(tags)):
+                if tag_idx[ii] is None:
+                    continue
+                tag_dat = _samp_val[tag_idx[ii]]
+                if (tag_dat != "." and tag_dat != "0" and 
+                    tag_dat.count(".,") == 0):
+                    tag_mat_list[ii]["data"].append(tag_dat)
+                    tag_mat_list[ii]["row"].append(var_idx)
+                    tag_mat_list[ii]["col"].append(obs_idx + 1)
+    infile.close()
+
+    if out_dir is not None:
+        if not os.path.exists(out_dir):
+            os.mkdir(out_dir)
+        fid_obs = open(out_dir + "/cellSNP.samples.tsv", "w")
+        fid_obs.writelines("\n".join(samples) + "\n")
+        fid_obs.close()
+
+        fid_var = open(out_dir + "/cellSNP.base.vcf", "w")
+        fid_var.writelines("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
+        for _var_info in var_info:
+            fid_var.writelines("\t".join(_var_info) + "\n")
+        fid_var.close()
+        
+        try:
+            import shutil
+            if shutil.which("bgzip") is not None:
+                bashCommand = "bgzip -f %s" %(out_dir + "/cellSNP.base.vcf")
+            else:
+                bashCommand = "gzip -f %s" %(out_dir + "/cellSNP.base.vcf")
+            pro = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
+            pro.communicate()[0]
+        except:
+            print("sparse matrix: VCF uncmpressed.")
+
+        for ii in range(len(tags)):
+            _mat = tag_mat_list[ii]
+            _dat = _mat["data"]
+            _row = _mat["row"]
+            _col = _mat["col"]
+            fid = open(out_dir + "/cellSNP.tag.%s.mtx" %(tags[ii]), "w")
+            fid.writelines("%" + 
+                           "%MatrixMarket matrix coordinate integer general\n")
+            fid.writelines("%\n")
+            fid.writelines("%d\t%d\t%d\n" %(len(var_info), len(samples), 
+                len(_dat)))
+            for jj in range(len(_dat)):
+                fid.writelines("%d\t%d\t%s\n" %(_row[jj], _col[jj], _dat[jj]))
+            fid.close()
+
+    return var_info, samples, tag_mat_list

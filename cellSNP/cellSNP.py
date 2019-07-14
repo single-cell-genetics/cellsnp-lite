@@ -10,9 +10,11 @@ import pysam
 import subprocess
 import multiprocessing
 from optparse import OptionParser, OptionGroup
-from .utils.vcf_utils import load_VCF, merge_vcf
+
+from .version import __version__
 from .utils.pileup_utils import fetch_positions
 from .utils.pileup_regions import pileup_regions
+from .utils.vcf_utils import load_VCF, merge_vcf, VCF_to_sparseMat
 
 START_TIME = time.time()
 
@@ -20,18 +22,21 @@ def show_progress(RV=None):
     return RV
 
 def main():
-    import warnings
-    warnings.filterwarnings('error')
+    # import warnings
+    # warnings.filterwarnings('error')
 
     # parse command line options
     parser = OptionParser()
     parser.add_option("--samFile", "-s", dest="sam_file", default=None,
-        help=("Indexed sorted sam file(s), comma separated multiple samples. "
-              "Mode 1&2: one sam file with single cell barcode; "
-              "Mode 3: one or multiple bulk sam files, no barcodes needed, "
+        help=("Indexed sam/bam file(s), comma separated multiple samples. "
+              "Mode 1&2: one sam/bam file with single cell barcode; "
+              "Mode 3: one or multiple bulk sam/bam files, no barcodes needed, "
               "but sample ids and regionsVCF."))
-    parser.add_option("--outFile", "-o", dest="out_file", default=None,
-        help=("Output file path and name for VCF file."))
+    parser.add_option("--outDir", "-O", dest="sparse_dir", default=None,
+        help=("Output directory for VCF and sparse matrices: AD, DP, OTH."))
+    parser.add_option("--outVCF", "-o", dest="out_file", default=None,
+        help=("Output full path with file name for VCF file. Only use if not "
+              "given outDir. [optional]"))
     
     parser.add_option("--regionsVCF", "-R", dest="region_file", default=None,
         help=("A vcf file listing all candidate SNPs, for fetch each variants. "
@@ -77,7 +82,7 @@ def main():
 
     (options, args) = parser.parse_args()
     if len(sys.argv[1:]) == 0:
-        print("Welcome to cellSNP!\n")
+        print("Welcome to cellSNP v%s!\n" %(__version__))
         print("use -h or --help for help on argument.")
         sys.exit(1)
         
@@ -111,7 +116,11 @@ def main():
         fid.close()
         barcodes = sorted(barcodes)
         
-    if options.out_file is None:
+    if options.sparse_dir is not None:
+        if not os.path.exists(options.sparse_dir):
+            os.mkdir(options.sparse_dir)
+        out_file = options.sparse_dir + "/cellSNP.cells.vcf.gz"
+    elif options.out_file is None:
         print("Error: need outFile for output file path and name.")
         sys.exit(1)
     elif os.path.dirname(options.out_file) == "":
@@ -240,6 +249,10 @@ def main():
               %(len(pos_list)))
     
     merge_vcf(out_file, out_files, options.save_HDF5)
+
+    if options.sparse_dir is not None:
+        VCF_to_sparseMat(out_file, tags=["AD", "DP", "OTH"], 
+            out_dir=options.sparse_dir)
     
     run_time = time.time() - START_TIME
     print("[cellSNP] All done: %d min %.1f sec" %(int(run_time / 60), 

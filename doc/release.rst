@@ -2,6 +2,16 @@
 History
 =======
 
+Release v0.1.6 (14/07/2019)
+===========================
+* support saving to sparse matrices:
+  Please use ``-O`` for out directory instead of ``-o`` for VCF output only. 
+  Also, you can use ``sparseVCF.py`` to convert existing VCF.gz into sparse 
+  matrices
+* turn off breaking from warnings
+* change P_error with BQ ranges [0.25, 45]
+* h5py is not a required dependent package anymore
+
 Release v0.1.5 (02/07/2019)
 ===========================
 * fix a bug in qual_vector when the Quality (Phred) scores is 0, i.e., ASCII 
