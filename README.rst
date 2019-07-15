@@ -64,7 +64,7 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -O $OUT_DIE -R $REGION_VCF -p 20
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20
   
 Recommend filtering SNPs with <20UMIs or <10% minor alleles for downstream 
 donor deconvolution, by adding ``--minMAF 0.1 --minCOUNT 20``
@@ -74,7 +74,7 @@ donor deconvolution, by adding ``--minMAF 0.1 --minCOUNT 20``
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -O $OUT_DIE -p 22
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -p 22
   
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space
 and speed up inference when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``
