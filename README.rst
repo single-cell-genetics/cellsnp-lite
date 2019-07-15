@@ -41,13 +41,17 @@ Alternatively, you can download or clone this repository and type
 ``python setup.py install`` to install. In either case, add ``--user`` if you 
 don't have the permission as a root or for your Python environment.
 
-**Note**, cellSNP (>=0.1.0 requires pysam>=0.15.2), so make sure you are using 
+From v0.1.0, cellSNP requires pysam>=0.15.2, so make sure you are using 
 the right version of `pysam`. Try `pip uninstall pysam` and then reinstall 
 `pip install -U pysam`
 
 
 Quick usage
 -----------
+
+**Note**, cellSNP now support save data into sparse matrices. When genotyping 
+at single cell level (mode 1 or 2), please use `-O OUT_DIR` instead of 
+`-o OUT_FILE.vcf.gz`, though the latter is still supported.
 
 Once installed, check all arguments by type ``cellSNP -h`` (see a snapshot_)
 There are three modes of cellSNP:
@@ -60,7 +64,7 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -o $OUT_FILE -R $REGION_VCF -p 20
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIE -R $REGION_VCF -p 20
   
 Recommend filtering SNPs with <20UMIs or <10% minor alleles for downstream 
 donor deconvolution, by adding ``--minMAF 0.1 --minCOUNT 20``
@@ -70,7 +74,7 @@ donor deconvolution, by adding ``--minMAF 0.1 --minCOUNT 20``
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -o $OUT_FILE -p 22
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIE -p 22
   
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space
 and speed up inference when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``
