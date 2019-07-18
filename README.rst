@@ -10,9 +10,9 @@ cellSNP
    :target: https://travis-ci.org/huangyh09/cellSNP
 
 cellSNP aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
-data, which can be directly used for donor deconvolution in multiplexed single-
-cell RNA-seq data, particularly with vireo_ in cardelino_ R package, which 
-assigns cells to donors and detects doublets, even without genotyping reference.
+data, which can be directly used for donor deconvolution in multiplexed 
+single-cell RNA-seq data, particularly with vireo_, which assigns cells to 
+donors and detects doublets, even without genotyping reference.
 
 cellSNP heavily depends on pysam_, a Python interface for samtools and bcftools. 
 This program should give very similar results as samtools/bcftools mpileup. 
@@ -118,8 +118,7 @@ Release Notes
 All releases are included in pypi_. Notes for each release are recorded in
 `release.rst`_.
 
-.. _vireo: https://rawgit.com/PMBio/cardelino/master/inst/doc/vignette-donorid.html
-.. _cardelino: https://github.com/PMBio/cardelino
+.. _vireo: https://github.com/huangyh09/vireo
 .. _snapshot: https://github.com/huangyh09/cellSNP/blob/master/doc/manual.rst
 .. _pysam: https://github.com/pysam-developers/pysam
 .. _pypi: https://pypi.org/project/cellSNP/
