@@ -49,9 +49,12 @@ the right version of `pysam`. Try `pip uninstall pysam` and then reinstall
 Quick usage
 -----------
 
-**Note**, cellSNP now support save data into sparse matrices. When genotyping 
+**Note1**, cellSNP now support save data into sparse matrices. When genotyping 
 at single cell level (mode 1 or 2), please use `-O OUT_DIR` instead of 
 `-o OUT_FILE.vcf.gz`, though the latter is still supported.
+
+**Note2**, by default, cellSNP count UMIs instead of reads. If your bam file 
+doesn't have UMIs, please add ``--UMItag None``.
 
 Once installed, check all arguments by type ``cellSNP -h`` (see a snapshot_)
 There are three modes of cellSNP:
@@ -112,11 +115,14 @@ In case you want to lift over SNP positions in vcf file from one genome build
 to another, see our `LiftOver_vcf`_ wrap function.
 
 
-Release Notes
--------------
+FAQ and releases
+----------------
+For troubleshooting, please have a look of `FAQ.rst`_, and we welcome reporting 
+any issue_.
 
 All releases are included in pypi_. Notes for each release are recorded in
 `release.rst`_.
+
 
 .. _vireo: https://github.com/huangyh09/vireo
 .. _snapshot: https://github.com/huangyh09/cellSNP/blob/master/doc/manual.rst
@@ -128,3 +134,5 @@ All releases are included in pypi_. Notes for each release are recorded in
 .. _folder: https://sourceforge.net/projects/cellsnp/files/SNPlist/
 .. _LiftOver_vcf: https://github.com/huangyh09/cellSNP/tree/master/liftOver
 .. _release.rst: https://github.com/huangyh09/cellSNP/blob/master/doc/release.rst
+.. _FAQ.rst: https://github.com/huangyh09/cellSNP/blob/master/doc/FAQ.rst
+.. _issue: https://github.com/huangyh09/cellSNP/issues
