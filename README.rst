@@ -67,17 +67,18 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20
   
-Recommend filtering SNPs with <20UMIs or <10% minor alleles for downstream 
-donor deconvolution, by adding ``--minMAF 0.1 --minCOUNT 20``
+As shown in the above command line, we recommend filtering SNPs with <20UMIs  
+or <10% minor alleles for downstream donor deconvolution, by adding 
+``--minMAF 0.1 --minCOUNT 20``
 
 
 * **Mode 2: pileup the whole genome for single cells in a big BAM/SAM file**
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -p 22
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100
   
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space
 and speed up inference when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``
@@ -98,7 +99,9 @@ file for a list of common SNPs.
 
   cellSNP -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -o $OUT_FILE -R $REGION_VCF -p 20
   
-Set filtering thresholds according to the downstream analysis.
+Set filtering thresholds according to the downstream analysis. Please add 
+``--UMItag None`` if you bam file does not have UMIs, e.g., smart-seq and bulk 
+RNA-seq.
 
 
 List of candidate SNPs
