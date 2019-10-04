@@ -2,6 +2,13 @@
 History
 =======
 
+Release v0.1.7 (04/10/2019)
+===========================
+* fix a bug when chromosome is not in the bam file
+* support barcodes.tsv.gz
+* liftOver supports bgzip compress
+* add vcf format to cellSNP.base.vcf.gz
+
 Release v0.1.6 (14/07/2019)
 ===========================
 * support saving to sparse matrices:

@@ -261,6 +261,7 @@ def VCF_to_sparseMat(vcf_file, tags=["AD", "DP"], out_dir=None):
         fid_obs.close()
 
         fid_var = open(out_dir + "/cellSNP.base.vcf", "w")
+        fid_var.writelines("##fileformat=VCFv4.2\n")
         fid_var.writelines("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
         for _var_info in var_info:
             fid_var.writelines("\t".join(_var_info) + "\n")

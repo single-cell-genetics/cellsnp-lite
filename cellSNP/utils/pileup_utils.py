@@ -72,7 +72,7 @@ def check_pysam_chrom(samFile, chrom=None):
         else:
             samFile = pysam.AlignmentFile(samFile, "r")
 
-    if chrom != None:
+    if chrom is not None:
         if chrom not in samFile.references:
             if chrom.startswith("chr"):
                 chrom = chrom.split("chr")[1]
@@ -80,7 +80,7 @@ def check_pysam_chrom(samFile, chrom=None):
                 chrom = "chr" + chrom
         if chrom not in samFile.references:
             print("Can't find references %s in samFile" %chrom)
-            return None, None
+            return samFile, None
     
     CACHE_CHROM = chrom
     CACHE_SAMFILE = samFile
@@ -147,10 +147,19 @@ def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
     Filtering is also applied, including cell and UMI tags and read mapping 
     quality.
     """
+    base_list, qual_list, UMIs_list, cell_list = [], [], [], []
+    if samFile is None or chrom is None or POS is None:
+        if samFile is None:
+            print("Warning: samFile is None")
+        if chrom is None:
+            print("Warning: chrom is None")
+        if POS is None:
+            print("Warning: POS is None")
+        return base_list, qual_list, UMIs_list, cell_list
+
     if type(POS) != int:
         POS = int(POS)
 
-    base_list, qual_list, UMIs_list, cell_list = [], [], [], []
     for _read in samFile.fetch(chrom, POS-1, POS):
         try:
             idx = _read.positions.index(POS-1)

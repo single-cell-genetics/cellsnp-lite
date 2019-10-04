@@ -136,7 +136,11 @@ def main():
     update_vcf(in_file, new_bed_file, unmap_bed_file, out_file)
     
     print("gzip vcf file ... ")
-    bashCommand = "gzip %s" %(out_file)
+    import shutil
+    if shutil.which("bgzip") is not None:
+        bashCommand = "bgzip -f %s" %(out_file)
+    else:
+        bashCommand = "gzip -f %s" %(out_file)
     pro = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
     pro.communicate()[0]
     return None

@@ -8,6 +8,7 @@ import gzip
 import time
 import pysam
 import subprocess
+import numpy as np
 import multiprocessing
 from optparse import OptionParser, OptionGroup
 
@@ -111,9 +112,11 @@ def main():
         sys.exit(1)
     else:
         sample_ids = None
-        fid = open(options.barcode_file, "r")
-        barcodes = [x.rstrip() for x in fid.readlines()] #.split("-")[0]
-        fid.close()
+        # fid = open(options.barcode_file, "r")
+        # barcodes = [x.rstrip() for x in fid.readlines()] #.split("-")[0]
+        # fid.close()
+        barcodes = list(np.genfromtxt(options.barcode_file, 
+                                      dtype="str", delimiter="\t"))
         barcodes = sorted(barcodes)
         
     if options.sparse_dir is not None:
