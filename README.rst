@@ -2,12 +2,14 @@
 cellSNP
 =======
 
-|PyPI| |Build Status|
+|PyPI| |Build Status| |DOI|
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellSNP.svg
     :target: https://pypi.org/project/cellSNP
 .. |Build Status| image:: https://travis-ci.org/huangyh09/cellSNP.svg?branch=master
    :target: https://travis-ci.org/huangyh09/cellSNP
+.. |DOI| image:: https://zenodo.org/badge/145724973.svg
+   :target: https://zenodo.org/badge/latestdoi/145724973
 
 cellSNP aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed 
