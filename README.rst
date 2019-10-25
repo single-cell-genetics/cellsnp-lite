@@ -6,8 +6,8 @@ cellSNP
 
 .. |PyPI| image:: https://img.shields.io/pypi/v/cellSNP.svg
     :target: https://pypi.org/project/cellSNP
-.. |Build Status| image:: https://travis-ci.org/huangyh09/cellSNP.svg?branch=master
-   :target: https://travis-ci.org/huangyh09/cellSNP
+.. |Build Status| image:: https://travis-ci.org/PMBio/cellSNP.svg?branch=master
+   :target: https://travis-ci.org/PMBio/cellSNP
 .. |DOI| image:: https://zenodo.org/badge/145724973.svg
    :target: https://zenodo.org/badge/latestdoi/145724973
 
