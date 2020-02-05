@@ -91,7 +91,10 @@ def pileup_regions(samFile, barcodes, out_file=None, chrom=None, cell_tag="CR",
     if out_file is not None:
         fid = open(out_file, "w")
         fid.writelines(VCF_HEADER + CONTIG)
-        fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
+        if barcodes is not None:
+            fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
+        else:
+            fid.writelines("\t".join(VCF_COLUMN + ["sample0"]) + "\n")
     
     POS_CNT = 0
     vcf_lines_all = []

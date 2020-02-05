@@ -22,9 +22,11 @@ BAM=$DAT_DIR/demux.B.merged.bam
 BARCODE=$DAT_DIR/demux.B.barcodes.400.tsv
 REGION=$DAT_DIR/genome1K.subset.hg19.vcf.gz
 
-# OUT_FILE=$DAT_DIR/demux.B.cellGT.v010.vcf.gz
-# cellSNP -s $BAM -o $OUT_FILE -R $REGION -p 20 -b $BARCODE #--UMItag None 
+### Mode 1: 10x data with SNP list
+# OUT_DIR=$DAT_DIR/demux_B
+# cellSNP -s $BAM -O $OUT_DIR -R $REGION -p 20 -b $BARCODE #--UMItag None 
 
-OUT_DIR=$DAT_DIR/demux_B
-cellSNP -s $BAM -O $OUT_DIR -R $REGION -p 20 -b $BARCODE #--UMItag None 
+### Mode 2: 10x data with SNP list
+OUT_DIR=$DAT_DIR/demux_B_chrM
+cellSNP -s $BAM -O $OUT_DIR --chrom chrMT -p 1 --UMItag None --cellTAG None # -b $BARCODE #--UMItag None 
 

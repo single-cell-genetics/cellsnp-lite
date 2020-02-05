@@ -144,7 +144,7 @@ def main():
             print("[cellSNP] mode 2: pileup %d whole chromosomes in %d single "
                 "cells." %(len(chrom_all), len(barcodes)))
         else:
-            print("[cellSNP] mode 2: pileup %d whole chromosomes in one  "
+            print("[cellSNP] mode 2: pileup %d whole chromosomes in one "
                 "bulk sample." %(len(chrom_all)))
     elif os.path.isfile(options.region_file) == False:
         print("Error: No such file\n    -- %s" %options.region_file)
