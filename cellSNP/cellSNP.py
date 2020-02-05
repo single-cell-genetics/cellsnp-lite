@@ -140,8 +140,12 @@ def main():
             chrom_all = [str(x) for x in range(1, 23)]
         else:
             chrom_all = options.chrom_all.split(",")
-        print("[cellSNP] mode 2: pileup %d whole chromosomes in %d single "
-              "cells." %(len(chrom_all), len(barcodes)))
+        if barcodes is not None:
+            print("[cellSNP] mode 2: pileup %d whole chromosomes in %d single "
+                "cells." %(len(chrom_all), len(barcodes)))
+        else:
+            print("[cellSNP] mode 2: pileup %d whole chromosomes in one  "
+                "bulk sample." %(len(chrom_all)))
     elif os.path.isfile(options.region_file) == False:
         print("Error: No such file\n    -- %s" %options.region_file)
         sys.exit(1)
