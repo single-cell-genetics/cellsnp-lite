@@ -2,6 +2,13 @@
 History
 =======
 
+
+Release v0.1.8 (06/02/2020)
+===========================
+* Mode 2 now supports pile up chromosomes for a single bulk sample
+* Mode 3 now supports multiple bam files in a list file
+
+
 Release v0.1.7 (04/10/2019)
 ===========================
 * fix a bug when chromosome is not in the bam file

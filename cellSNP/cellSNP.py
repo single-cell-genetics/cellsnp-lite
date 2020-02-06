@@ -33,6 +33,8 @@ def main():
               "Mode 1&2: one sam/bam file with single cell barcode; "
               "Mode 3: one or multiple bulk sam/bam files, no barcodes needed, "
               "but sample ids and regionsVCF."))
+    parser.add_option("--samFileList", "-S", dest="sam_file_list", default=None,
+        help=("A list file containing bam files, each per line, for Mode 3."))
     parser.add_option("--outDir", "-O", dest="sparse_dir", default=None,
         help=("Output directory for VCF and sparse matrices: AD, DP, OTH."))
     parser.add_option("--outVCF", "-o", dest="out_file", default=None,
@@ -87,20 +89,28 @@ def main():
         print("use -h or --help for help on argument.")
         sys.exit(1)
         
-    if options.sam_file is None:
+    if options.sam_file is None and options.sam_file_list is None:
         print("Error: need samFile for sam file.")
         sys.exit(1)
-    else:
+    elif options.sam_file is not None:
         sam_file_list = options.sam_file.split(",")
-        for sam_file in sam_file_list:
-            if os.path.isfile(sam_file) == False:
-                print("Error: No such file\n    -- %s" %sam_file)
-                sys.exit(1)
+    else:
+        fid = open(options.sam_file_list, "r")
+        sam_file_list = [x.rstrip() for x in fid.readlines()]
+        fid.close()
+    for sam_file in sam_file_list:
+        if os.path.isfile(sam_file) == False:
+            print("Error: No such file\n    -- %s" %sam_file)
+            sys.exit(1)
         
     if options.barcode_file is None:
         barcodes = None
         if options.sample_ids is None:
             sample_ids = ["Sample_%d" %x for x in range(len(sam_file_list))]
+        elif os.path.isfile(options.sample_ids):
+            fid = open(options.sample_ids, "r")
+            sample_ids = [x.rstrip() for x in fid.readlines()]
+            fid.close()
         else:
             sample_ids = options.sample_ids.split(",")
         if len(sample_ids) != len(sam_file_list):

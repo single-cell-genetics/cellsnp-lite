@@ -29,6 +29,15 @@ Also, there are two major differences comparing to bcftools mpileup:
    SNPs and the downstream statistical model can take the full use of it.
 
 
+News
+----
+All release notes can be found in `doc/release.rst`_.
+
+For computational efficiency, we initialised comments on this: `doc/speed.rst`_
+
+.. _doc/release.rst: https://github.com/single-cell-genetics/cellSNP/blob/master/doc/release.rst
+.. _doc/speed.rst: https://github.com/single-cell-genetics/cellSNP/blob/master/doc/speed.rst
+
 Installation
 ------------
 
@@ -51,20 +60,15 @@ the right version of `pysam`. Try `pip uninstall pysam` and then reinstall
 Quick usage
 -----------
 
-**Note1**, cellSNP now support save data into sparse matrices. When genotyping 
-at single cell level (mode 1 or 2), please use `-O OUT_DIR` instead of 
-`-o OUT_FILE.vcf.gz`, though the latter is still supported.
-
-**Note2**, by default, cellSNP count UMIs instead of reads. If your bam file 
-doesn't have UMIs, please add ``--UMItag None``.
-
 Once installed, check all arguments by type ``cellSNP -h`` (see a snapshot_)
 There are three modes of cellSNP:
 
-* **Mode 1: pileup a list of SNPs for single cells in a big BAM/SAM file**
+* **Mode 1: pileup a list of SNPs for a single BAM/SAM file**
 
-Require: a single BAM/SAM file, e.g., from cellranger, a VCF file for 
-a list of common SNPs. This mode is recommended comparing to mode 2, if a 
+Use both `-R` and `-b`. 
+
+Require: a single BAM/SAM file, e.g., from cellranger, a list of cell barcodes,
+a VCF file for common SNPs. This mode is recommended comparing to mode 2, if a 
 list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
@@ -76,12 +80,23 @@ or <10% minor alleles for downstream donor deconvolution, by adding
 ``--minMAF 0.1 --minCOUNT 20``
 
 
-* **Mode 2: pileup the whole genome for single cells in a big BAM/SAM file**
+* **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file**
+
+Don't use `-R` but flexible on `-b`. 
+
+This mode requires inputting a single bam file with either cell barcoded 
+(add `-b`) or a bulk sample:
 
 .. code-block:: bash
-
+  # 10x sample with cell barcodes
   cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100
+
+  # a bulk sample without cell barcodes and UMI tag
+  cellSNP -s $bulkBAM -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None
   
+Add `--chrom` if you only want to genotype specific chromosomes, e.g., `1,2`, 
+or `chrMT`.
+
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space
 and speed up inference when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``
 
@@ -92,15 +107,20 @@ Nevertheless, for species, e.g., zebrafish, without a good list of common SNPs,
 this strategy is still worth a good try, and it does not take much more time 
 than mode 1.
 
-* **Mode 3: pileup a list of SNPs for one or multiple bulk BAM/SAM files**
+* **Mode 3: pileup a list of SNPs for one or multiple BAM/SAM files**
 
-Require: one or multiple BAM/SAM files, their according sample ids, and a VCF 
-file for a list of common SNPs.
+Use `-R` but not `-b`.
+
+Require: one or multiple BAM/SAM files (bulk or smart-seq), their according 
+sample ids (optional), and a VCF file for a list of common SNPs. BAM/SAM files 
+can be input in comma separated way (`-s`) or in a list file (`-S`). 
 
 .. code-block:: bash
 
-  cellSNP -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -o $OUT_FILE -R $REGION_VCF -p 20
-  
+  cellSNP -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -o $OUT_FILE -R $REGION_VCF -p 20 --UMItag None
+
+  cellSNP -S $BAM_list_file -I sample_list_file -o $OUT_FILE -R $REGION_VCF -p 20 --UMItag None
+
 Set filtering thresholds according to the downstream analysis. Please add 
 ``--UMItag None`` if you bam file does not have UMIs, e.g., smart-seq and bulk 
 RNA-seq.
@@ -113,8 +133,8 @@ A quality list of candidate SNPs (ususally common SNPs) are important for mode 1
 and mode 3. If a list of genotyped SNPs is available, it can be used to pile up.
 Alternatively, for human, common SNPs in population that have been idenetified 
 from consortiums can also be very good candidates, e.g., gnomAD_ and 
-1000_Genome_Project_. For the latter, we have compiled a list of 37 million 
-common variants with this bash script_ and stored in this folder_.
+1000_Genome_Project_. For the latter, we have compiled a list of 7.4 million 
+common variants (AF>5%) with this bash script_ and stored in this folder_.
 
 In case you want to lift over SNP positions in vcf file from one genome build 
 to another, see our `LiftOver_vcf`_ wrap function.
