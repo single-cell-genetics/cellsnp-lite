@@ -6,7 +6,7 @@ cd $DAT_DIR
 
 ### Download data (bam file: 19G)
 if [ $DOWNLOAD = "TRUE" ]; then
-    wget https://sra-download.ncbi.nlm.nih.gov/traces/sra47/SRZ/005398/SRR5398236/B.merged.bam \ 
+    wget https://sra-pub-src-1.s3.amazonaws.com/SRR5398236/B.merged.bam.1 \ 
         -O $DAT_DIR/demux.B.merged.bam
     wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM2560nnn/GSM2560246/suppl/GSM2560246%5Fbarcodes%2Etsv%2Egz \
         -O $DAT_DIR/demux.B.barcodes.tsv.gz
