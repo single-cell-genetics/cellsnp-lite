@@ -1,11 +1,15 @@
 #!/bin/sh
 
+## Please edit the $DAT_DIR to the directory you want
+
 DOWNLOAD=${1:-FALSE}
-DAT_DIR=$HOME/links/test_cellSNP
-cd $DAT_DIR
+DAT_DIR=$HOME/test_cellSNP
+mkdir $DAT_DIR
+cd -P $DAT_DIR
 
 ### Download data (bam file: 19G)
 if [ $DOWNLOAD = "TRUE" ]; then
+    cd -P $DAT_DIR
     wget https://sra-pub-src-1.s3.amazonaws.com/SRR5398236/B.merged.bam.1 \ 
         -O $DAT_DIR/demux.B.merged.bam
     wget ftp://ftp.ncbi.nlm.nih.gov/geo/samples/GSM2560nnn/GSM2560246/suppl/GSM2560246%5Fbarcodes%2Etsv%2Egz \
@@ -22,11 +26,11 @@ BAM=$DAT_DIR/demux.B.merged.bam
 BARCODE=$DAT_DIR/demux.B.barcodes.400.tsv
 REGION=$DAT_DIR/genome1K.subset.hg19.vcf.gz
 
-### Mode 1: 10x data with SNP list
-# OUT_DIR=$DAT_DIR/demux_B
-# cellSNP -s $BAM -O $OUT_DIR -R $REGION -p 20 -b $BARCODE #--UMItag None 
+### Subsampling the bam file using synth_pool.py from vireo
+## https://github.com/single-cell-genetics/vireo/blob/master/simulate/synth_pool.py
+python $HOME/vireo/simulate/synth_pool.py -r $REGION -b $BARCODE -s $BAM -o ./lite_bam -d 0 
 
-### Mode 2: 10x data with SNP list
-OUT_DIR=$DAT_DIR/demux_B_chrM
-cellSNP -s $BAM -O $OUT_DIR --chrom chrMT -p 1 --UMItag None --cellTAG None # -b $BARCODE #--UMItag None 
 
+## rename file
+# cp lite_bam/pooled.sorted.bam demux.B.lite.bam 
+# cp lite_bam/pooled.sorted.bam.bai demux.B.lite.bam.bai
