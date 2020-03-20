@@ -16,9 +16,8 @@ Run testing data
 
   .. code-block:: bash
 
-     cd $HOME/test_cellSNP
      bash test_10x.sh TRUE # if you need to download
-     bash test_10x.sh # if you already download
+     bash test_10x.sh # if you already downloaded
      
      
 Generating test files
@@ -37,7 +36,6 @@ cellSNP is still to come.
 
   .. code-block:: bash
      
-     cd $vatrix_out
      vatrix --umi --mapq 30 -b $BAM -c $BARCODE --scoring-method coverage --threads 1 \
          --ref-matrix ref.mtx --out-matrix alt.mtx -v $REGION --fasta $FASTA --no-duplicates
          
@@ -46,7 +44,6 @@ cellSNP is still to come.
 
   .. code-block:: bash
   
-     cd $freebayes_out
      freebayes -C 0 -F 0 --fasta-reference $faFile $BAM > freebayes.vcf
      # vcffilter -f "QUAL > 20" freebayes.vcf | bgzip -c > freebayes.sorted.vcf.gz
 
