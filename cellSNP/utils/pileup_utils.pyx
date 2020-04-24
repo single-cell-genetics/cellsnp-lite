@@ -13,6 +13,7 @@ import pysam
 import numpy as np
 from .base_utils import id_mapping, unique_list
 from ..version import __version__
+from .cellsnp_utils import get_query_bases, get_query_qualities
 
 VCF_HEADER = (
     '##fileformat=VCFv4.2\n'
@@ -99,8 +100,8 @@ def qual_vector(qual=None, capBQ=45, minBQ=0.25):
         return [0, 0, 0, 0]
     BQ = ord(qual) - 33
     BQ = max(min(capBQ, BQ), minBQ)
-    P = 0.1**(BQ / 10) # Sanger coding, error probability
-    RV = [np.log(1-P), np.log(3/4 - 2/3*P), np.log(1/2 - 1/3*P), np.log(P)]
+    P = 0.1**(BQ / 10.0) # Sanger coding, error probability
+    RV = [np.log(1-P), np.log(3.0/4 - 2.0/3*P), np.log(1.0/2 - 1.0/3*P), np.log(P)]
     return RV
 
 
@@ -122,20 +123,20 @@ def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
     REF_qual = qual_matrix[ref_idx, :]
     ALT_qual = qual_matrix[alt_idx, :]
     OTH_qual = (np.sum(qual_matrix[other_idx, 3]) + 
-                np.log(2/3) * np.sum(np.array(base_count)[other_idx]))
+                np.log(2.0/3) * np.sum(np.array(base_count)[other_idx]))
     
-    GL1 = OTH_qual + REF_qual[0] + ALT_qual[3] + np.log(1/3) * ALT_read
+    GL1 = OTH_qual + REF_qual[0] + ALT_qual[3] + np.log(1.0/3) * ALT_read
     GL2 = OTH_qual + REF_qual[2] + ALT_qual[2]
-    GL3 = OTH_qual + REF_qual[3] + ALT_qual[0] + np.log(1/3) * REF_read
-    GL4 = OTH_qual + REF_qual[1] + np.log(1/4) * ALT_read
-    GL5 = OTH_qual + ALT_qual[1] + np.log(1/4) * REF_read
+    GL3 = OTH_qual + REF_qual[3] + ALT_qual[0] + np.log(1.0/3) * REF_read
+    GL4 = OTH_qual + REF_qual[1] + np.log(1.0/4) * ALT_read
+    GL5 = OTH_qual + ALT_qual[1] + np.log(1.0/4) * REF_read
     if doublet_GL:
         out_GL_list = [GL1, GL2, GL3, GL4, GL5]
     else:
         out_GL_list = [GL1, GL2, GL3]
 
     GT_out = ["0/0", "1/0", "1/1"][np.argmax([GL1, GL2, GL3])]
-    PL_out = ",".join(["%.0f" %(-10 * x  / np.log(10)) for x in out_GL_list])
+    PL_out = ",".join(["%.0f" %(-10.0 * x  / np.log(10)) for x in out_GL_list])
     #GL_out = ",".join(["%.2f" %(x / np.log(10)) for x in out_GL_list])
 
     return GT_out, PL_out
@@ -180,9 +181,9 @@ def fetch_bases(samFile, chrom, POS, cell_tag="CR", UMI_tag="UR", min_MAPQ=20,
         if cell_tag is not None:
             cell_list.append(_read.get_tag(cell_tag))
 
-        _base = _read.query_alignment_sequence[idx].upper()
+        _base = get_query_bases(_read, full_length = False)[idx].upper()
         base_list.append(_base)
-        qual_list.append(_read.qqual[idx])
+        qual_list.append(get_query_qualities(_read, full_length = False)[idx])
     return base_list, qual_list, UMIs_list, cell_list
 
 
@@ -263,7 +264,7 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
             qual_cells = qual_cells_sample
             
         if sum(base_merge.values()) < min_COUNT:
-                continue  
+            continue  
         
         if REF is not None and ALT is not None:
             _REF, _ALT = REF[i], ALT[i]
@@ -325,6 +326,7 @@ def map_barcodes(base_list, qual_list, cell_list, UMIs_list, barcodes):
             base_merge[base_list[i]] += 1
             qual_cells[0][BASE_IDX[base_list[i]], :] += qual_vector(qual_list[i])
         base_cells = [[base_merge[x] for x in "ACGTN"]]
+
     return base_merge, base_cells, qual_cells
 
 

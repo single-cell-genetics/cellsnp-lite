@@ -4,6 +4,7 @@
 # Date: 21/05/2018
 
 from .pileup_utils import *
+from .cellsnp_utils import get_query_bases, get_query_qualities
 
 ## ealier high error in pileup whole genome might come from
 ## using _read.query_sequence, which has only partially aligned
@@ -55,8 +56,8 @@ def pileup_bases(pileupColumn, real_POS, cell_tag, UMI_tag, min_MAPQ,
                 idx = _read.positions.index(real_POS-1)
             except:
                 continue
-            _qual = _read.qqual[idx]
-            _base = _read.query_alignment_sequence[idx].upper()
+            _qual = get_query_bases(_read, full_length = False)[idx]
+            _base = get_query_qualities(_read, full_length = False)[idx].upper()
         else:
             query_POS = pileupread.query_position
             _qual = _read.qual[query_POS - 1]
@@ -113,9 +114,9 @@ def pileup_regions(samFile, barcodes, out_file=None, chrom=None, cell_tag="CR",
         base_merge, base_cells, qual_cells = map_barcodes(base_list, qual_list, 
             cell_list, UMIs_list, barcodes)
         
-        vcf_line = get_vcf_line(base_merge, base_cells, qual_cells, 
+        vcf_line = get_vcf_line(base_merge, base_cells, qual_cells,
             pileupcolumn.reference_name, pileupcolumn.pos, min_COUNT, min_MAF,
-            doublet_GL = doublet_GL)
+            REF = None, ALT = None, doublet_GL = doublet_GL)
 
         if vcf_line is not None:
             if out_file is None:
