@@ -4,7 +4,8 @@
 # Date: 21/05/2018
 
 from .pileup_utils import *
-from .cellsnp_utils import get_query_bases, get_query_qualities
+from .pileup_utils cimport *
+from .cellsnp_utils cimport get_query_bases, get_query_qualities
 
 ## ealier high error in pileup whole genome might come from
 ## using _read.query_sequence, which has only partially aligned

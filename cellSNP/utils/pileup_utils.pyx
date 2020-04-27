@@ -11,9 +11,10 @@
 import sys
 import pysam
 import numpy as np
+cimport libc.math as c_math
 from .base_utils import id_mapping, unique_list
 from ..version import __version__
-from .cellsnp_utils import get_query_bases, get_query_qualities
+from .cellsnp_utils cimport get_query_bases, get_query_qualities, c_max, c_min
 
 VCF_HEADER = (
     '##fileformat=VCFv4.2\n'
@@ -87,8 +88,7 @@ def check_pysam_chrom(samFile, chrom=None):
     CACHE_SAMFILE = samFile
     return samFile, chrom
 
-
-def qual_vector(qual=None, capBQ=45, minBQ=0.25):
+cdef qual_vector(qual=None, double capBQ=45, double minBQ=0.25):
     """convert the base call quality score to related values for different genotypes
     http://emea.support.illumina.com/bulletins/2016/04/fastq-files-explained.html
     https://linkinghub.elsevier.com/retrieve/pii/S0002-9297(12)00478-8
@@ -98,14 +98,15 @@ def qual_vector(qual=None, capBQ=45, minBQ=0.25):
     """
     if qual is None:
         return [0, 0, 0, 0]
+    cdef double BQ, P
     BQ = ord(qual) - 33
-    BQ = max(min(capBQ, BQ), minBQ)
-    P = 0.1**(BQ / 10.0) # Sanger coding, error probability
-    RV = [np.log(1-P), np.log(3.0/4 - 2.0/3*P), np.log(1.0/2 - 1.0/3*P), np.log(P)]
+    BQ = c_max(c_min(capBQ, BQ), minBQ)
+    P = c_math.pow(0.1, BQ / 10.0) # Sanger coding, error probability
+    RV = [c_math.log(1-P), c_math.log(3.0/4 - 2.0/3*P), c_math.log(1.0/2 - 1.0/3*P), c_math.log(P)]
     return RV
 
 
-def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
+cdef qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, bint doublet_GL=False):
     """
     qual_matrix: 5-by-4: ACGTN vs [1-Q, 3/4-2/3Q, 1/2-1/3Q, Q]
     base_count: (5,) for ACGTN
@@ -114,29 +115,32 @@ def qual_matrix_to_geno(qual_matrix, base_count, REF, ALT, doublet_GL=False):
         GL1: L(rr|qual_matrix, base_count), 
         GL2-GL5: L(ra|..), L(aa|..), L(rr+ra|..), L(ra+aa|..)
     """
-    ref_idx = BASE_IDX[REF]
-    alt_idx = BASE_IDX[ALT]
-    other_idx = [x for x in range(5) if "ACGTN"[x] not in [REF, ALT]]
+    cdef int ref_idx = BASE_IDX[REF]
+    cdef int alt_idx = BASE_IDX[ALT]
+    cdef int x
+    other_idx = [x for x in range(5) if "ACGTN"[x] not in [REF, ALT]]  # do not use cdef to save the overhead of initializing memoryview.
 
-    REF_read = base_count[ref_idx]
-    ALT_read = base_count[alt_idx]
+    cdef int REF_read = base_count[ref_idx]
+    cdef int ALT_read = base_count[alt_idx]
     REF_qual = qual_matrix[ref_idx, :]
     ALT_qual = qual_matrix[alt_idx, :]
-    OTH_qual = (np.sum(qual_matrix[other_idx, 3]) + 
-                np.log(2.0/3) * np.sum(np.array(base_count)[other_idx]))
+    cdef double OTH_qual = np.sum(qual_matrix[other_idx, 3]) + \
+                            c_math.log(2.0/3) * np.sum(np.array(base_count)[other_idx])
     
-    GL1 = OTH_qual + REF_qual[0] + ALT_qual[3] + np.log(1.0/3) * ALT_read
-    GL2 = OTH_qual + REF_qual[2] + ALT_qual[2]
-    GL3 = OTH_qual + REF_qual[3] + ALT_qual[0] + np.log(1.0/3) * REF_read
-    GL4 = OTH_qual + REF_qual[1] + np.log(1.0/4) * ALT_read
-    GL5 = OTH_qual + ALT_qual[1] + np.log(1.0/4) * REF_read
+    cdef double GL1 = OTH_qual + REF_qual[0] + ALT_qual[3] + c_math.log(1.0/3) * ALT_read
+    cdef double GL2 = OTH_qual + REF_qual[2] + ALT_qual[2]
+    cdef double GL3 = OTH_qual + REF_qual[3] + ALT_qual[0] + c_math.log(1.0/3) * REF_read
+    cdef double GL4 = OTH_qual + REF_qual[1] + c_math.log(1.0/4) * ALT_read
+    cdef double GL5 = OTH_qual + ALT_qual[1] + c_math.log(1.0/4) * REF_read
     if doublet_GL:
         out_GL_list = [GL1, GL2, GL3, GL4, GL5]
     else:
         out_GL_list = [GL1, GL2, GL3]
 
     GT_out = ["0/0", "1/0", "1/1"][np.argmax([GL1, GL2, GL3])]
-    PL_out = ",".join(["%.0f" %(-10.0 * x  / np.log(10)) for x in out_GL_list])
+    cdef double z
+    cdef double y = c_math.log(10)
+    PL_out = ",".join(["%.0f" % (-10 * z  / y) for z in out_GL_list])
     #GL_out = ",".join(["%.2f" %(x / np.log(10)) for x in out_GL_list])
 
     return GT_out, PL_out
