@@ -51,6 +51,9 @@ cdef get_query_qualities(AlignedSegment read, bint full_length=False):
                          unaligned positions within the read. The returned list will thus be of the 
                          same length as the read. [bint]
     @return              A list of qualities. [list]
+
+    @note                The returned qual values are not ASCII-encoded values typically seen in FASTQ or SAM formatted files,
+                         so no need to substract 33.
     """
     cdef uint32_t k, i, l, pos
     cdef int op
@@ -72,7 +75,7 @@ cdef get_query_qualities(AlignedSegment read, bint full_length=False):
             pos += l
         elif op == BAM_CMATCH or op == BAM_CEQUAL or op == BAM_CDIFF:
             for i from pos <= i < pos + l:
-                result.append(chr(s[i] + 33))
+                result.append(s[i])
             pos += l
         # else: do nothing.
     return result

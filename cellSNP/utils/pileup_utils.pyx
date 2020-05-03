@@ -92,15 +92,17 @@ cdef qual_vector(qual=None, double capBQ=45, double minBQ=0.25):
     """convert the base call quality score to related values for different genotypes
     http://emea.support.illumina.com/bulletins/2016/04/fastq-files-explained.html
     https://linkinghub.elsevier.com/retrieve/pii/S0002-9297(12)00478-8
-    
+
+    @Note  The parameter "qual" is the qual value that is not the ASCII-encoded values typically seen in 
+           FASTQ or SAM formatted files, so no need to substract 33.
+
     Return: a vector of loglikelihood for 
     AA, AA+AB (doublet), AB, B or E (see Demuxlet paper online methods)
     """
     if qual is None:
         return [0, 0, 0, 0]
     cdef double BQ, P
-    BQ = ord(qual) - 33
-    BQ = c_max(c_min(capBQ, BQ), minBQ)
+    BQ = c_max(c_min(capBQ, qual), minBQ)
     P = c_math.pow(0.1, BQ / 10.0) # Sanger coding, error probability
     RV = [c_math.log(1-P), c_math.log(3.0/4 - 2.0/3*P), c_math.log(1.0/2 - 1.0/3*P), c_math.log(P)]
     return RV
