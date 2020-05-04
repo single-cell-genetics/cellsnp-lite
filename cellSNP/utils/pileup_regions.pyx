@@ -61,7 +61,7 @@ def pileup_bases(pileupColumn, real_POS, cell_tag, UMI_tag, min_MAPQ,
             _base = get_query_qualities(_read, full_length = False)[idx].upper()
         else:
             query_POS = pileupread.query_position
-            _qual = _read.qual[query_POS - 1]       # qual value in read.qual does not need to substract 33.
+            _qual = _read.query_qualities[query_POS - 1]
             _base = _read.query_sequence[query_POS - 1].upper()
 
         ## filtering reads
