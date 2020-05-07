@@ -237,13 +237,19 @@ def fetch_positions(samFile_list, chroms, positions, REF=None, ALT=None,
             fid.writelines("\t".join(VCF_COLUMN + barcodes) + "\n")
         else:
             fid.writelines("\t".join(VCF_COLUMN + sample_ids) + "\n")
-    
+
+    POS_CNT_TOTAL = len(positions)
+    POS_CNT_NPRINTS = 50           # expected times to print the percentage of positions.
+    POS_CNT_PERC_M = POS_CNT_TOTAL / POS_CNT_NPRINTS
+    POS_CNT_PERC_N = POS_CNT_PERC_M
     POS_CNT = 0
     vcf_lines_all = []
     for i in range(len(positions)):
         POS_CNT += 1
-        if verbose and POS_CNT % 10000 == 0:
-            print("%.2fM positions processed." %(POS_CNT/1000000))
+        if verbose and POS_CNT_TOTAL and POS_CNT >= POS_CNT_PERC_N:
+            print("%.2f%% positions processed." % (POS_CNT / POS_CNT_TOTAL * 100.0))
+            POS_CNT_PERC_N += POS_CNT_PERC_M
+            POS_CNT_PERC_N = POS_CNT_PERC_N if POS_CNT_PERC_N <= POS_CNT_TOTAL else POS_CNT_TOTAL
         
         base_cells_sample = []
         qual_cells_sample = []
