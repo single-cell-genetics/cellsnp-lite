@@ -2,21 +2,12 @@
 cellSNP
 =======
 
-|PyPI| |Build Status| |DOI|
-
-.. |PyPI| image:: https://img.shields.io/pypi/v/cellSNP.svg
-    :target: https://pypi.org/project/cellSNP
-.. |Build Status| image:: https://travis-ci.org/PMBio/cellSNP.svg?branch=master
-   :target: https://travis-ci.org/PMBio/cellSNP
-.. |DOI| image:: https://zenodo.org/badge/145724973.svg
-   :target: https://zenodo.org/badge/latestdoi/145724973
-
 cellSNP aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed 
 single-cell RNA-seq data, particularly with vireo_, which assigns cells to 
 donors and detects doublets, even without genotyping reference.
 
-cellSNP heavily depends on pysam_, a Python interface for samtools and bcftools. 
+cellSNP heavily depends on htslib. 
 This program should give very similar results as samtools/bcftools mpileup. 
 Also, there are two major differences comparing to bcftools mpileup:
 
@@ -41,21 +32,20 @@ For computational efficiency, we initialised comments on this: `doc/speed.rst`_
 Installation
 ------------
 
-cellSNP is available through `pypi`_. To install, type the following command 
-line, and add ``-U`` for upgrading:
+cellSNP depends on `zlib`_ and `htslib`_. The two libs should have been installed in the system before
+installing cellSNP. Then to install cellSNP,  
 
 .. code-block:: bash
 
-  pip install cellSNP
+  git clone https://github.com/single-cell-genetics/cellSNP.git;
+  cd cellSNP; 
+  make;
+  sudo make install;
+  
+Done.
 
-Alternatively, you can download or clone this repository and type 
-``python setup.py install`` to install. In either case, add ``--user`` if you 
-don't have the permission as a root or for your Python environment.
-
-From v0.1.0, cellSNP requires pysam>=0.15.2, so make sure you are using 
-the right version of `pysam`. Try `pip uninstall pysam` and then reinstall 
-`pip install -U pysam`
-
+.. _zlib: http://zlib.net/
+.. _htslib: https://github.com/samtools/htslib
 
 Quick usage
 -----------
@@ -73,14 +63,14 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20
+  cellSNP -s $BAM -b $BARCODE -o $OUT_FILE -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20
   
 As shown in the above command line, we recommend filtering SNPs with <20UMIs  
 or <10% minor alleles for downstream donor deconvolution, by adding 
 ``--minMAF 0.1 --minCOUNT 20``
 
 
-* **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file**
+* **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file (Will be supported soon...)**
 
 Don't use `-R` but flexible on `-b`. 
 
