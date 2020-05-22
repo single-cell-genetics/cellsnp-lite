@@ -42,7 +42,18 @@ installing cellSNP. Then to install cellSNP,
   make;
   sudo make install;
   
-Done.
+By default, this will build against an HTSlib source tree in ../htslib. You can alter this to a source tree elsewhere or to a 
+previously-installed HTSlib by running ``make htslib_dir=<path_to_htslib_dir>``.  
+
+Besides, if you met the error ``error while loading shared libraries: libhts.so.3`` when running cellSNP, you could fix this 
+by setting environment variable ``LD_LIBRARY_PATH`` to proper value,
+
+.. code-block:: bash
+
+  echo 'export LD_LIBRARY_PATH=<abspath_to_htslib_dir>:$LD_LIBRARY_PATH' >> ~/.bashrc;
+  source ~/.bashrc;
+  
+Done.  
 
 .. _zlib: http://zlib.net/
 .. _htslib: https://github.com/samtools/htslib

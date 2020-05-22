@@ -19,6 +19,7 @@
 #include <libgen.h>
 #include <time.h>
 #include <zlib.h>
+#include <assert.h>
 #include "thpool.h"
 #include "general_util.h"
 #include "cellsnp_util.h"
