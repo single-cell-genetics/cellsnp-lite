@@ -144,8 +144,7 @@ static inline int str_arr_join(char **a, const int n, int c, kstring_t *s) {
 @note         Only works for Unix system as the path seperator used in this function is '/'.
  */
 static inline char* join_path(const char *p1, const char *p2) {
-    kstring_t ks = KS_INITIALIZE;
-    kstring_t *s = &ks;
+    kstring_t ks = KS_INITIALIZE, *s = &ks;
     char *p = NULL;
     int n1;
     if (NULL == p1 || (n1 = strlen(p1)) <= 0 || NULL == p2) { ks_free(s); return NULL; }
@@ -184,96 +183,30 @@ static int merge_files(char **in_fn, const int n, const char *out_fn) {
     if (out) fclose(out);
     return i;
 }
-
-/*@abstract    Output contents of several files to stream.
-@param in_fn   Names of input files to be merged.
-@param n       Num of input files.
-@param out     Pointer of output stream.
-@return        Num of files have been merged.
-
-@note          Do not close the out stream inside this function! It should be closed by the caller.
- */
-static int merge_files_to_fp(char **in_fn, const int n, FILE *out) {
-    char buf[TMP_BUFSIZE];
-    FILE *in = NULL;
-    int i = 0;
-    size_t m;
-    if (NULL == in_fn || NULL == out) { return 0; }
-    for (i = 0; i < n; i++) {
-        if (NULL == (in = fopen(in_fn[i], "r"))) { fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, in_fn[i]); goto fail; }
-        while ((m = fread(buf, 1, TMP_BUFSIZE, in)) > 0) { fwrite(buf, 1, m, out); }
-        if (ferror(in)) { goto fail; }
-        else { fclose(in); in = NULL; }
-    }
-    return i;
-  fail:
-    if (in) fclose(in);
-    return i;
-}
-
-/*@abstract    Output contents of several files to zipped stream.
-@param in_fn   Names of input files to be merged.
-@param n       Num of input files.
-@param out     Pointer of zipped output stream.
-@return        Num of files have been merged.
-
-@note          Do not close the out stream inside this function! It should be closed by the caller.
- */
-static int merge_files_to_zip_fp(char **in_fn, const int n, gzFile out) {
-    char buf[TMP_BUFSIZE];
-    FILE *in = NULL;
-    int i = 0;
-    size_t m;
-    if (NULL == in_fn || NULL == out) { return 0; }
-    for (i = 0; i < n; i++) {
-        if (NULL == (in = fopen(in_fn[i], "r"))) { fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, in_fn[i]); goto fail; }
-        while ((m = fread(buf, 1, TMP_BUFSIZE, in)) > 0) { gzwrite(out, buf, m); }
-        if (ferror(in)) { goto fail; }
-        else { fclose(in); in = NULL; }
-    }
-    return i;
-  fail:
-    if (in) fclose(in);
-    return i;
-}
-
-/*@abstract    Output contents of several zipped files to zipped stream.
-@param in_fn   Names of input zipped files to be merged.
-@param n       Num of input files.
-@param out     Pointer of zipped output stream.
-@return        Num of files have been merged.
-
-@note          Do not close the out stream inside this function! It should be closed by the caller.
- */
-static int merge_zip_files_to_zip_fp(char **in_fn, const int n, gzFile out) {
-    char buf[TMP_BUFSIZE];
-    gzFile in = NULL;
-    int i = 0;
-    size_t m;
-    if (NULL == in_fn || NULL == out) { return 0; }
-    for (i = 0; i < n; i++) {
-        if (NULL == (in = gzopen(in_fn[i], "rb"))) { fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, in_fn[i]); goto fail; }
-        while ((m = gzread(in, buf, TMP_BUFSIZE)) > 0) { gzwrite(out, buf, m); }
-        gzclose(in); in = NULL;
-    }
-    return i;
-  fail:
-    if (in) gzclose(in);
-    return i;
-}
 #undef TMP_BUFSIZE
 
-/*@abstract      Remove several files.
-@param fn        Names of files to be removed.
-@param n         Num of files.
-@return          Num of files have been removed.
+/*@abstract  Remove file.
+@param fn    Name of file to be removed.
+@return      1 if success, 0 if file does not exist, -1 if failure.
+ */
+static inline int remove_file(char *fn) {
+    if (0 != access(fn, F_OK)) { return 0; }
+    if (remove(fn) < 0) { return -1; }
+    return 1;
+}
+
+/*@abstract   Remove several files.
+@param fn     Names of files to be removed.
+@param n      Num of files.
+@return       Num of files have been removed if no error, -1 otherwise.
  */
 static inline int remove_files(char **fn, const int n) {
-    int i;
-    for (i = 0; i < n; i++) {
-        if (0 != access(fn[i], F_OK) || remove(fn[i]) < 0) break;
+    int i, j, ret;
+    for (i = 0, j = 0; i < n; i++) {
+        if ((ret = remove_file(fn[i])) < 0) { return -1; }
+        else { j += ret; }
     }
-    return i;
+    return j;
 }
 
 /* 
@@ -284,6 +217,7 @@ static inline int remove_files(char **fn, const int n) {
 It's often used when need dynamically allocate and free/reset memory. The main feature (diff from kv_t) of SZ_POOL are:
 1. It can automately allocate memory for elements in the pool.
 2. It can automately reset the eleements in the pool.
+@TODO: add init function as parameter.
 
 An example:
 #include <stdio.h>

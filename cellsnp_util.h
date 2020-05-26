@@ -2,10 +2,20 @@
 #ifndef CELL_SNP_UTIL_H
 #define CELL_SNP_UTIL_H
 
+#define DEBUG 0
+#define VERBOSE 1
+/* DEVELOP defined to 1 means some codes for future version of cellsnp will be included. */
+#define DEVELOP 0
+
+#define CSP_NAME "cellSNP"
+#define CSP_VERSION "0.1.0"
+#define CSP_AUTHOR "hxj5"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdarg.h>
 #include "htslib/vcf.h"
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
@@ -36,9 +46,7 @@ static inline int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_
         if (strlen(name) > 3 && 'c' == name[0] && 'h' == name[1] && 'r' == name[2]) { return sam_hdr_name2tid(hdr, name + 3); }
         else {
             kputs("chr", s); kputs(name, s);
-            tid = sam_hdr_name2tid(hdr, ks_str(s));
-            ks_clear(s);
-            return tid;
+            return sam_hdr_name2tid(hdr, ks_str(s));
         }
     } else { return tid; }
 }
@@ -102,6 +110,10 @@ static inline char* get_bam_aux_str(bam1_t *b, const char tag[2]) {
     return bam_aux2Z(data);
 }
 
+/*
+* File API
+ */
+
 /*@abstract  Packing the common bam file related pointers into a structure. */
 typedef struct {
     htsFile *fp;
@@ -129,12 +141,7 @@ static inline void csp_bam_fs_destroy(csp_bam_fs *p) {
 /*@abstract  Build the csp_bam_fs structure.  
 @param fn    Filename of the bam/sam/cram.
 @param ret   Pointer to the state.
-             0 if success, negative numbers otherwise:
-               -1, fn is NULL.
-               -3, init csp_bam_fs structure error.
-               -5, open bam/sam/cram error.
-               -7, read sam header error.
-               -9, load sam index error.
+             0 if success, -1 for memory error, -2 for open/parse sam file error.
 @return      The pointer to the csp_bam_fs structure if success, NULL otherwise.
 
 @note        The pointer returned successfully by csp_bam_fs_build() should be freed
@@ -143,10 +150,10 @@ static inline void csp_bam_fs_destroy(csp_bam_fs *p) {
 static inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
     csp_bam_fs *p;
     if (NULL == fn) { *ret = -1; return NULL; }
-    if (NULL == (p = csp_bam_fs_init())) { *ret = -3; return NULL; }
-    if (NULL == (p->fp = hts_open(fn, "rb"))) { *ret = -5; goto fail; }
-    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { *ret = -7; goto fail; }
-    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { *ret = -9; goto fail; }
+    if (NULL == (p = csp_bam_fs_init())) { *ret = -1; return NULL; }
+    if (NULL == (p->fp = hts_open(fn, "rb"))) { *ret = -2; goto fail; }
+    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { *ret = -2; goto fail; }
+    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { *ret = -2; goto fail; }
     *ret = 0;
     return p;
   fail:
@@ -159,10 +166,194 @@ static inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn) {
     if (p->idx) { hts_idx_destroy(p->idx); }
     if (p->hdr) { sam_hdr_destroy(p->hdr); }
     if (p->fp)  { hts_close(p->fp); }		
-    if (NULL == (p->fp = hts_open(fn, "rb"))) { return -3; }
-    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { return -5; }
-    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { return -7; }
+    if (NULL == (p->fp = hts_open(fn, "rb"))) { return -1; }
+    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { return -1; }
+    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { return -1; }
     return 0;
+}
+
+/* let gzgets() to be compatible with kgetline(). */
+static inline char* csp_gzgets(char *buf, int len, gzFile fp) { return gzgets(fp, buf, len); }
+
+/*@abstract    Structure used for outputed files with Simple Output Buffer.
+@param fn      Filename.
+@param fm      Filemode.
+@param zfp     File pointer for zipped mode.
+@param fp      File pointer for non-zipped mode.
+@param is_zip  If the outputed file should be zipped.
+@param is_tmp  If the outputed file is a tmp file. It's only used by mtx file and has no effect on I/O.
+@param is_open If the outputed file is open.
+@param buf     Mimic Output Buffer.
+@param bufsize Size of buffer.
+@note          1. The @p fn should be valid pointer coming from strdup().
+               2. The @p fm points to const string, so do not free it!
+               3. Output buffer is inside the structure.
+@TODO  Add is_error to save the state that if I/O has error.
+ */
+typedef struct {
+    char *fn;
+    char *fm;
+    gzFile zfp;
+    FILE *fp;
+    uint8_t is_zip, is_tmp, is_open;
+    kstring_t ks, *buf;
+    size_t bufsize;
+} csp_fs_t;
+
+/*@abstract  Initialize the csp_fs_t structure.
+@param       Void.
+@return      Pointer of csp_fs_t if success, NULL otherwise.
+ */
+static inline csp_fs_t* csp_fs_init(void) { 
+    csp_fs_t *p = (csp_fs_t*) calloc(1, sizeof(csp_fs_t));
+    if (p) { p->buf = &p->ks; p->bufsize = 1048576; }   // p->ks has been initialized after calling calloc(). Double initializing will cause error.
+    return p;
+}
+
+static inline void csp_fs_destroy(csp_fs_t* p) {
+    if (p) {
+        if (p->is_open) {
+            if (p->is_zip) { gzclose(p->zfp); p->zfp = NULL; }
+            else { fclose(p->fp); p->fp = NULL; }
+        }
+        ks_free(p->buf);
+        free(p->fn); free(p);
+    }
+}
+
+static inline void csp_fs_set_bufsize(csp_fs_t *p, size_t bufsize) { p->bufsize = bufsize; }
+
+/* If the csp_fs_t is open. 0:no; 1:yes. */
+static inline int csp_fs_isopen(csp_fs_t *p) { return p->is_open; }
+
+/*@abstract  Open csp_fs_t for reading or writing.
+@param p     Pointer of csp_fs_t.
+@param mode  Open mode as in fopen(). if NULL, use default mode inside csp_fs_t.
+@return      1 if success, 0 if already open, -1 if error. 
+ */
+static inline int csp_fs_open(csp_fs_t *p, char *mode) {
+    if (p->is_open) { return 0; }
+    char *fm = mode ? mode : p->fm;
+    if (p->is_zip) {
+        if (NULL == (p->zfp = gzopen(p->fn, fm))) { return -1; }
+        else { p->is_open = 1; return 1; }
+    } else if (NULL == (p->fp = fopen(p->fn, fm))) {
+        return -1;
+    } else { p->is_open = 1; return 1; }
+}
+
+/*@abstract  Read from csp_fs_t without Input buffer.
+@param p     Pointer of csp_fs_t.
+@param buf   Buffer where the read content will be pushed into.
+@param len   Size of content to be read.
+@return      Value returned as gzread/fread. */
+static inline ssize_t csp_fs_read(csp_fs_t *p, char *buf, size_t len) {
+    return p->is_zip ? gzread(p->zfp, buf, len) : fread(buf, 1, len, p->fp);
+}
+
+/*@abstract  Get a line from csp_fs_t without Input buffer.
+@param p     Pointer of csp_fs_t.
+@param s     Pointer of kstring_t which saves the line.
+@return      Value returned as kgetline(). 0 if success, EOF if end-of-file or error.
+
+@note        kgetline() is defined in htslib/kstring.h 
+*/
+static inline int csp_fs_getln(csp_fs_t *p, kstring_t *s) {
+    return p->is_zip ? kgetline(s, (kgets_func*) csp_gzgets, p->zfp) : kgetline(s, (kgets_func*) fgets, p->fp);
+}
+
+/*@abstract  Output functions below are like kxxx() functions in htslib/kstring.h with Output buffer.
+@return      Value returned are like in fxxx()/kxxx() functions (fputc()/kputc() etc.), which are 
+             the real size outputed if success, EOF if error. */
+
+/*@abstract  Flush buffer to stream.
+@param p     Pointer of csp_fs_t.
+@return      0 if success, EOF otherwise.
+ */
+static inline int csp_fs_flush(csp_fs_t *p) {
+    ssize_t l, l0 = ks_len(p->buf);
+    l = p->is_zip ? gzwrite(p->zfp, ks_str(p->buf), ks_len(p->buf)) : fwrite(ks_str(p->buf), 1, ks_len(p->buf), p->fp);
+    ks_clear(p->buf);
+    return l == l0 ? 0 : EOF;
+}
+
+static inline int csp_fs_printf(csp_fs_t *p, const char *fmt, ...) {
+    va_list ap;
+    int l;
+    va_start(ap, fmt);
+    l = kvsprintf(p->buf, fmt, ap);
+    va_end(ap);
+    if (ks_len(p->buf) >= p->bufsize && csp_fs_flush(p) < 0) { return EOF; }
+    return l;
+}
+
+static inline int csp_fs_putc(int c, csp_fs_t *p) { 
+    int l;
+    l = kputc(c, p->buf);
+    if (ks_len(p->buf) >= p->bufsize && csp_fs_flush(p) < 0) { return EOF; }
+    return l;
+}
+
+static inline int csp_fs_putc_(int c, csp_fs_t *p) { 
+    int l;
+    l = kputc_(c, p->buf);
+    if (ks_len(p->buf) >= p->bufsize && csp_fs_flush(p) < 0) { return EOF; }
+    return l;
+}
+
+static inline int csp_fs_puts(const char *s, csp_fs_t *p) { 
+    int l;
+    l = kputs(s, p->buf); 
+    if (ks_len(p->buf) >= p->bufsize && csp_fs_flush(p) < 0) { return EOF; }
+    return l;
+}
+
+static inline int csp_fs_write(csp_fs_t *p, char *buf, size_t len) { 
+    int l; 
+    l = kputsn(buf, len, p->buf);
+    if (ks_len(p->buf) >= p->bufsize && csp_fs_flush(p) < 0) { return EOF; }
+    return l;
+}
+
+/*@abstract  Close csp_fs_t but does not destroy it.
+@param p     Pointer of csp_fs_t.
+@return      0 if success, EOF otherwise.
+
+@note        Even fail, the csp_fs_t will still be set to not open.
+ */
+static inline int csp_fs_close(csp_fs_t *p) {
+    int ret = 0;
+    if (p->is_open) {
+        if (ks_len(p->buf) && csp_fs_flush(p) < 0) { ret = EOF; } // only for write mode.
+        if (p->is_zip) { gzclose(p->zfp); p->zfp = NULL; }
+        else { fclose(p->fp); p->fp = NULL; }
+        p->is_open = 0;
+    } 
+    return ret;
+}
+
+/*@abstract   Remove file.
+@param p      Pointer of csp_fs_t to be removed.
+@return       1 if success, 0 if file does not exist, -1 if failure.
+ */
+static inline int csp_fs_remove(csp_fs_t *p) {
+    if (0 != access(p->fn, F_OK)) { return 0; }
+    if (remove(p->fn) < 0) { return -1; }
+    return 1;
+}
+
+/*@abstract   Remove all files in array.
+@param fs     Pointer of array of csp_fs_t to be removed.
+@param n      Size of array.
+@return       Num of files have been removed if no error, -1 otherwise.
+ */
+static inline int csp_fs_remove_all(csp_fs_t **fs, const int n) {
+    int i, j, ret;
+    for (i = 0, j = 0; i < n; i++) {
+        if ((ret = csp_fs_remove(fs[i])) < 0) { return -1; }
+        else { j += ret; }
+    }
+    return j;
 }
 
 /* 
@@ -290,7 +481,7 @@ static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret) 
 #define get_snplist(fn, pl, ret) get_snplist_from_vcf((fn), (pl), (ret))
 
 /* 
-* Thread API 
+* Thread API
 */
 /*@abstract    The data structure used as thread-func parameter.
 @param gs      Pointer to the global_settings structure.
@@ -299,9 +490,9 @@ static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret) 
 @param ci      Index of the element in the chrom_all array used by certain thread.
 @param i       Id of the thread data.
 @param ret     Running state of the thread.
-@param out_fn  Name of the output file. Data that the pointer points to would be freed elsewhere.
-@param out_fm  Mode of the output file. w/a.
-@param is_out_zip  If out file needs to be zipped.
+@param ns      Num of SNPs that passed all filters.
+@param nr_*    Num of records for each output matrix file. 
+@param out_*   Pointers of output files.
  */
 typedef struct {
     global_settings *gs;
@@ -309,9 +500,8 @@ typedef struct {
     int ci;        // for chromosome(s).
     int i;
     int ret;
-    char *out_fn;
-    char *out_fm;
-    int is_out_zip;
+    size_t ns, nr_ad, nr_dp, nr_oth;
+    csp_fs_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth, *out_vcf_base, *out_vcf_cells;
 } thread_data;
 
 /*@abstract  Create the thread_data structure.
@@ -326,7 +516,6 @@ static inline void thdata_destroy(thread_data *p) { free(p); }
 static inline void thdata_print(FILE *fp, thread_data *p) {
     fprintf(fp, "\tm = %ld, n = %ld\n", p->m, p->n);
     fprintf(fp, "\tci = %d, i = %d, ret = %d\n", p->ci, p->i, p->ret);
-    fprintf(fp, "\tout_fn = '%s', out_fm = '%s', is_out_zip = %d\n", p->out_fn, p->out_fm, p->is_out_zip);
 }
 
 /*
@@ -455,7 +644,11 @@ typedef sz_pool_t(uu) csp_pool_uu_t;
            which is different from kv_xxx functions.
  */
 typedef kvec_t(csp_umi_unit_t*) csp_list_uu_t;
-#define csp_list_uu_init(v) kv_init(*(v))
+static inline csp_list_uu_t* csp_list_uu_init(void) {
+    csp_list_uu_t *v = (csp_list_uu_t*) malloc(sizeof(csp_list_uu_t));
+    if (v) { kv_init(*v); }
+    return v;
+}
 #define csp_list_uu_resize(v, size) kv_resize(csp_umi_unit_t*, *(v), size)
 #define csp_list_uu_push(v, x) kv_push(csp_umi_unit_t*, *(v), x)
 #define csp_list_uu_A(v, i) kv_A(*(v), i)
@@ -520,6 +713,22 @@ typedef khash_t(ug) csp_map_ug_t;
     }																															\
 }
 
+/* Struct csp_list_qu_t APIs 
+@abstract  The structure stores all qual value of one sample for certain query pos.
+@param v   The csp_list_qu_t structure [csp_list_qu_t].
+
+@example   Refer to the example in kvec.h.
+ */
+typedef kvec_t(int8_t) csp_list_qu_t;
+#define csp_list_qu_init(v) kv_init(v)
+#define csp_list_qu_resize(v, size) kv_resize(int8_t, v, size)
+#define csp_list_qu_push(v, x) kv_push(int8_t, v, x)
+#define csp_list_qu_A(v, i) kv_A(v, i)
+#define csp_list_qu_size(v) kv_size(v)
+#define csp_list_qu_max(v) kv_max(v)
+#define csp_list_qu_destroy(v) kv_destroy(v)
+#define csp_list_qu_reset(v) ((v).n = 0)
+
 SZ_NUMERIC_OP_INIT(cu_d, double)
 SZ_NUMERIC_OP_INIT(cu_s, size_t)
 
@@ -545,7 +754,7 @@ static inline int get_qual_vector(double qual, double cap_bq, double min_bq, dou
 
 /*@abstract     Internal function to translate qual matrix to vector of GL.
 @param qm       Qual matrix: 5-by-4, columns are [1-Q, 3/4-2/3Q, 1/2-1/3Q, Q]. See csp_plp_t::qmat
-@param bc       Base count: (5, ). See csp_plp_t::bcount
+@param bc       Base count: (5, ). See csp_plp_t::bc
 @param ref_idx  Index of ref base in 'ACGTN'. 
 @param alt_idx  Index of alt base in 'ACGTN'.
 @param db       doublet_GL. 1/0.
@@ -556,7 +765,7 @@ static inline int get_qual_vector(double qual, double cap_bq, double min_bq, dou
 @param n        Pointer of num of elements in GL array.
 @return         0 if success, -1 otherwise.
 
-@note           In some special cases, ref=A and alt=AG for example, the ref_idx would be equal with alt_idx.
+@note           TODO: In some special cases, ref=A and alt=AG for example, the ref_idx would be equal with alt_idx.
                 Should be fixed in future.
  */
 static int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_idx, int db, double *gl, int *n) {
@@ -607,43 +816,51 @@ static inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx
     *ref_idx = k1; *alt_idx = k2;
 }
 
-/*@abstract      The structure that store pileup info of one cell/sample for certain query pos.
-@param bcount    Total read count for each base in the order of 'ACGTN'.
-@param tcount    Total read count for all bases.
-@param qmat      Matrix of qual with 'ACGTN' vs. [1-Q, 3/4-2/3Q, 1/2-1/3Q, Q].
-@param gl        Array of GL: loglikelihood for 
-                     GL1: L(rr|qual_matrix, base_count), 
-                     GL2-GL5: L(ra|..), L(aa|..), L(rr+ra|..), L(ra+aa|..)
-                 Note that the right values of its elements would be altered and should not be used anymore, 
-                 after calling csp_plp_to_vcf(). 
-@param ngl       Num of valid elements in the array gl.
-@param h         Pointer of hash table that stores stat info of UMI groups.
+/*@abstract  The structure that store pileup info of one cell/sample for certain query pos.
+@param bc    Total read count for each base in the order of 'ACGTN'.
+@param tc    Total read count for all bases.
+@param ad    Read count of alt.
+@param dp    Read count of alt + ref.
+@param oth   Read count of bases except alt and ref.
+@param qu    All qual values of each base for one sample in the order of 'ACGTN'.
+@param qmat  Matrix of qual with 'ACGTN' vs. [1-Q, 3/4-2/3Q, 1/2-1/3Q, Q].
+@param gl    Array of GL: loglikelihood for 
+               GL1: L(rr|qual_matrix, base_count), 
+               GL2-GL5: L(ra|..), L(aa|..), L(rr+ra|..), L(ra+aa|..).
+@param ngl   Num of valid elements in the array gl.
+@param hug   Pointer of hash table that stores stat info of UMI groups.
  */
 typedef struct {
-    size_t bcount[5];
-    size_t tcount;
+    size_t bc[5];
+    size_t tc, ad, dp, oth;
+    csp_list_qu_t qu[5];
     double qmat[5][4];
     double gl[5];
     int ngl;
-    csp_map_ug_t *h;
+    csp_map_ug_t *hug;
 } csp_plp_t;
 
+/* note that the @p qu is also initialized after calling calloc(). */
 static inline csp_plp_t* csp_plp_init(void) { return (csp_plp_t*) calloc(1, sizeof(csp_plp_t)); }
 
 static inline void csp_plp_destroy(csp_plp_t *p) { 
     if (p) { 
-        if (p->h) { csp_map_ug_destroy(p->h); }
+        int i;
+        for (i = 0; i < 5; i++) { csp_list_qu_destroy(p->qu[i]); }
+        if (p->hug) { csp_map_ug_destroy(p->hug); }
         free(p); 
     }
 }
 
 static inline void csp_plp_reset(csp_plp_t *p) {
-    if (p) {
-        memset(p->bcount, 0, sizeof(p->bcount));
-        p->tcount = 0;
+    if (p) {   // TODO: reset based on is_genotype.
+        int i;
+        memset(p->bc, 0, sizeof(p->bc));
+        p->tc = p->ad = p->dp = p->oth = 0;
+        for (i = 0; i < 5; i++) { csp_list_qu_reset(p->qu[i]); }
         memset(p->qmat, 0, sizeof(p->qmat));
         p->ngl = 0;
-        if (p->h) { csp_map_ug_reset(p->h); } 
+        if (p->hug) { csp_map_ug_reset(p->hug); }
     }
 }
 
@@ -656,9 +873,9 @@ static inline void csp_plp_reset(csp_plp_t *p) {
 static void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
     int i, j;
     csp_map_ug_iter u;
-    fprintf(fp, "%stotal read count = %ld\n", prefix, p->tcount);
+    fprintf(fp, "%stotal read count = %ld\n", prefix, p->tc);
     fprintf(fp, "%sbase count (A/C/G/T/N):", prefix);
-    for (i = 0; i < 5; i++) fprintf(fp, " %ld", p->bcount[i]);
+    for (i = 0; i < 5; i++) fprintf(fp, " %ld", p->bc[i]);
     fputc('\n', fp);
     fprintf(fp, "%squal matrix 5x4:\n", prefix);
     for (i = 0; i < 5; i++) {
@@ -672,13 +889,13 @@ static void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
         for (i = 0; i < p->ngl; i++) fprintf(fp, " %.2f", p->gl[i]);
         fputc('\n', fp);
     }
-    if (p->h) {
-        int size = csp_map_ug_size(p->h);
+    if (p->hug) {
+        int size = csp_map_ug_size(p->hug);
         fprintf(fp, "%ssize of the csp_map_ug = %d\n", prefix, size);
         if (size) {
             fprintf(fp, "%s", prefix);
-            for (u = csp_map_ug_begin(p->h); u != csp_map_ug_end(p->h); u++) {
-                if (csp_map_ug_exist(p->h, u)) { fprintf(fp, " %s", csp_map_ug_key(p->h, u)); }
+            for (u = csp_map_ug_begin(p->hug); u != csp_map_ug_end(p->hug); u++) {
+                if (csp_map_ug_exist(p->hug, u)) { fprintf(fp, " %s", csp_map_ug_key(p->hug, u)); }
             } fputc('\n', fp);
         }
     }
@@ -688,28 +905,37 @@ static void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
                 string in the output vcf file. 
 @param p        Pointer of csp_plp_t structure corresponding to the pos.
 @param s        Pointer of kstring_t which would store the formatted string.
-@param ref_idx  Index of ref base in 'ACGTN'.
-@param alt_idx  Index of alt base in 'ACGTN'.
 @return         0 if success, -1 otherwise.
-
-@note           The right values in plp->gl are changed after calling this function, so do not use the values in
-                plp->gl since then.
  */
-static int csp_plp_to_vcf(csp_plp_t *p, kstring_t *s, int8_t ref_idx, int8_t alt_idx) {
-    if (p->tcount <= 0) { kputs(".:.:.:.:.:.", s); return 0; }
-    size_t ref_cnt, alt_cnt, dp_cnt, oth_cnt;
+static int csp_plp_str_vcf(csp_plp_t *p, kstring_t *s) {
+    if (p->tc <= 0) { kputs(".:.:.:.:.:.", s); return 0; }
+    double gl[5];
     int i, m;
     double tmp = -10 / log(10);
     char *gt[] = {"0/0", "1/0", "1/1"};
-    ref_cnt = p->bcount[ref_idx];   alt_cnt = p->bcount[alt_idx];
-    dp_cnt = ref_cnt + alt_cnt;     oth_cnt = p->tcount - dp_cnt;
     m = get_idx_of_max(cu_d, p->gl, 3);
     kputs(gt[m], s);
-    ksprintf(s, ":%ld:%ld:%ld:", alt_cnt, dp_cnt, oth_cnt);
-    for (i = 0; i < p->ngl; i++) { p->gl[i] *= tmp; }
-    if (join_arr_to_str(cu_d, p->gl, p->ngl, ',', "%.0f", s) < p->ngl) { return -1; }
+    ksprintf(s, ":%ld:%ld:%ld:", p->ad, p->dp, p->oth);
+    for (i = 0; i < p->ngl; i++) { gl[i] = p->gl[i] * tmp; }
+    if (join_arr_to_str(cu_d, gl, p->ngl, ',', "%.0f", s) < p->ngl) { return -1; }
     kputc_(':', s);
-    if (join_arr_to_str(cu_s, p->bcount, 5, ',', "%ld", s) < 5) { return -1; }  // here first s is name of SZ_NUMERIC_OP while the latter one is pointer of kstring_t.
+    if (join_arr_to_str(cu_s, p->bc, 5, ',', "%ld", s) < 5) { return -1; }
+    return 0;
+}
+
+static int csp_plp_to_vcf(csp_plp_t *p, csp_fs_t *s) {
+    if (p->tc <= 0) { csp_fs_puts(".:.:.:.:.:.", s); return 0; }
+    double gl[5];
+    int i, m;
+    double tmp = -10 / log(10);
+    char *gt[] = {"0/0", "1/0", "1/1"};
+    m = get_idx_of_max(cu_d, p->gl, 3);
+    csp_fs_puts(gt[m], s);
+    csp_fs_printf(s, ":%ld:%ld:%ld:", p->ad, p->dp, p->oth);
+    for (i = 0; i < p->ngl; i++) { gl[i] = p->gl[i] * tmp; }
+    if (join_arr_to_str(cu_d, gl, p->ngl, ',', "%.0f", s->buf) < p->ngl) { return -1; }  // TODO: use internal buf directly is not good.
+    csp_fs_putc_(':', s);
+    if (join_arr_to_str(cu_s, p->bc, 5, ',', "%ld", s->buf) < 5) { return -1; }
     return 0;
 }
 
@@ -756,26 +982,29 @@ typedef khash_t(sg) csp_map_sg_t;
 @param inf_aid  Infered index of alt in "ACGTN". Negative number means not valid value.
 @param bc    Read count of each base summarizing all sample groups for the pos, in the order of 'ACGTN'.
 @param tc    Total read count of all bases for the pos.
-@param h     HashMap that stores the stat info of all sample groups for the pos.
-@param hiter Pointer of array of csp_map_sg_iter. The iter in the array is in the same order of sg names.
-@param nsg   Size of csp_map_sg_iter array hiter.
+@param ad    Read count of alt.
+@param dp    Read count of alt + ref.
+@param oth   Read count of bases except alt and ref.
+@param nr_*  Num of records/lines outputed to mtx file for certain SNP/pos.
+@param hsg   HashMap that stores the stat info of all sample groups for the pos.
+@param hsg_iter Pointer of array of csp_map_sg_iter. The iter in the array is in the same order of sg names.
+@param nsg   Size of csp_map_sg_iter array hsg_iter.
 @param pu    Pool of csp_umi_unit_t structures.
 @param pl    Pool of csp_list_uu_t structures.
 @param su    Pool of UMI strings.
-@param s     The kstring_t structure to store the formatted string of csp_mplp_t. The string would be output to vcf.
 @param qvec  A container for the qual vector returned by get_qual_vector().
  */
 typedef struct {
     int8_t ref_idx, alt_idx, inf_rid, inf_aid;
     size_t bc[5];
-    size_t tc;
-    csp_map_sg_t *h;
-    csp_map_sg_iter *hiter;
+    size_t tc, ad, dp, oth;
+    size_t nr_ad, nr_dp, nr_oth;
+    csp_map_sg_t *hsg;
+    csp_map_sg_iter *hsg_iter;
     int nsg;
     csp_pool_uu_t *pu;
     csp_pool_ul_t *pl;
     csp_pool_ps_t *su;
-    kstring_t s;
     double qvec[4];
 } csp_mplp_t;
 
@@ -793,12 +1022,11 @@ static inline csp_mplp_t* csp_mplp_init(void) {
 
 static inline void csp_mplp_destroy(csp_mplp_t *p) { 
     if (p) {
-        if (p->h) { csp_map_sg_destroy(p->h); }
-        if (p->hiter) { free(p->hiter); }
+        if (p->hsg) { csp_map_sg_destroy(p->hsg); }
+        if (p->hsg_iter) { free(p->hsg_iter); }
         if (p->pu) { csp_pool_uu_destroy(p->pu); }
         if (p->pl) { csp_pool_ul_destroy(p->pl); }
         if (p->su) { csp_pool_ps_destroy(p->su); }
-        ks_free(&p->s);
         free(p); 
     }
 }
@@ -806,13 +1034,13 @@ static inline void csp_mplp_destroy(csp_mplp_t *p) {
 static inline void csp_mplp_reset(csp_mplp_t *p) {
     if (p) {
         memset(p->bc, 0, sizeof(p->bc));
-        p->tc = 0;
-        if (p->h) { csp_map_sg_reset_val(p->h); }
+        p->tc = p->ad = p->dp = p->oth = 0;
+        p->nr_ad = p->nr_dp = p->nr_oth = 0;
+        if (p->hsg) { csp_map_sg_reset_val(p->hsg); }
         if (p->pu) { csp_pool_uu_reset(p->pu); }
         if (p->pl) { csp_pool_ul_reset(p->pl); }
         if (p->su) { csp_pool_ps_reset(p->su); }
         memset(p->qvec, 0, sizeof(p->qvec));
-        ks_clear(&p->s);
     }
 }
 
@@ -820,12 +1048,12 @@ static inline void csp_mplp_reset(csp_mplp_t *p) {
 @param fp      Pointer of stream.
 @param p       Pointer of csp_mplpt_t to be printed.
 @param prefix  Pointer of prefix string. Set to "" if no prefix.
+@return        Void.
  */
 static void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
     int i;
     csp_plp_t *plp;
-    kstring_t ks = KS_INITIALIZE;
-    kstring_t *s = &ks;
+    kstring_t ks = KS_INITIALIZE, *s = &ks;
     fprintf(fp, "%sref_idx = %d, alt_idx = %d\n", prefix, p->ref_idx, p->alt_idx);
     fprintf(fp, "%sinf_rid = %d, inf_aid = %d\n", prefix, p->inf_rid, p->inf_aid);
     fprintf(fp, "%stotal base count = %ld\n", prefix, p->tc);
@@ -836,15 +1064,15 @@ static void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
     if (p->nsg) {
         kputs(prefix, s); kputc('\t', s);
         for (i = 0; i < p->nsg; i++) {
-            fprintf(fp, "%sSG-%d = %s:\n", prefix, i, csp_map_sg_key(p->h, p->hiter[i]));
-            plp = csp_map_sg_val(p->h, p->hiter[i]);
+            fprintf(fp, "%sSG-%d = %s:\n", prefix, i, csp_map_sg_key(p->hsg, p->hsg_iter[i]));
+            plp = csp_map_sg_val(p->hsg, p->hsg_iter[i]);
             csp_plp_print(fp, plp, ks_str(s));
         }
     }
     ks_free(s);
 }
 
-static void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
+static inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
     int i;
     fprintf(fp, "%sref_idx = %d, alt_idx = %d\n", prefix, p->ref_idx, p->alt_idx);
     fprintf(fp, "%sinf_rid = %d, inf_aid = %d\n", prefix, p->inf_rid, p->inf_aid);
@@ -859,37 +1087,32 @@ static void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
 @param p     Pointer to the csp_mplp_t structure.
 @parma s     Pointer to the array of names of sample groups.
 @param n     Num of sample groups.
-@return      0, no error; negative numbers otherwise:
-               -1, invalid parameter;
-               -3, failed to allocate memory for sg HashMap.
-               -5, failed to allocate memory for csp_map_sg_iter array.
-               -7, kh_put failed or have repeted sg names;
-               -9, invalid sg names, i.e., NULL;
-               -11, HashMap error.
+@return      0, no error; -1 otherwise.
 
 @note        1. This function should be called just one time right after csp_mplp_t structure was created
                 becuase the sgname wouldn't change once set.
              2. The HashMap (for sgnames) in csp_mplp_t should be empty or NULL.
+             3. The keys of HashMap are exactly pointers to sg names coming directly from @p s.
  */
 static int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     if (NULL == p || NULL == s || 0 == n) { return -1; }
     int i, r;
     csp_map_sg_iter k;
-    if (NULL == p->h && NULL == (p->h = csp_map_sg_init())) { return -3; }
-    if (NULL == p->hiter && NULL == (p->hiter = (csp_map_sg_iter*) malloc(sizeof(csp_map_sg_iter) * n))) { return -5; }
+    if (NULL == p->hsg && NULL == (p->hsg = csp_map_sg_init())) { return -1; }
+    if (NULL == p->hsg_iter && NULL == (p->hsg_iter = (csp_map_sg_iter*) malloc(sizeof(csp_map_sg_iter) * n))) { return -1; }
     for (i = 0; i < n; i++) {
         if (s[i]) { 
-            k = csp_map_sg_put(p->h, s[i], &r); 
-            if (r <= 0) { csp_mplp_destroy(p); return -7; } /* r = 0 means repeatd sgnames. */
-            else { csp_map_sg_val(p->h, k) = NULL; }
-        } else { csp_mplp_destroy(p); return -9; }
+            k = csp_map_sg_put(p->hsg, s[i], &r); 
+            if (r <= 0) { csp_mplp_destroy(p); return -1; } /* r = 0 means repeatd sgnames. */
+            else { csp_map_sg_val(p->hsg, k) = NULL; }
+        } else { return -1; }
     }
     /* Storing iter index for each sg (sample group) name must be done after all sg names have been pushed into 
        the HashMap in case that the internal arrays of HashMap autoly shrink or some else modifications. */
     for (i = 0; i < n; i++) {
-        k = csp_map_sg_get(p->h, s[i]);
-        if (k == csp_map_sg_end(p->h)) { return -11; }
-        else { p->hiter[i] = k; }
+        k = csp_map_sg_get(p->hsg, s[i]);
+        if (k == csp_map_sg_end(p->hsg)) { return -1; }
+        else { p->hsg_iter[i] = k; }
     }
     p->nsg = n;
     return 0;
@@ -897,19 +1120,139 @@ static int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
 
 /*@abstract  Format the content of csp_mplp_t (the pileup stat info) of certain query pos to string in the output vcf file.
 @param mplp  Pointer of the csp_mplp_t structure corresponding to the pos.
+@param s     Pointer of kstring_t which stores the formatted string.
 @return      0 if success, -1 otherwise.
  */
-static int csp_mplp_to_vcf(csp_mplp_t *mplp) {
-    kstring_t *s = &mplp->s;
+static inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s) {
     int i;
     for (i = 0; i < mplp->nsg; i++) {
         kputc_('\t', s);
-        if (csp_plp_to_vcf(csp_map_sg_val(mplp->h, mplp->hiter[i]), s, mplp->ref_idx, mplp->alt_idx) < 0) { return -1; }
+        if (csp_plp_str_vcf(csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
     } //s->s[--(s->l)] = '\0';    /* s->l could not be negative unless no csp_plp_t(s) are printed to s->s. */
     return 0;
 }
 
-/*
-* File API
+static inline int csp_mplp_to_vcf(csp_mplp_t *mplp, csp_fs_t *s) {
+    int i;
+    for (i = 0; i < mplp->nsg; i++) {
+        csp_fs_putc_('\t', s);
+        if (csp_plp_to_vcf(csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
+    } //s->s[--(s->l)] = '\0';    /* s->l could not be negative unless no csp_plp_t(s) are printed to s->s. */
+    return 0;
+}
+
+/*@abstract    Format the content of csp_mplp_t of certain query pos to string in the output sparse matrices file.
+@param mplp    Pointer of the csp_mplp_t structure corresponding to the pos.
+@param ks_ad   Pointer of kstring_t which is to store formatted AD string.
+@param ks_dp   Pointer of kstring_t which is to store formatted DP string.
+@param ks_oth  Pointer of kstring_t which is to store formatted OTH string.
+@param idx     Index of the SNP/mplp (1-based).
+@return        0 if success, -1 otherwise.
  */
+static inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth, size_t idx) {
+    csp_plp_t *plp;
+    int i;
+    for (i = 1; i <= mplp->nsg; i++) {
+        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        if (plp->ad) ksprintf(ks_ad, "%ld\t%d\t%ld\n", idx, i, plp->ad);
+        if (plp->dp) ksprintf(ks_dp, "%ld\t%d\t%ld\n", idx, i, plp->dp);
+        if (plp->oth) ksprintf(ks_oth, "%ld\t%d\t%ld\n", idx, i, plp->oth);        
+    }
+    return 0; 
+}
+
+/*@abstract    Format the content of csp_mplp_t of certain query pos to string in the tmp output sparse matrices file.
+@param mplp    Pointer of the csp_mplp_t structure corresponding to the pos.
+@param ks_ad   Pointer of kstring_t which is to store formatted AD string.
+@param ks_dp   Pointer of kstring_t which is to store formatted DP string.
+@param ks_oth  Pointer of kstring_t which is to store formatted OTH string.
+@return        0 if success, -1 otherwise.
+
+@note          This function is used for tmp files.
+ */
+static inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth) {
+    csp_plp_t *plp;
+    int i;
+    for (i = 1; i <= mplp->nsg; i++) {
+        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        if (plp->ad) ksprintf(ks_ad, "%d\t%ld\n", i, plp->ad);
+        if (plp->dp) ksprintf(ks_dp, "%d\t%ld\n", i, plp->dp);
+        if (plp->oth) ksprintf(ks_oth, "%d\t%ld\n", i, plp->oth);        
+    }
+    kputc('\n', ks_ad); kputc('\n', ks_dp); kputc('\n', ks_oth);
+    return 0; 
+}
+
+static int csp_mplp_to_mtx(csp_mplp_t *mplp, csp_fs_t *fs_ad, csp_fs_t *fs_dp, csp_fs_t *fs_oth, size_t idx) {
+    csp_plp_t *plp;
+    int i;
+    for (i = 1; i <= mplp->nsg; i++) {
+        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i - 1]);
+        if (plp->ad) fs_ad->is_tmp ? csp_fs_printf(fs_ad, "%d\t%ld\n", i, plp->ad) : csp_fs_printf(fs_ad, "%ld\t%d\t%ld\n", idx, i, plp->ad);
+        if (plp->dp) fs_dp->is_tmp ? csp_fs_printf(fs_dp, "%d\t%ld\n", i, plp->dp) : csp_fs_printf(fs_dp, "%ld\t%d\t%ld\n", idx, i, plp->dp);
+        if (plp->oth) fs_oth->is_tmp ? csp_fs_printf(fs_oth, "%d\t%ld\n", i, plp->oth) : csp_fs_printf(fs_oth, "%ld\t%d\t%ld\n", idx, i, plp->oth);      
+    }
+    if (fs_ad->is_tmp) csp_fs_putc('\n', fs_ad);
+    if (fs_dp->is_tmp) csp_fs_putc('\n', fs_dp);
+    if (fs_oth->is_tmp) csp_fs_putc('\n', fs_oth);
+    return 0; 
+}
+
+#if DEVELOP
+/* 
+* Tags for sparse matrices
+* It's useful when the input tags are optional.
+*/
+typedef size_t csp_mtx_value_t;
+typedef int csp_mtx_iter_t;
+typedef csp_mtx_value_t (*csp_mtx_value_func_t)(csp_mplp_t*, csp_plp_t*);
+
+static inline csp_mtx_value_t csp_mtx_value_AD(csp_mplp_t *mplp, csp_plp_t *plp) {
+    return plp->ad;
+}
+
+static inline csp_mtx_value_t csp_mtx_value_DP(csp_mplp_t *mplp, csp_plp_t *plp) {
+    return plp->dp;
+}
+
+static inline csp_mtx_value_t csp_mtx_value_OTH(csp_mplp_t *mplp, csp_plp_t *plp) {
+    return plp->oth;
+}
+
+static csp_mtx_iter_t csp_mtx_ntags = 3;
+static char *csp_mtx_tags[] = {"AD", "DP", "OTH"};
+static csp_mtx_value_func_t csp_mtx_value_funcs[] = { &csp_mtx_value_AD, &csp_mtx_value_DP, &csp_mtx_value_OTH };
+
+static inline char* csp_get_mtx_fn(char *tag) {
+    kstring_t ks = KS_INITIALIZE;
+    ksprintf(&ks, "cellSNP.tag.%s.mtx", tag);
+    char *p = strdup(ks_str(&ks));
+    ks_free(&ks);
+    return p;
+}
+
+static inline csp_mtx_iter_t csp_get_mtx_idx(char *tag) {
+    csp_mtx_iter_t i;
+    for (i = 0; i < csp_mtx_ntags; i++) {
+        if (0 == strcmp(tag, csp_mtx_tags[i])) { return i; }
+    } 
+    return -1;
+}
+
+static inline csp_mtx_value_func_t csp_get_mtx_value_func(csp_mtx_iter_t i) { return csp_mtx_value_funcs[i]; }
+
+typedef struct {
+    char *out_fn;
+    csp_mtx_value_func_t vfunc;
+} csp_mtx_tag_fs;
+
+static inline csp_mtx_tag_fs* csp_mtx_tag_fs_init(void) {
+    return (csp_mtx_tag_fs*) calloc(1, sizeof(csp_mtx_tag_fs));
+}
+
+static inline void sp_mtx_tag_fs_destroy(csp_mtx_tag_fs *p) {
+    if (p) { free(p->out_fn); free(p); }
+}
+#endif
+
 #endif

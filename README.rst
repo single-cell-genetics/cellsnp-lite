@@ -74,14 +74,14 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellSNP -s $BAM -b $BARCODE -o $OUT_FILE -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20
+  cellSNP -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20
   
 As shown in the above command line, we recommend filtering SNPs with <20UMIs  
 or <10% minor alleles for downstream donor deconvolution, by adding 
 ``--minMAF 0.1 --minCOUNT 20``
 
 
-* **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file (Will be supported soon...)**
+* **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file (Will be supported in future...)**
 
 Don't use `-R` but flexible on `-b`. 
 
@@ -118,9 +118,9 @@ can be input in comma separated way (`-s`) or in a list file (`-S`).
 
 .. code-block:: bash
 
-  cellSNP -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -o $OUT_FILE -R $REGION_VCF -p 20 --UMItag None
+  cellSNP -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None
 
-  cellSNP -S $BAM_list_file -I sample_list_file -o $OUT_FILE -R $REGION_VCF -p 20 --UMItag None
+  cellSNP -S $BAM_list_file -I sample_list_file -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None
 
 Set filtering thresholds according to the downstream analysis. Please add 
 ``--UMItag None`` if you bam file does not have UMIs, e.g., smart-seq and bulk 
