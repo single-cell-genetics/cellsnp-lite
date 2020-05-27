@@ -6,6 +6,8 @@
 4. Improve the csp_fs_t structure, for example, adding @p is_error.
 5. Improve the SZ_POOL structure, for example, adding @p base_init_f.
 6. Use optional sparse matrices tags with the help of function pointers.
+7. Output optionally qual values/letters to mtx file.
+8. Deal with the problem that some UMIs have the letter 'N'.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -795,12 +797,12 @@ static int rewrite_mtx(csp_fs_t *fs, size_t ns, int nsmp, size_t nr) {
  */
 static int run_mode_with_fetch(global_settings *gs) {
     /* check options (input) */
-    if (NULL == gs || gs->nin <= 0 || gs->nbarcode <= 0 || csp_snplist_size(gs->pl) <= 0 || NULL == gs->out_dir) {
-        fprintf(stderr, "[E::%s] error options for mode1.\n", __func__);
+    if (NULL == gs || gs->nin <= 0 || (gs->nbarcode <= 0 && gs->nsid <= 0) || csp_snplist_size(gs->pl) <= 0 || NULL == gs->out_dir) {
+        fprintf(stderr, "[E::%s] error options for fetch modes.\n", __func__);
         return -1;
     }
     int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nsid;
-    /* core part of Mode 1. */
+    /* core part. */
     if (gs->tp && gs->nthread > 1) {
         int nthread = gs->nthread;
         csp_fs_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
@@ -1105,9 +1107,15 @@ static int check_global_args(global_settings *gs) {
     } else { fprintf(stderr, "[E::%s] should specify -O/--outDir option.\n", __func__); return -1; }
      /* 1. In current version, one and only one of barcodes and sample-ids would exist and work. Prefer barcodes. 
         2. For barcodes, the barcode file would not be read unless cell-tag is set, i.e. the barcodes and cell-tag are
-           effective only when both of them are valid. */
+           effective only when both of them are valid. 
+        3. Codes below are a little repetitive and redundant, but it works well, maybe improve them in future.
+    */
     if (gs->cell_tag && (0 == strcmp(gs->cell_tag, "None") || 0 == strcmp(gs->cell_tag, "none"))) { 
         free(gs->cell_tag);  gs->cell_tag = NULL; 
+    }
+    if (gs->sample_ids || gs->sid_list_file) {
+        if (gs->barcode_file) { fprintf(stderr, "[E::%s] should not specify barcodes and sample IDs at the same time.\n", __func__); return -1; }
+        else if (gs->cell_tag) { free(gs->cell_tag); gs->cell_tag = NULL; } 
     }
     if (gs->cell_tag && gs->barcode_file) {
         if (gs->sample_ids || gs->sid_list_file) { 
