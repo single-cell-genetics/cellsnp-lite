@@ -8,7 +8,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellSNP"
-#define CSP_VERSION "0.1.0"
+#define CSP_VERSION "0.1.8"
 #define CSP_AUTHOR "hxj5"
 
 #include <stdio.h>
@@ -404,10 +404,10 @@ typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
 #define csp_snplist_A(v, i) kv_A(v, i)
 #define csp_snplist_size(v) kv_size(v)
 #define csp_snplist_max(v) kv_max(v)
-#define csp_snplist_destroy(v) {																		\
-    size_t __j;																							\
-    for (__j = 0; __j < csp_snplist_size(v); __j++) csp_snp_destroy(csp_snplist_A(v, __j));					\
-    kv_destroy(v);																						\
+#define csp_snplist_destroy(v) {														\
+    size_t __j;																			\
+    for (__j = 0; __j < csp_snplist_size(v); __j++) csp_snp_destroy(csp_snplist_A(v, __j));	\
+    kv_destroy(v);																		\
 }
 
 /*@abstract    Extract SNP info from bcf/vcf file.
@@ -703,14 +703,14 @@ typedef khash_t(ug) csp_map_ug_t;
 #define csp_map_ug_end(h) kh_end(h)
 #define csp_map_ug_size(h) kh_size(h)
 #define csp_map_ug_reset(h) kh_clear(ug, h)
-#define csp_map_ug_destroy(h) {																									\
-    if (h) {																														\
-        csp_map_ug_iter __k;																									\
-        for (__k = csp_map_ug_begin(h); __k != csp_map_ug_end(h); __k++) { 														\
-            if (csp_map_ug_exist(h, __k)) csp_list_uu_destroy(csp_map_ug_val(h, __k));																\
-        }																													\
-        kh_destroy(ug, h);																										\
-    }																															\
+#define csp_map_ug_destroy(h) {														\
+    if (h) {																			\
+        csp_map_ug_iter __k;															\
+        for (__k = csp_map_ug_begin(h); __k != csp_map_ug_end(h); __k++) { 				\
+            if (csp_map_ug_exist(h, __k)) csp_list_uu_destroy(csp_map_ug_val(h, __k));		\
+        }																				\
+        kh_destroy(ug, h);																\
+    }																					\
 }
 
 /* Struct csp_list_qu_t APIs 
@@ -957,22 +957,22 @@ typedef khash_t(sg) csp_map_sg_t;
 #define csp_map_sg_begin(h) kh_begin(h)
 #define csp_map_sg_end(h) kh_end(h)
 #define csp_map_sg_size(h) kh_size(h)
-#define csp_map_sg_destroy(h) {																								\
-    if (h) {																												\
-        csp_map_sg_iter __k;																									\
-        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) { 													\
-            if (csp_map_sg_exist(h, __k)) csp_plp_destroy(csp_map_sg_val(h, __k)); 												\
-        }																													\
-        kh_destroy(sg, h);																								\
-    }																														\
+#define csp_map_sg_destroy(h) {														\
+    if (h) {																		\
+        csp_map_sg_iter __k;														\
+        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) { 				\
+            if (csp_map_sg_exist(h, __k)) csp_plp_destroy(csp_map_sg_val(h, __k)); 	\
+        }																			\
+        kh_destroy(sg, h);															\
+    }																				\
 }
-#define csp_map_sg_reset_val(h) {																							\
-    if (h) {																												\
-        csp_map_sg_iter __k;																								\
-        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) {												\
-            if (csp_map_sg_exist(h, __k)) csp_plp_reset(csp_map_sg_val(h, __k)); 												\
-        }																													\
-    }																														\
+#define csp_map_sg_reset_val(h) {														\
+    if (h) {																			\
+        csp_map_sg_iter __k;															\
+        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) {				\
+            if (csp_map_sg_exist(h, __k)) csp_plp_reset(csp_map_sg_val(h, __k)); 		\
+        }																				\
+    }																					\
 }
 
 /*@abstract  The structure stores the stat info of all sample groups for certain query pos.

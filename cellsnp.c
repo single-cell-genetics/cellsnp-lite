@@ -1,13 +1,15 @@
 
 /* TODO: 
-1. Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
-2. Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
-3. More filters could be applied when extracting/fetching reads.
-4. Improve the csp_fs_t structure, for example, adding @p is_error.
-5. Improve the SZ_POOL structure, for example, adding @p base_init_f.
-6. Use optional sparse matrices tags with the help of function pointers.
-7. Output optionally qual values/letters to mtx file.
-8. Deal with the problem that some UMIs have the letter 'N'.
+- Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
+- Complete Mode 2.
+- Write test scripts for some key functions.
+- Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
+- More filters could be applied when extracting/fetching reads.
+- Improve the csp_fs_t structure, for example, adding @p is_error.
+- Improve the SZ_POOL structure, for example, adding @p base_init_f.
+- Use optional sparse matrices tags with the help of function pointers.
+- Output optionally qual values/letters to mtx file.
+- Deal with the problem that some UMIs have the letter 'N'.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,7 +30,7 @@
 #define CSP_CHROM_ALL  {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"}
 #define CSP_NCHROM     22
 #define CSP_CELL_TAG   "CB"
-#define CSP_UMI_TAG    "UR"
+#define CSP_UMI_TAG    "Auto"
 #define CSP_NTHREAD    1
 #define CSP_MIN_COUNT  20
 #define CSP_MIN_MAF    0.0
@@ -953,40 +955,10 @@ static int run_mode_with_fetch(global_settings *gs) {
         return -1;
     } else if (1 == gs->nthread) {  // only one thread.
         thread_data *d = NULL;
-        //csp_fs_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth, *out_vcf_base, *out_vcf_cells;
-        //kstring_t ks = KS_INITIALIZE, *s = &ks;
-        //out_mtx_ad = out_mtx_dp = out_mtx_oth = out_vcf_base = out_vcf_cells = NULL;
         if (NULL == (d = thdata_init())) { 
             fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
             goto fail1; 
         }
-        /*
-        if (NULL == create_tmp_fs(gs->out_mtx_ad, 0, 0, s)) {
-            fprintf(stderr, "[E::%s] fail to create tmp mtx_AD.\n", __func__); 
-            goto fail1; 
-        } else { ks_clear(s); }
-        if (NULL == create_tmp_fs(gs->out_mtx_dp, 0, 0, s)) {
-            fprintf(stderr, "[E::%s] fail to create tmp mtx_DP.\n", __func__); 
-            goto fail1; 
-        } else { ks_clear(s); }
-        if (NULL == create_tmp_fs(gs->out_mtx_oth, 0, 0, s)) {
-            fprintf(stderr, "[E::%s] fail to create tmp mtx_OTH.\n", __func__); 
-            goto fail1; 
-        } else { ks_clear(s); }
-        if (NULL == create_tmp_fs(gs->out_vcf_base, 0, 0, s)) {
-            fprintf(stderr, "[E::%s] fail to create tmp vcf BASE.\n", __func__); 
-            goto fail1; 
-        } else { ks_clear(s); }
-        if (gs->is_genotype) {
-            if (NULL == create_tmp_fs(gs->out_vcf_cells, 0, 0, s)) {
-                fprintf(stderr, "[E::%s] fail to create tmp vcf CELLS.\n", __func__); 
-                goto fail1;
-            } else { ks_clear(s); }
-        }
-        d->gs = gs; d->n = 0; d->m = csp_snplist_size(gs->pl); d->i = 0; 
-        d->out_mtx_ad = out_mtx_ad; d->out_mtx_dp = out_mtx_dp; d->out_mtx_oth = out_mtx_oth;
-        d->out_vcf_base = out_vcf_base; d->out_vcf_cells = gs->is_genotype ? out_vcf_cells : NULL;
-        */
         d->gs = gs; d->n = 0; d->m = csp_snplist_size(gs->pl); d->i = 0; 
         d->out_mtx_ad = gs->out_mtx_ad; d->out_mtx_dp = gs->out_mtx_dp; d->out_mtx_oth = gs->out_mtx_oth;
         d->out_vcf_base = gs->out_vcf_base; d->out_vcf_cells = gs->is_genotype ? gs->out_vcf_cells : NULL;
@@ -1411,6 +1383,7 @@ int main(int argc, char **argv) {
     /* clean */
     ks_free(s); s = NULL;
     gll_setting_free(&gs);
+    fprintf(stderr, "[I::%s] All Done!\n", __func__);
     /* calc time spent */
     if (print_time) {
         time(&end_time);
@@ -1424,6 +1397,7 @@ int main(int argc, char **argv) {
     if (s) { ks_free(s); }
     gll_setting_free(&gs);
     if (print_time) {
+        fprintf(stderr, "[E::%s] Quiting...\n", __func__);
         time(&end_time);
         time_info = localtime(&end_time);
         strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
