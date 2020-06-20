@@ -1,4 +1,3 @@
-
 /* TODO: 
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
 - Complete Mode 2.
@@ -58,7 +57,7 @@ struct _gll_settings {
     csp_fs_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth;
     int is_out_zip;        // If output files need to be zipped.
     int is_genotype;       // If need to do genotyping in addition to counting.
-    char *pos_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
+    char *snp_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
     csp_snplist_t pl;      // List of the input SNPs. TODO: local variable.
     char *barcode_file;    // Name of the file containing a list of barcodes, one barcode per line.
     char **barcodes;       // Pointer to the array of barcodes.
@@ -110,7 +109,7 @@ static void gll_setting_free(global_settings *gs) {
         if (gs->out_mtx_ad) { csp_fs_destroy(gs->out_mtx_ad); gs->out_mtx_ad = NULL; }
         if (gs->out_mtx_dp) { csp_fs_destroy(gs->out_mtx_dp); gs->out_mtx_dp = NULL; }
         if (gs->out_mtx_oth) { csp_fs_destroy(gs->out_mtx_oth); gs->out_mtx_oth = NULL; } 
-        if (gs->pos_list_file) { free(gs->pos_list_file); gs->pos_list_file = NULL; }
+        if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
         csp_snplist_destroy(gs->pl);
         if (gs->barcode_file) { free(gs->barcode_file); gs->barcode_file = NULL; }
         if (gs->barcodes) { str_arr_destroy(gs->barcodes, gs->nbarcode); gs->barcodes = NULL; }
@@ -136,7 +135,7 @@ static void gll_set_default(global_settings *gs) {
         gs->out_vcf_base = NULL; gs->out_vcf_cells = NULL; gs->out_samples = NULL;
         gs->out_mtx_ad = NULL; gs->out_mtx_dp = NULL; gs->out_mtx_oth = NULL;
         gs->is_genotype = 0; gs->is_out_zip = 0;
-        gs->pos_list_file = NULL; csp_snplist_init(gs->pl);
+        gs->snp_list_file = NULL; csp_snplist_init(gs->pl);
         gs->barcode_file = NULL; gs->nbarcode = 0; gs->barcodes = NULL; 
         gs->sid_list_file = NULL; gs->sample_ids = NULL; gs->nsid = 0;
         char *chrom_tmp[] = CSP_CHROM_ALL;
@@ -1000,7 +999,6 @@ static void print_usage(FILE *fp) {
     fprintf(fp,
 "\n"
 "Options:\n"
-"  -h, --help           Show this help message and exit.\n"
 "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
 "                       Mode 1&2: one sam/bam file with single cell.\n"
 "                       Mode 3: one or multiple bulk sam/bam files,\n"
@@ -1012,7 +1010,10 @@ static void print_usage(FILE *fp) {
 "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
 "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
 "  -I, --sampleIDs STR      Comma separated sample ids.\n"
-"  --genotype               If use, do genotyping in addition to counting.\n");
+"  --genotype               If use, do genotyping in addition to counting.\n"
+"  --printSkipSNPs          If use, the SNPs skipped when loading VCF will be printed.\n"
+"  -V, --version            Print software version and exit.\n"
+"  -h, --help               Show this help message and exit.\n");
     fprintf(fp,
 "\n"
 "Optional arguments:\n"
@@ -1120,11 +1121,11 @@ static int check_global_args(global_settings *gs) {
         }
     }
     /* 1. In current version, one and only one of pos_list and chrom(s) would exist and work. Prefer pos_list. 
-       2. Sometimes, pos_list_file and chrom_all are both not NULL as the chrom_all has been set to default value when
-          global_settings structure was just created. In this case, free chrom_all and save pos_list_file. */
-    if (NULL == gs->pos_list_file || 0 == strcmp(gs->pos_list_file, "None") || 0 == strcmp(gs->pos_list_file, "none")) { 
+       2. Sometimes, snp_list_file and chrom_all are both not NULL as the chrom_all has been set to default value when
+          global_settings structure was just created. In this case, free chrom_all and save snp_list_file. */
+    if (NULL == gs->snp_list_file || 0 == strcmp(gs->snp_list_file, "None") || 0 == strcmp(gs->snp_list_file, "none")) { 
         if (NULL == gs->chrom_all) { fprintf(stderr, "[E::%s] should specify -R/--regionsVCF or --chrom option.\n", __func__); return -1; }
-        if (gs->pos_list_file) { free(gs->pos_list_file); gs->pos_list_file = NULL; }
+        if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
     } else if (gs->chrom_all) { str_arr_destroy(gs->chrom_all, gs->nchrom); gs->chrom_all = NULL; gs->nchrom = 0; }
     if (gs->umi_tag) {
         if (0 == strcmp(gs->umi_tag, "Auto")) {
@@ -1173,9 +1174,10 @@ int main(int argc, char **argv) {
     global_settings gs;
     gll_set_default(&gs);
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-    int c, k, ret, print_time = 1;
+    int c, k, ret, print_time = 0, print_skip_snp = 0;
     struct option lopts[] = {
         {"help", no_argument, NULL, 'h'},
+        {"version", no_argument, NULL, 'V'},
         {"samFile", required_argument, NULL, 's'},
         {"samfile", required_argument, NULL, 's'},
         {"samFileList", required_argument, NULL, 'S'},			
@@ -1207,12 +1209,14 @@ int main(int argc, char **argv) {
         {"maxFlag", required_argument, NULL, 10},
         {"maxflag", required_argument, NULL, 10},
         {"genotype", no_argument, NULL, 11},
-        {"gzip", no_argument, NULL, 12}
+        {"gzip", no_argument, NULL, 12},
+        {"printSkipSNPs", no_argument, NULL, 13}
     };
-    if (1 == argc) { print_usage(stderr); print_time = 0; goto fail; }
-    while ((c = getopt_long(argc, argv, "hs:S:O:R:b:i:I:p:", lopts, NULL)) != -1) {
+    if (1 == argc) { print_usage(stderr); goto fail; }
+    while ((c = getopt_long(argc, argv, "hVs:S:O:R:b:i:I:p:", lopts, NULL)) != -1) {
         switch (c) {
-            case 'h': print_usage(stderr); print_time = 0; goto fail;
+            case 'h': print_usage(stderr); goto fail;
+            case 'V': printf("%s\n", CSP_VERSION); goto fail;
             case 's': 
                     if (gs.in_fns) { str_arr_destroy(gs.in_fns, gs.nin); }
                     if (NULL == (gs.in_fns = hts_readlist(optarg, 0, &gs.nin)) || gs.nin <= 0) {
@@ -1226,8 +1230,8 @@ int main(int argc, char **argv) {
                     if (gs.out_dir) { free(gs.out_dir); }
                     gs.out_dir = strdup(optarg); break;
             case 'R': 
-                    if (gs.pos_list_file) free(gs.pos_list_file);
-                    gs.pos_list_file = strdup(optarg); break;
+                    if (gs.snp_list_file) free(gs.snp_list_file);
+                    gs.snp_list_file = strdup(optarg); break;
             case 'b': 
                     if (gs.barcode_file) free(gs.barcode_file);
                     gs.barcode_file = strdup(optarg); break;
@@ -1261,6 +1265,7 @@ int main(int argc, char **argv) {
             case 10: gs.max_flag = atoi(optarg); break;
             case 11: gs.is_genotype = 1; break;
             case 12: gs.is_out_zip = 1; break;
+            case 13: print_skip_snp = 1; break;
             default:  fprintf(stderr,"Invalid option: '%c'\n", c); goto fail;													
         }
     }
@@ -1272,7 +1277,7 @@ int main(int argc, char **argv) {
     /* check global settings */
     if ((ret = check_global_args(&gs)) < 0) { 
         fprintf(stderr, "[E::%s] error global settings\n", __func__);
-        if (ret == -1) print_usage(stderr);
+        if (ret == -1) { print_usage(stderr); }
         goto fail;
     }
 #if DEBUG
@@ -1358,23 +1363,23 @@ int main(int argc, char **argv) {
         Mode2: pileup whole chromosome(s) for one or multiple BAM/SAM files
         Mode3: pileup a list of SNPs for one or multiple BAM/SAM files with sample IDs.
     */
-    if (gs.pos_list_file) {
+    if (gs.snp_list_file) {
         fprintf(stderr, "[I::%s] loading the VCF file for given SNPs ...\n", __func__);
-        if (get_snplist(gs.pos_list_file, &gs.pl, &ret) <= 0 || ret < 0) {
-            fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.pos_list_file);
-            goto fail;
-        }
+        if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
+            fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
+            print_time = 1; goto fail;
+        } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, csp_snplist_size(gs.pl)); }
         if (gs.barcodes) { 
             fprintf(stderr, "[I::%s] mode 1: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
-            if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); goto fail; } 
+            if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); print_time = 1; goto fail; } 
         } else { 
             fprintf(stderr, "[I::%s] mode 3: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
-            if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); goto fail; } 
+            if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); print_time = 1; goto fail; } 
         }
     } else if (gs.chrom_all) { 
         if (gs.barcodes) { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
         else { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in one bulk sample.\n", __func__, gs.nchrom); }
-        if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2 failed.\n", __func__); goto fail; }
+        if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2 failed.\n", __func__); print_time = 1; goto fail; }
     } else {
         fprintf(stderr, "[E::%s] no proper mode to run, check input options.\n", __func__);
         print_usage(stderr);
@@ -1385,13 +1390,11 @@ int main(int argc, char **argv) {
     gll_setting_free(&gs);
     fprintf(stderr, "[I::%s] All Done!\n", __func__);
     /* calc time spent */
-    if (print_time) {
-        time(&end_time);
-        time_info = localtime(&end_time);
-        strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
-        fprintf(stderr, "[I::%s] end time: %s\n", __func__, time_str);
-        fprintf(stderr, "[I::%s] time spent: %ld seconds.\n", __func__, end_time - start_time);
-    }
+    time(&end_time);
+    time_info = localtime(&end_time);
+    strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
+    fprintf(stderr, "[I::%s] end time: %s\n", __func__, time_str);
+    fprintf(stderr, "[I::%s] time spent: %ld seconds.\n", __func__, end_time - start_time);
     return 0;
   fail:
     if (s) { ks_free(s); }
