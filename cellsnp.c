@@ -808,40 +808,49 @@ static int run_mode_with_fetch(global_settings *gs) {
         int nthread = gs->nthread;
         csp_fs_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
         thread_data **td = NULL, *d = NULL;
-        int ntd = 0, mtd = nthread; // ntd: num of thread-data structures that have been created. mtd: size of td array.
+        int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
         int i, ret;
         size_t npos, mpos, ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
         out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
+        /* calc number of threads and number of SNPs for each thread. */
+        mpos = csp_snplist_size(gs->pl) / nthread;
+        if (0 == csp_snplist_size(gs->pl) % nthread) {
+            mtd = nthread;
+        } else {
+            mpos++;
+            mtd = csp_snplist_size(gs->pl) / mpos;   // can prove here mtd < nthread.
+            if (0 != csp_snplist_size(gs->pl) % mpos) { mtd++; }
+        }        
         /* create output tmp filenames. */
-        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, nthread, 0))) {
+        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, nthread, 0))) {
+        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_DP.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, nthread, 0))) {
+        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_OTH.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, nthread, 0))) {
+        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_BASE.\n", __func__);
             goto fail;
         }
-        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, nthread, 0))) {
+        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_CELLS.\n", __func__);
             goto fail;
         }
         /* prepare data for thread pool and run. */
         td = (thread_data**) calloc(mtd, sizeof(thread_data*));
         if (NULL == td) { fprintf(stderr, "[E::%s] could not initialize the array of thread_data structure.\n", __func__); goto fail; }
-        for (npos = 0, mpos = csp_snplist_size(gs->pl) / mtd; ntd < mtd - 1; ntd++, npos += mpos) { /* mtd is equal to mout_tmp */
+        for (npos = 0; ntd < mtd; ntd++, npos += mpos) {
             if (NULL == (d = thdata_init())) {
                 fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
                 goto fail; 
             }
-            d->gs = gs; d->n = npos; d->m = mpos; d->i = ntd; 
+            d->i = ntd; d->gs = gs; d->n = npos; d->m = ntd == mtd - 1 ? csp_snplist_size(gs->pl) - npos : mpos;
             d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
             d->out_vcf_base = out_tmp_vcf_base[ntd]; d->out_vcf_cells = gs->is_genotype ? out_tmp_vcf_cells[ntd] : NULL;
             td[ntd] = d;
@@ -850,100 +859,86 @@ static int run_mode_with_fetch(global_settings *gs) {
                 goto fail;
             } // make sure do not to free pointer d when fail.
         }
-        if (csp_snplist_size(gs->pl) - npos > 0) { // still have some SNPs to be processed.
-            if (NULL == (d = thdata_init())) { 
-                fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
-                goto fail; 
-            }
-            d->gs = gs; d->n = npos; d->m = csp_snplist_size(gs->pl) - npos; d->i = ntd; 
-            d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
-            d->out_vcf_base = out_tmp_vcf_base[ntd]; d->out_vcf_cells = gs->is_genotype ? out_tmp_vcf_cells[ntd] : NULL;
-            td[ntd] = d;         
-            if (thpool_add_work(gs->tp, (void*) pileup_positions_with_fetch, d) < 0) {
-                fprintf(stderr, "[E::%s] could not add thread work (No. %d)\n", __func__, ntd++);
-                goto fail;
-            } else { ntd++; }
-        }
         thpool_wait(gs->tp);
         /* check running status of threads. */
         #if DEBUG
-            for (i = 0; i < ntd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
+            for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
         #endif
-        for (i = 0; i < nthread; i++) { if (td[i]->ret < 0) goto fail; }
+        for (i = 0; i < mtd; i++) { if (td[i]->ret < 0) goto fail; }
         /* merge tmp files. */
         ns = nr_ad = nr_dp = nr_oth = 0;
-        for (i = 0; i < nthread; i++) {
+        for (i = 0; i < mtd; i++) {
             nr_ad += td[i]->nr_ad; nr_dp += td[i]->nr_dp; nr_oth += td[i]->nr_oth;
             ns += td[i]->ns;
         }
         if (csp_fs_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
         csp_fs_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
-        merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, gs->nthread, &ns_merge, &nr_merge, &ret);
+        merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_ad) { fprintf(stderr, "[E::%s] failed to merge mtx AD.\n", __func__); goto fail; }
         csp_fs_close(gs->out_mtx_ad);
 
         if (csp_fs_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
         csp_fs_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
-        merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, gs->nthread, &ns_merge, &nr_merge, &ret);
+        merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_dp) { fprintf(stderr, "[E::%s] failed to merge mtx DP.\n", __func__); goto fail; }
         csp_fs_close(gs->out_mtx_dp);
 
         if (csp_fs_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
         csp_fs_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
-        merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, gs->nthread, &ns_merge, &nr_merge, &ret);
+        merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_oth) { fprintf(stderr, "[E::%s] failed to merge mtx OTH.\n", __func__); goto fail; }
         csp_fs_close(gs->out_mtx_oth);
 
         if (csp_fs_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
-        merge_vcf(gs->out_vcf_base, out_tmp_vcf_base, gs->nthread, &ret);
+        merge_vcf(gs->out_vcf_base, out_tmp_vcf_base, mtd, &ret);
         if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf BASE.\n", __func__); goto fail; }
         csp_fs_close(gs->out_vcf_base);
 
         if (gs->is_genotype) {
             if (csp_fs_open(gs->out_vcf_cells, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf CELLS.\n", __func__); goto fail; }
-            merge_vcf(gs->out_vcf_cells, out_tmp_vcf_cells, gs->nthread, &ret);
+            merge_vcf(gs->out_vcf_cells, out_tmp_vcf_cells, mtd, &ret);
             if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf CELLS.\n", __func__); goto fail; }    
             csp_fs_close(gs->out_vcf_cells);     
         }
         /* clean */
-        for (i = 0; i < ntd; i++) { thdata_destroy(td[i]); }
+        for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
         free(td); td = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_ad, nthread) < 0) {
+        if (destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
         } out_tmp_mtx_ad = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_dp, nthread) < 0) {
+        if (destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
         } out_tmp_mtx_dp = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_oth, nthread) < 0) {
+        if (destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
         } out_tmp_mtx_oth = NULL;
-        if (destroy_tmp_files(out_tmp_vcf_base, nthread) < 0) {
+        if (destroy_tmp_files(out_tmp_vcf_base, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf BASE files.\n", __func__);
         } out_tmp_vcf_base = NULL;
         if (gs->is_genotype) {         
-            if (destroy_tmp_files(out_tmp_vcf_cells, nthread) < 0) {
+            if (destroy_tmp_files(out_tmp_vcf_cells, mtd) < 0) {
                 fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
             } out_tmp_vcf_cells = NULL;
         }
         return 0;
       fail:
         if (td) {
-            for (i = 0; i < ntd; i++) { thdata_destroy(td[i]); }
+            for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
             free(td);
         }
-        if (out_tmp_mtx_ad && destroy_tmp_files(out_tmp_mtx_ad, nthread) < 0) {
+        if (out_tmp_mtx_ad && destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
         }
-        if (out_tmp_mtx_dp && destroy_tmp_files(out_tmp_mtx_dp, nthread) < 0) {
+        if (out_tmp_mtx_dp && destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
         }
-        if (out_tmp_mtx_oth && destroy_tmp_files(out_tmp_mtx_oth, nthread) < 0) {
+        if (out_tmp_mtx_oth && destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
         }
-        if (out_tmp_vcf_base && destroy_tmp_files(out_tmp_vcf_base, nthread) < 0) {
+        if (out_tmp_vcf_base && destroy_tmp_files(out_tmp_vcf_base, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf BASE files.\n", __func__);
         }
-        if (out_tmp_vcf_cells && destroy_tmp_files(out_tmp_vcf_cells, nthread) < 0) {
+        if (out_tmp_vcf_cells && destroy_tmp_files(out_tmp_vcf_cells, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
         }
         if (csp_fs_isopen(gs->out_mtx_ad)) { csp_fs_close(gs->out_mtx_ad); }
