@@ -7,7 +7,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellSNP"
-#define CSP_VERSION "0.1.8"
+#define CSP_VERSION "0.3.0"
 #define CSP_AUTHOR "hxj5"
 
 #include <stdio.h>
