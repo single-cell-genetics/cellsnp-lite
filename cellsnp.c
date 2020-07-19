@@ -35,7 +35,9 @@
 #define CSP_MIN_MAF    0.0
 #define CSP_MIN_LEN    30
 #define CSP_MIN_MAPQ   20
-#define CSP_MAX_FLAG   255
+#define CSP_MAX_SAM_FLAG         4096
+#define CSP_MAX_FLAG_WITH_UMI    CSP_MAX_SAM_FLAG
+#define CSP_MAX_FLAG_WITHOUT_UMI 255
 #define CSP_OUT_VCF_CELLS   "cellSNP.cells.vcf"
 #define CSP_OUT_VCF_BASE    "cellSNP.base.vcf"
 #define CSP_OUT_SAMPLES     "cellSNP.samples.tsv"
@@ -146,7 +148,7 @@ static void gll_set_default(global_settings *gs) {
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
         gs->double_gl = 0;
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
-        gs->max_flag = CSP_MAX_FLAG;
+        gs->max_flag = -1;
     }
 }
 
@@ -1033,7 +1035,8 @@ static void print_usage(FILE *fp) {
     fprintf(fp,
 "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
     fprintf(fp,
-"  --maxFLAG INT        Maximum FLAG for read filtering [%d]\n", CSP_MAX_FLAG);
+"  --maxFLAG INT        Maximum FLAG for read filtering [%d (when use UMI) or %d (otherwise)]\n", \
+                        CSP_MAX_FLAG_WITH_UMI, CSP_MAX_FLAG_WITHOUT_UMI);
     fputc('\n', fp);
 }
 
@@ -1128,6 +1131,7 @@ static int check_global_args(global_settings *gs) {
             else { free(gs->umi_tag); gs->umi_tag = NULL; }
         } else if (0 == strcmp(gs->umi_tag, "None") || 0 == strcmp(gs->umi_tag, "none")) { free(gs->umi_tag); gs->umi_tag = NULL; }
     }
+    if (gs->max_flag < 0) { gs->max_flag = gs->umi_tag ? CSP_MAX_FLAG_WITH_UMI : CSP_MAX_FLAG_WITHOUT_UMI; }
     return 0;
 }
 
