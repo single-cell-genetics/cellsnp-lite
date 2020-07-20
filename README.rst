@@ -80,6 +80,11 @@ As shown in the above command line, we recommend filtering SNPs with <20UMIs
 or <10% minor alleles for downstream donor deconvolution, by adding 
 ``--minMAF 0.1 --minCOUNT 20``
 
+Besides, special care needs to be taken when filtering PCR duplicates for scRNA-seq data by 
+setting maxFLAG to a small value, for the upstream pipeline may mark each extra read sharing 
+the same CB/UMI pair as PCR duplicate, which will result in most variant data being lost. 
+Due to the reason above, cellSNP by default uses a large maxFLAG value to include PCR 
+duplicates for scRNA-seq data when UMItag is turned on.
 
 * **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file (Will be supported in future...)**
 
