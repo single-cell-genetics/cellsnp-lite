@@ -1,20 +1,24 @@
-CC=gcc
-CFLAGS=-g -Wall -O2 -Wno-unused-function
-BINDIR=/usr/local/bin
-
 htslib_dir=../htslib
 htslib_include_dir=$(htslib_dir)
 htslib_lib_dir=$(htslib_dir)
+
+CC=gcc
+CFLAGS=-g -Wall -O2 -Wno-unused-function -I$(htslib_include_dir)
+LDFLAGS=-L$(htslib_lib_dir)
+
+BIN_DIR=/usr/local/bin
+BIN_NAME=cellsnp-lite
+
 scripts=cellsnp.c thpool.c
 headers=general_util.h cellsnp_util.h thpool.h kvec.h
 
-all: cellSNP
+all: $(BIN_NAME)
 
-cellSNP: $(scripts) $(headers)
-	$(CC) $(CFLAGS) $(scripts) -o $@ -I $(htslib_include_dir) -L $(htslib_lib_dir) -lz -lm -lhts -pthread
+$(BIN_NAME): $(scripts) $(headers)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(scripts) -o $@ -lz -lm -lhts -pthread
 
 install: all
-	install cellSNP $(BINDIR)
+	install $(BIN_NAME) $(BIN_DIR)
 
 clean:
-	-rm *.o a.out cellSNP
+	-rm -f *.o a.out $(BIN_NAME)
