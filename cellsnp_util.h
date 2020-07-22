@@ -6,9 +6,9 @@
 /* DEVELOP defined to 1 means some codes for future version of cellsnp will be included. */
 #define DEVELOP 0
 
-#define CSP_NAME "cellSNP"
-#define CSP_VERSION "0.3.0"
-#define CSP_AUTHOR "hxj5"
+#define CSP_NAME "cellsnp-lite"
+#define CSP_VERSION "0.3.1"
+#define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 #include <stdio.h>
 #include <stdlib.h>

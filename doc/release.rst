@@ -2,12 +2,23 @@
 History
 =======
 
+Release v0.3.1 (22/07/2020)
+===========================
+* turn off the PCR duplicate filtering by default (--maxFLAG), as it is not 
+  well flagged in CellRanger, hence may result in loss of a substantial 
+  fraction of SNPs.
+
+Release v0.3.0 (05/06/2020)
+===========================
+* fix a bug of using read.qqual and read.query_alignment_sequence in pileup_bases() and 
+  fetch_bases(), which could cause error when CIGAR string includes the 'I' (Insertion) op
+* fix a bug of repetitive UMIs existing in different cells when grouping and counting UMIs
+* the pos in the output vcf of mode 2 is switched from 0-based to 1-based
 
 Release v0.1.8 (06/02/2020)
 ===========================
 * Mode 2 now supports pile up chromosomes for a single bulk sample
 * Mode 3 now supports multiple bam files in a list file
-
 
 Release v0.1.7 (04/10/2019)
 ===========================
