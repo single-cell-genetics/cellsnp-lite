@@ -22,6 +22,8 @@ Also, there are two major differences comparing to bcftools mpileup:
 
 News
 ----
+We have turn off the PCR duplicate filtering by default (--maxFLAG), as it is not well flagged in CellRanger, hence may result in loss of a substantial fraction of SNPs. Please use v0.3.1 or setting --maxFLAG to large number. Credits to [issue](https://github.com/single-cell-genetics/cellSNP/issues/13)
+
 All release notes can be found in `doc/release.rst`_.
 
 For computational efficiency, we initialised comments on this: `doc/speed.rst`_
