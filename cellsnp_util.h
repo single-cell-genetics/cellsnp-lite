@@ -10,6 +10,11 @@
 #define CSP_VERSION "0.3.1"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
+// zip method for csp_fs_t structure.
+#define CSP_FS_GZIP 1
+#define CSP_FS_BGZIP 2
+#define CSP_FS_ZIP_METHOD CSP_FS_BGZIP
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +25,7 @@
 #include "htslib/kstring.h"
 #include "htslib/hts.h"
 #include "htslib/khash.h"
+#include "htslib/bgzf.h"
 #include "kvec.h"
 #include "general_util.h"
 
@@ -173,6 +179,25 @@ static inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn) {
 
 /* let gzgets() to be compatible with kgetline(). */
 static inline char* csp_gzgets(char *buf, int len, gzFile fp) { return gzgets(fp, buf, len); }
+static inline int csp_bgzf_gets(BGZF *fp, kstring_t *s) {
+    return bgzf_getline(fp, '\n', s) <= -1 ? -1 : 0;
+}
+
+#if (CSP_FS_ZIP_METHOD == CSP_FS_BGZIP)
+    #define CSP_FS_ZFILE BGZF*
+    #define csp_fs_zopen(fn, fm) bgzf_open(fn, fm)
+    #define csp_fs_zclose(zfp) bgzf_close(zfp)
+    #define csp_fs_zread(zfp, buf, len) bgzf_read(zfp, buf, len)
+    #define csp_fs_zgetln(zfp, ks) csp_bgzf_gets(zfp, ks)
+    #define csp_fs_zwrite(zfp, buf, len) bgzf_write(zfp, buf, len)
+#else
+    #define CSP_FS_ZFILE gzFile
+    #define csp_fs_zopen(fn, fm) gzopen(fn, fm)
+    #define csp_fs_zclose(zfp) gzclose(zfp)
+    #define csp_fs_zread(zfp, buf, len) gzread(zfp, buf, len)
+    #define csp_fs_zgetln(zfp, ks) kgetline(ks, (kgets_func*) csp_gzgets, zfp)
+    #define csp_fs_zwrite(zfp, buf, len) gzwrite(zfp, buf, len)
+#endif
 
 /*@abstract    Structure used for outputed files with Simple Output Buffer.
 @param fn      Filename.
@@ -192,7 +217,7 @@ static inline char* csp_gzgets(char *buf, int len, gzFile fp) { return gzgets(fp
 typedef struct {
     char *fn;
     char *fm;
-    gzFile zfp;
+    CSP_FS_ZFILE zfp;
     FILE *fp;
     uint8_t is_zip, is_tmp, is_open;
     kstring_t ks, *buf;
@@ -212,7 +237,7 @@ static inline csp_fs_t* csp_fs_init(void) {
 static inline void csp_fs_destroy(csp_fs_t* p) {
     if (p) {
         if (p->is_open) {
-            if (p->is_zip) { gzclose(p->zfp); p->zfp = NULL; }
+            if (p->is_zip) { csp_fs_zclose(p->zfp); p->zfp = NULL; }
             else { fclose(p->fp); p->fp = NULL; }
         }
         ks_free(p->buf);
@@ -234,7 +259,7 @@ static inline int csp_fs_open(csp_fs_t *p, char *mode) {
     if (p->is_open) { return 0; }
     char *fm = mode ? mode : p->fm;
     if (p->is_zip) {
-        if (NULL == (p->zfp = gzopen(p->fn, fm))) { return -1; }
+        if (NULL == (p->zfp = csp_fs_zopen(p->fn, fm))) { return -1; }
         else { p->is_open = 1; return 1; }
     } else if (NULL == (p->fp = fopen(p->fn, fm))) {
         return -1;
@@ -247,7 +272,7 @@ static inline int csp_fs_open(csp_fs_t *p, char *mode) {
 @param len   Size of content to be read.
 @return      Value returned as gzread/fread. */
 static inline ssize_t csp_fs_read(csp_fs_t *p, char *buf, size_t len) {
-    return p->is_zip ? gzread(p->zfp, buf, len) : fread(buf, 1, len, p->fp);
+    return p->is_zip ? csp_fs_zread(p->zfp, buf, len) : fread(buf, 1, len, p->fp);
 }
 
 /*@abstract  Get a line from csp_fs_t without Input buffer.
@@ -258,7 +283,7 @@ static inline ssize_t csp_fs_read(csp_fs_t *p, char *buf, size_t len) {
 @note        kgetline() is defined in htslib/kstring.h 
 */
 static inline int csp_fs_getln(csp_fs_t *p, kstring_t *s) {
-    return p->is_zip ? kgetline(s, (kgets_func*) csp_gzgets, p->zfp) : kgetline(s, (kgets_func*) fgets, p->fp);
+    return p->is_zip ? csp_fs_zgetln(p->zfp, s) : kgetline(s, (kgets_func*) fgets, p->fp);
 }
 
 /*@abstract  Output functions below are like kxxx() functions in htslib/kstring.h with Output buffer.
@@ -271,7 +296,7 @@ static inline int csp_fs_getln(csp_fs_t *p, kstring_t *s) {
  */
 static inline int csp_fs_flush(csp_fs_t *p) {
     ssize_t l, l0 = ks_len(p->buf);
-    l = p->is_zip ? gzwrite(p->zfp, ks_str(p->buf), ks_len(p->buf)) : fwrite(ks_str(p->buf), 1, ks_len(p->buf), p->fp);
+    l = p->is_zip ? csp_fs_zwrite(p->zfp, ks_str(p->buf), ks_len(p->buf)) : fwrite(ks_str(p->buf), 1, ks_len(p->buf), p->fp);
     ks_clear(p->buf);
     return l == l0 ? 0 : EOF;
 }
@@ -324,7 +349,7 @@ static inline int csp_fs_close(csp_fs_t *p) {
     int ret = 0;
     if (p->is_open) {
         if (ks_len(p->buf) && csp_fs_flush(p) < 0) { ret = EOF; } // only for write mode.
-        if (p->is_zip) { gzclose(p->zfp); p->zfp = NULL; }
+        if (p->is_zip) { csp_fs_zclose(p->zfp); p->zfp = NULL; }
         else { fclose(p->fp); p->fp = NULL; }
         p->is_open = 0;
     } 

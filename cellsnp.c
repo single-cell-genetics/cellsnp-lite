@@ -1028,7 +1028,7 @@ static void print_usage(FILE *fp) {
 "  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
     fprintf(fp,
 "  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n"
-"  --gzip               If use, the output files will be zipped.\n"
+"  --gzip               If use, the output files will be zipped into BGZF format.\n"
 "\n"
 "Read filtering:\n"
 "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
