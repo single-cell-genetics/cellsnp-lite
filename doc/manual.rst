@@ -1,53 +1,48 @@
 Full parameters
 ---------------
-Here is a list of full parameters for setting (``cellSNP -h`` always give the 
+Here is a list of full parameters for setting (``cellsnp-lite -V`` always give the 
 version you are using):
 
 .. code-block:: html
 
-  Usage: cellSNP [options]
-
+  Usage: cellsnp-lite [options]
+  
   Options:
-    -h, --help            show this help message and exit
-    -s SAM_FILE, --samFile=SAM_FILE
-                          Indexed sam/bam file(s), comma separated multiple
-                          samples. Mode 1&2: one sam/bam file with single cell
-                          barcode; Mode 3: one or multiple bulk sam/bam files,
-                          no barcodes needed, but sample ids and regionsVCF.
-    -O SPARSE_DIR, --outDir=SPARSE_DIR
-                          Output directory for VCF and sparse matrices: AD, DP,
-                          OTH.
-    -o OUT_FILE, --outVCF=OUT_FILE
-                          Output full path with file name for VCF file. Only
-                          use if not given outDir. [optional]
-    -R REGION_FILE, --regionsVCF=REGION_FILE
-                          A vcf file listing all candidate SNPs, for fetch each
-                          variants. If None, pileup the genome. Needed for bulk
-                          samples.
-    -b BARCODE_FILE, --barcodeFile=BARCODE_FILE
-                          A plain file listing all effective cell barcode.
-    -I SAMPLE_IDS, --sampleIDs=SAMPLE_IDS
-                          Comma separated sample ids. Only use it when you input
-                          multiple bulk sam files.
-
-    Optional arguments:
-      -p NPROC, --nproc=NPROC
-                          Number of subprocesses [default: 1]
-      --chrom=CHROM_ALL   The chromosomes to use, comma separated [default: 1 to
-                          22]
-      --cellTAG=CELL_TAG  Tag for cell barcodes, turn off with None [default:
-                          CB]
-      --UMItag=UMI_TAG    Tag for UMI: UR, Auto, None. For Auto mode, use UR if
-                          barcodes is inputted, otherwise use None. None mode
-                          means no UMI but read counts [default: Auto]
-      --minCOUNT=MIN_COUNT
-                          Minimum aggragated count [default: 20]
-      --minMAF=MIN_MAF    Minimum minor allele frequency [default: 0.0]
-      --doubletGL         If use, keep doublet GT likelihood, i.e., GT=0.5 and
-                          GT=1.5
-      --saveHDF5          If use, save an output file in HDF5 format.
-
-    Read filtering:
-      --minLEN=MIN_LEN    Minimum mapped length for read filtering [default: 30]
-      --minMAPQ=MIN_MAPQ  Minimum MAPQ for read filtering [default: 20]
-      --maxFLAG=MAX_FLAG  Maximum FLAG for read filtering [default: 255]
+    -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.
+                         Mode 1&2: one sam/bam file with single cell.
+                         Mode 3: one or multiple bulk sam/bam files,
+                         no barcodes needed, but sample ids and regionsVCF.
+    -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.
+    -O, --outDir DIR         Output directory for VCF and sparse matrices.
+    -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.
+                             If None, pileup the genome. Needed for bulk samples.
+    -b, --barcodeFile FILE   A plain file listing all effective cell barcode.
+    -i, --sampleList FILE    A list file containing sample IDs, each per line.
+    -I, --sampleIDs STR      Comma separated sample ids.
+    -V, --version            Print software version and exit.
+    -h, --help               Show this help message and exit.
+  
+  Optional arguments:
+    --genotype           If use, do genotyping in addition to counting.
+    --gzip               If use, the output files will be zipped into BGZF format.
+    --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.
+    -p, --nproc INT      Number of subprocesses [1]
+    --chrom STR          The chromosomes to use, comma separated [1 to 22]
+    --cellTAG STR        Tag for cell barcodes, turn off with None [CB]
+    --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,
+                         otherwise use None. None mode means no UMI but read counts [Auto]
+    --minCOUNT INT       Minimum aggragated count [20]
+    --minMAF FLOAT       Minimum minor allele frequency [0.00]
+    --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.
+  
+  Read filtering:
+    --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset []
+    --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [UNMAP,SECONDARY,QCFAIL
+                         (when use UMI) or UNMAP,SECONDARY,QCFAIL,DUP (otherwise)]
+    --minLEN INT         Minimum mapped length for read filtering [30]
+    --minMAPQ INT        Minimum MAPQ for read filtering [20]
+    --countORPHAN        If use, do not skip anomalous read pairs.
+  
+  Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG" instead.
+  You can easily aggregate and convert the flag mask bits to an integer by refering to:
+  https://broadinstitute.github.io/picard/explain-flags.html

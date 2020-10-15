@@ -2,6 +2,12 @@
 History
 =======
 
+Release v1.0.0 (15/10/2020)
+===========================
+* add mode 2
+* replace --maxFLAG with --inclFLAG and --exclFLAG
+* always filter unmapped reads
+
 Release v0.3.1 (22/07/2020)
 ===========================
 * turn off the PCR duplicate filtering by default (--maxFLAG), as it is not 

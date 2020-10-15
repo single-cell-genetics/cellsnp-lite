@@ -7,7 +7,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellsnp-lite"
-#define CSP_VERSION "0.3.1"
+#define CSP_VERSION "1.0.0"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 // zip method for csp_fs_t structure.
@@ -48,12 +48,22 @@ static inline int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_
     int tid;
     if ((tid = sam_hdr_name2tid(hdr, name)) < 0) {
         if (tid < -1) { return tid; }
-        if (strlen(name) > 3 && 'c' == name[0] && 'h' == name[1] && 'r' == name[2]) { return sam_hdr_name2tid(hdr, name + 3); }
+        if (0 == strncmp(name, "chr", 3)) { return sam_hdr_name2tid(hdr, name + 3); }
         else {
             kputs("chr", s); kputs(name, s);
             return sam_hdr_name2tid(hdr, ks_str(s));
         }
     } else { return tid; }
+}
+
+/*@abstract  Convert chrom name to be the same with the one in sam header. 
+@return      Pointer to ref/chrom name if success, NULL otherwise.
+@note        No need to free the returned char* pointer when success.
+*/
+static inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s) {
+    int tid;
+    if ((tid = csp_sam_hdr_name2id(hdr, name, s)) < 0) { return NULL; }
+    else { return sam_hdr_tid2name(hdr, tid); }
 }
 
 /*@abstract   The two functions below convert raw cigar op/len value to real value.
@@ -519,9 +529,8 @@ static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, 
 */
 /*@abstract    The data structure used as thread-func parameter.
 @param gs      Pointer to the global_settings structure.
-@param n       Pos of next element in the snplist to be used by certain thread.
+@param n       Pos of next element in the snp-list/chrom-list to be used by certain thread.
 @param m       Total size of elements to be used by certain thread, must not be changed.
-@param ci      Index of the element in the chrom_all array used by certain thread.
 @param i       Id of the thread data.
 @param ret     Running state of the thread.
 @param ns      Num of SNPs that passed all filters.
@@ -530,8 +539,7 @@ static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, 
  */
 typedef struct {
     global_settings *gs;
-    size_t m, n;   // for snplist.
-    int ci;        // for chromosome(s).
+    size_t m, n;   // for snp-list or chrom-list.
     int i;
     int ret;
     size_t ns, nr_ad, nr_dp, nr_oth;
@@ -549,7 +557,7 @@ static inline void thdata_destroy(thread_data *p) { free(p); }
 
 static inline void thdata_print(FILE *fp, thread_data *p) {
     fprintf(fp, "\tm = %ld, n = %ld\n", p->m, p->n);
-    fprintf(fp, "\tci = %d, i = %d, ret = %d\n", p->ci, p->i, p->ret);
+    fprintf(fp, "\ti = %d, ret = %d\n", p->i, p->ret);
 }
 
 /*

@@ -19,14 +19,16 @@ Also, there are two major differences comparing to bcftools mpileup:
    and minor alleles fractions. The idea here is to keep most information of 
    SNPs and the downstream statistical model can take the full use of it.
 
-cellsnp-lite is the C version of cellSNP_, which is implemented in Python. Compared to cellSNP, cellsnp-lite is basically more efficient with 
-higher speed and less memory usage. But it can only pileup SNPs with a list of positions and cannot pileup 
-whole chromosome(s), which is mode 2 of cellSNP. If you would like to pileup whole chromosome(s) for a single 
-BAM/SAM file, please refer to cellSNP.
+cellsnp-lite is the C version of cellSNP_, which is implemented in Python. Compared to 
+cellSNP, cellsnp-lite is basically more efficient with higher speed and less memory usage. 
 
 News
 ----
-We have turn off the PCR duplicate filtering by default (--maxFLAG), as it is not well flagged in CellRanger, hence may result in loss of a substantial fraction of SNPs. Please use v0.3.1 (or above) or setting --maxFLAG to large number. Credits to issue13_ of cellSNP.
+Mode 2 is now avaliable in cellsnp-lite. cellsnp-lite mode 2 is aimed to pileup 
+whole chromosome(s) for a single BAM/SAM file.
+
+The command line option ``--maxFLAG`` is now deprecated, please use ``--inclFLAG`` and 
+``--exclFLAG`` instead, which are more flexible for reads filtering.
 
 All release notes can be found in `doc/release.rst`_.
 
@@ -68,8 +70,8 @@ or to a new environment:
 
 * **Method 2: Install from this Github Repo (latest stable/dev version)**
 
-cellsnp-lite depends on `zlib`_ and `htslib`_. The two libs should have been installed in the system before
-installing cellsnp-lite. Then to install cellsnp-lite,  
+cellsnp-lite depends on `zlib`_ and `htslib`_. The two libs should have been installed in 
+the system before installing cellsnp-lite. Then to install cellsnp-lite,  
 
 .. code-block:: bash
 
@@ -78,11 +80,13 @@ installing cellsnp-lite. Then to install cellsnp-lite,
   make;
   sudo make install;
   
-By default, this will build against an HTSlib source tree in ../htslib. You can alter this to a source tree elsewhere or to a 
-previously-installed HTSlib by running ``make htslib_dir=<path_to_htslib_dir>``.  
+By default, this will build against an HTSlib source tree in ../htslib. You can alter this 
+to a source tree elsewhere or to a previously-installed HTSlib by running 
+``make htslib_dir=<path_to_htslib_dir>``.  
 
-Besides, if you met the error ``error while loading shared libraries: libhts.so.3`` when running cellsnp-lite, you could fix this 
-by setting environment variable ``LD_LIBRARY_PATH`` to proper value,
+Besides, if you met the error ``error while loading shared libraries: libhts.so.3`` when 
+running cellsnp-lite, you could fix this by setting environment variable ``LD_LIBRARY_PATH`` 
+to proper value,
 
 .. code-block:: bash
 
@@ -97,7 +101,7 @@ There are three modes of cellsnp-lite:
 
 * **Mode 1: pileup a list of SNPs for a single BAM/SAM file**
 
-Use both `-R` and `-b`. 
+Use both ``-R`` and ``-b``. 
 
 Require: a single BAM/SAM file, e.g., from cellranger, a list of cell barcodes,
 a VCF file for common SNPs. This mode is recommended comparing to mode 2, if a 
@@ -105,7 +109,7 @@ list of common SNP is known, e.g., human (see Candidate SNPs below)
 
 .. code-block:: bash
 
-  cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20 --genotype --gzip
+  cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20 --gzip
   
 As shown in the above command line, we recommend filtering SNPs with <20UMIs  
 or <10% minor alleles for downstream donor deconvolution, by adding 
@@ -114,32 +118,62 @@ or <10% minor alleles for downstream donor deconvolution, by adding
 Besides, special care needs to be taken when filtering PCR duplicates for scRNA-seq data by 
 setting maxFLAG to a small value, for the upstream pipeline may mark each extra read sharing 
 the same CB/UMI pair as PCR duplicate, which will result in most variant data being lost. 
-Due to the reason above, cellsnp-lite by default uses a large maxFLAG value to include PCR 
+Due to the reason above, cellsnp-lite by default uses a non-DUP exclFLAG value to include PCR 
 duplicates for scRNA-seq data when UMItag is turned on.
 
 * **Mode 2: pileup whole chromosome(s) for a single BAM/SAM file**
 
-This mode requires inputting a single bam file with either cell barcoded 
-(add `-b`) or a bulk sample. It is not available now and will be supported in future. 
-If you would like to use this mode, please refer to cellSNP_.
+Don't use ``-R`` but flexible on ``-b``.
 
-* **Mode 3: pileup a list of SNPs for one or multiple BAM/SAM files**
-
-Use `-R` but not `-b`.
-
-Require: one or multiple BAM/SAM files (bulk or smart-seq), their according 
-sample ids (optional), and a VCF file for a list of common SNPs. BAM/SAM files 
-can be input in comma separated way (`-s`) or in a list file (`-S`). 
+This mode requires inputting a single bam file with either cell barcoded (add ``-b``) or a bulk sample:
 
 .. code-block:: bash
 
-  cellsnp-lite -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None --genotype --gzip
+  # 10x sample with cell barcodes
+  cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --gzip
 
-  cellsnp-lite -S $BAM_list_file -I sample_list_file -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None --genotype --gzip
+  # a bulk sample without cell barcodes and UMI tag
+  cellsnp-lite -s $bulkBAM -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None --gzip
+
+Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
+
+Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space and speed up inference 
+when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
+
+Note, this mode may output false positive SNPs, for example somatic variants or falses caussed by 
+RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence 
+confounding the demultiplexing. Nevertheless, for species, e.g., zebrafish, without a good list of 
+common SNPs, this strategy is still worth a good try, and it does not take much more time than mode 1.
+
+* **Mode 3: pileup a list of SNPs for one or multiple BAM/SAM files**
+
+Use ``-R`` but not ``-b``.
+
+Require: one or multiple BAM/SAM files (bulk or smart-seq), their according 
+sample ids (optional), and a VCF file for a list of common SNPs. BAM/SAM files 
+can be input in comma separated way (``-s``) or in a list file (``-S``). 
+
+.. code-block:: bash
+
+  cellsnp-lite -s $BAM1,$BAM2,$BAM3 -I sample_id1,sample_id2,sample_id3 -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None --gzip
+
+  cellsnp-lite -S $BAM_list_file -I sample_list_file -O $OUT_DIR -R $REGION_VCF -p 20 --UMItag None --gzip
 
 Set filtering thresholds according to the downstream analysis. Please add 
 ``--UMItag None`` if your bam file does not have UMIs, e.g., smart-seq and bulk 
 RNA-seq.
+
+
+Notes
+----------------------
+
+The command line option ``--maxFLAG`` is now deprecated, please use ``--inclFLAG`` and 
+``--exclFLAG`` instead, which are more flexible for reads filtering. You could refer to
+the explain_flags_ page to easily aggregate and convert all flag bits into one integer. 
+One example is that the default exclFLAG value (without using UMIs) is 1796, which is 
+calculated by adding four flag bits: UNMAP (4), SECONDARY (256), QCFAIL (512) and DUP (1024).
+
+.. _explain_flags: https://broadinstitute.github.io/picard/explain-flags.html
 
 
 List of candidate SNPs
