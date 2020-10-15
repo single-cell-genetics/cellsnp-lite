@@ -403,6 +403,7 @@ static int pileup_read_with_fetch(hts_pos_t pos, csp_pileup_t *p, global_setting
     if (use_umi(gs) && NULL == (p->umi = get_bam_aux_str(p->b, gs->umi_tag))) { return 1; }
     if (use_barcodes(gs) && NULL == (p->cb = get_bam_aux_str(p->b, gs->cell_tag))) { return 1; }
     bam1_core_t *c = &(p->b->core);
+    if (c->tid < 0 || c->flag & BAM_FUNMAP) { return 2; }
     if (c->qual < gs->min_mapq) { return 2; }
     //if (c->flag > gs->max_flag) { return 2; }
     if (gs->rflag_filter && gs->rflag_filter & c->flag) { return 2; }
@@ -691,6 +692,7 @@ static int mp_func(void *data, bam1_t *b) {
     do {
         if ((ret = sam_itr_next(dat->fp, dat->itr, b)) < 0) { break; }
         c = &(b->core);
+        if (c->tid < 0 || c->flag & BAM_FUNMAP) { continue; }
         if (c->qual < gs->min_mapq) { continue; }
         //if (c->flag > gs->max_flag) { continue; }
         if (gs->rflag_filter && gs->rflag_filter & c->flag ) { continue; }
