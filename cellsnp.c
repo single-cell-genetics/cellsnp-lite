@@ -1,6 +1,5 @@
 /* TODO: 
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
-- Complete Mode 2.
 - Write test scripts for some key functions.
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
 - More filters could be applied when extracting/fetching reads.
@@ -1621,7 +1620,7 @@ static void print_usage(FILE *fp) {
 */
     fputs("\n"
 "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
-"you can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
+"You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
 "https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
     fputc('\n', fp);
 
