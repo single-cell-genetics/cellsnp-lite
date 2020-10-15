@@ -1387,17 +1387,14 @@ static int run_mode_with_pileup(global_settings *gs) {
     int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nin;
     /* core part. */
     if (gs->tp && gs->nthread > 1) {
-        int nthread = gs->nthread;
         csp_fs_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
         thread_data **td = NULL, *d = NULL;
         int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
         int i, ret;
-        size_t nreg, mreg, rreg, treg, ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
+        size_t ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
         out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
         /* calc number of threads and number of chroms for each thread. */
-        mtd = min2(gs->nchrom, nthread);
-        mreg = gs->nchrom / mtd;
-        rreg = gs->nchrom - mreg * mtd;        // number of remaining regions/chroms
+        mtd = gs->nchrom;
         /* create output tmp filenames. */
         if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, 0))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
@@ -1422,13 +1419,12 @@ static int run_mode_with_pileup(global_settings *gs) {
         /* prepare data for thread pool and run. */
         td = (thread_data**) calloc(mtd, sizeof(thread_data*));
         if (NULL == td) { fprintf(stderr, "[E::%s] could not initialize the array of thread_data structure.\n", __func__); goto fail; }
-        for (nreg = 0; ntd < mtd; ntd++, nreg += treg) {
+        for (; ntd < mtd; ntd++) {
             if (NULL == (d = thdata_init())) {
                 fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
                 goto fail; 
             }
-            treg = ntd >= mtd - rreg ? mreg + 1 : mreg;   // a trick here to put small chroms into one thread.
-            d->i = ntd; d->gs = gs; d->n = (size_t) nreg; d->m = (size_t) treg;
+            d->i = ntd; d->gs = gs; d->n = ntd; d->m = 1;
             d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
             d->out_vcf_base = out_tmp_vcf_base[ntd]; d->out_vcf_cells = gs->is_genotype ? out_tmp_vcf_cells[ntd] : NULL;
             td[ntd] = d;
