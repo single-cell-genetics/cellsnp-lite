@@ -2,6 +2,15 @@
 cellsnp-lite
 ============
 
+|conda| |platforms| |license|
+
+.. |conda| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/version.svg
+    :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+.. |platforms| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/platforms.svg
+   :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+.. |license| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/license.svg
+   :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+
 cellsnp-lite aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed 
 single-cell RNA-seq data, particularly with vireo_, which assigns cells to 
