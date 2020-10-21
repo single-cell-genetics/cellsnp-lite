@@ -142,7 +142,7 @@ This mode requires inputting a single bam file with either cell barcoded (add ``
   cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --gzip
 
   # a bulk sample without cell barcodes and UMI tag
-  cellsnp-lite -s $bulkBAM -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None --gzip
+  cellsnp-lite -s $bulkBAM -I Sample0 -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None --gzip
 
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
 
