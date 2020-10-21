@@ -1691,6 +1691,10 @@ static int check_global_args(global_settings *gs) {
     } else {
         if (NULL == gs->sample_ids) {
             if (NULL == gs->sid_list_file) { 
+                if (NULL == (gs->sample_ids = (char**) calloc(gs->nin, sizeof(char*)))) { 
+                    fprintf(stderr, "[E::%s] failed to allocate space for sample_ids\n", __func__); 
+                    return -2; 
+                }
                 kstring_t ks = KS_INITIALIZE, *s = &ks;
                 for (i = 0; i < gs->nin; i++) { ksprintf(s, "Sample_%d", i); gs->sample_ids[i] = strdup(ks_str(s)); ks_clear(s); }
                 gs->nsid = i; ks_free(s);

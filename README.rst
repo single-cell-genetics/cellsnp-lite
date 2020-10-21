@@ -2,6 +2,15 @@
 cellsnp-lite
 ============
 
+|conda| |platforms| |license|
+
+.. |conda| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/version.svg
+    :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+.. |platforms| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/platforms.svg
+   :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+.. |license| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/license.svg
+   :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
+
 cellsnp-lite aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed 
 single-cell RNA-seq data, particularly with vireo_, which assigns cells to 
@@ -133,7 +142,7 @@ This mode requires inputting a single bam file with either cell barcoded (add ``
   cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --gzip
 
   # a bulk sample without cell barcodes and UMI tag
-  cellsnp-lite -s $bulkBAM -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None --gzip
+  cellsnp-lite -s $bulkBAM -I Sample0 -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --UMItag None --gzip
 
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
 
