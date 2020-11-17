@@ -852,7 +852,7 @@ static inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx
     if (bc[0] < bc[1]) { m1 = bc[1]; m2 = bc[0]; k1 = 1; k2 = 0; }
     else { m1 = bc[0]; m2 = bc[1]; k1 = 0; k2 = 1; }
     for (i = 2; i < 5; i++) {
-        if (bc[i] > m1) { m1 = bc[i]; k1 = i; }
+        if (bc[i] > m1) { m2 = m1; k2 = k1; m1 = bc[i]; k1 = i; }
         else if (bc[i] > m2) { m2 = bc[i]; k2 = i; }
     }
     *ref_idx = k1; *alt_idx = k2;
