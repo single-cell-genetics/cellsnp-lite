@@ -7,7 +7,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellsnp-lite"
-#define CSP_VERSION "1.0.0"
+#define CSP_VERSION "1.0.1"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 // zip method for csp_fs_t structure.

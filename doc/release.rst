@@ -2,6 +2,13 @@
 History
 =======
 
+Release v1.0.1 (17/11/2020)
+===========================
+* fix a bug of m2 & k2 in csp_infer_allele() which could lead to error AD
+  and error MAF calculation.
+* fix a bug of not allocating space for sample_id
+* add badges
+
 Release v1.0.0 (15/10/2020)
 ===========================
 * add mode 2
