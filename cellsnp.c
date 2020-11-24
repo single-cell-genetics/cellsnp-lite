@@ -59,6 +59,9 @@
 // if discard orphan reads
 #define CSP_NO_ORPHAN   1
 
+// if the tmp files to be zipped: 0: no, 1: yes.
+#define CSP_TMP_ZIP 1
+
 /*Structure that stores global settings/options/parameters. 
 Note:
 1. In current version, one and only one of barcode(s) and sample-ID(s) would exist and work, the other
@@ -1215,23 +1218,23 @@ static int run_mode_with_fetch(global_settings *gs) {
         mpos = csp_snplist_size(gs->pl) / mtd;
         rpos = csp_snplist_size(gs->pl) - mpos * mtd;     // number of remaining positions
         /* create output tmp filenames. */
-        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_DP.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_OTH.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, 0))) {
+        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_BASE.\n", __func__);
             goto fail;
         }
-        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, mtd, 0))) {
+        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_CELLS.\n", __func__);
             goto fail;
         }
@@ -1395,23 +1398,23 @@ static int run_mode_with_pileup(global_settings *gs) {
         /* calc number of threads and number of chroms for each thread. */
         mtd = gs->nchrom;
         /* create output tmp filenames. */
-        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_DP.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, 0))) {
+        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for mtx_OTH.\n", __func__);
             goto fail;
         }
-        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, 0))) {
+        if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_BASE.\n", __func__);
             goto fail;
         }
-        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, mtd, 0))) {
+        if (gs->is_genotype && NULL == (out_tmp_vcf_cells = create_tmp_files(gs->out_vcf_cells, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_CELLS.\n", __func__);
             goto fail;
         }
