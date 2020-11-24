@@ -1,9 +1,13 @@
+/* cellsnp main function
+ * Author: Xianejie Huang <hxj5@hku.hk>
+ */
+
 /* TODO: 
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
 - Write test scripts for some key functions.
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
 - More filters could be applied when extracting/fetching reads.
-- Improve the csp_fs_t structure, for example, adding @p is_error.
+- Improve the jfile_t structure, for example, adding @p is_error.
 - Improve the SZ_POOL structure, for example, adding @p base_init_f.
 - Use optional sparse matrices tags with the help of function pointers.
 - Output optionally qual values/letters to mtx file.
@@ -22,45 +26,17 @@
 #include <assert.h>
 #include <limits.h>
 #include "thpool.h"
-#include "general_util.h"
-#include "cellsnp_util.h"
 #include "htslib/sam.h"
-
-/* Define default values of global parameters. */
-#define CSP_CHROM_ALL  {"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22"}
-#define CSP_NCHROM     22
-#define CSP_CELL_TAG   "CB"
-#define CSP_UMI_TAG    "Auto"
-#define CSP_NTHREAD    1
-#define CSP_MIN_COUNT  20
-#define CSP_MIN_MAF    0.0
-#define CSP_MIN_LEN    30
-#define CSP_MIN_MAPQ   20
-/* the following three macros are deprecated, use CSP_EXCL_FMASK* and CSP_INCL_FMASK* instead.
-#define CSP_MAX_SAM_FLAG         4096                
-#define CSP_MAX_FLAG_WITH_UMI    CSP_MAX_SAM_FLAG
-#define CSP_MAX_FLAG_WITHOUT_UMI 255 
-*/
-#define CSP_OUT_VCF_CELLS   "cellSNP.cells.vcf"
-#define CSP_OUT_VCF_BASE    "cellSNP.base.vcf"
-#define CSP_OUT_SAMPLES     "cellSNP.samples.tsv"
-#define CSP_OUT_MTX_AD      "cellSNP.tag.AD.mtx"
-#define CSP_OUT_MTX_DP      "cellSNP.tag.DP.mtx"
-#define CSP_OUT_MTX_OTH     "cellSNP.tag.OTH.mtx"
-
-/* default values of pileup */
-// default excluding flag mask, reads with any flag mask bit set would be filtered.
-#define CSP_EXCL_FMASK_UMI  (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL)
-#define CSP_EXCL_FMASK_NOUMI  (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)
-// default including flag mask, reads with all flag mask bit unset would be filtered.
-#define CSP_INCL_FMASK  0
-// default max depth for one site of one bam file, 0 means highest possible value. used by bam_mplp_set_maxcnt().
-#define CSP_PLP_MAX_DEPTH   0
-// if discard orphan reads
-#define CSP_NO_ORPHAN   1
-
-// if the tmp files to be zipped: 0: no, 1: yes.
-#define CSP_TMP_ZIP 1
+#include "config.h"
+#include "csp.h"
+#include "default.h"
+#include "jfile.h"
+#include "jnumeric.h"
+#include "jsam.h"
+#include "jstring.h"
+#include "mplp.h"
+#include "snp.h"
+#include "thread.h"
 
 /*Structure that stores global settings/options/parameters. 
 Note:
@@ -72,8 +48,8 @@ struct _gll_settings {
     int nin;               // Num of input bam/sam/cram files.
     char **in_fns;         // Pointer to the array of names of input bam/sam/cram files.
     char *out_dir;         // Pointer to the path of dir containing the output files.   
-    csp_fs_t *out_vcf_cells, *out_vcf_base, *out_samples;
-    csp_fs_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth;
+    jfile_t *out_vcf_cells, *out_vcf_base, *out_samples;
+    jfile_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth;
     int is_out_zip;        // If output files need to be zipped.
     int is_genotype;       // If need to do genotyping in addition to counting.
     char *snp_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
@@ -198,33 +174,6 @@ static void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%splp_max_depth = %d, no_orphan = %d\n", prefix, gs->plp_max_depth, gs->no_orphan);
     }
 }
-
-// SZ_NUMERIC_OP_INIT(csp_s, size_t);
-
-#define CSP_VCF_CELLS_HEADER "##fileformat=VCFv4.2\n" 																							\
-    "##source=cellSNP_v" CSP_VERSION "\n"																								\
-    "##FILTER=<ID=PASS,Description=\"All filters passed\">\n"																			\
-    "##FILTER=<ID=.,Description=\"Filter info not available\">\n"																		\
-    "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"total counts for ALT and REF\">\n"             									\
-    "##INFO=<ID=AD,Number=1,Type=Integer,Description=\"total counts for ALT\">\n"														\
-    "##INFO=<ID=OTH,Number=1,Type=Integer,Description=\"total counts for other bases from REF and ALT\">\n"							\
-    "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">\n"																\
-    "##FORMAT=<ID=PL,Number=G,Type=Integer,Description=\"List of Phred-scaled genotype likelihoods\">\n"							\
-    "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"total counts for ALT and REF\">\n"											\
-    "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"total counts for ALT\">\n"														\
-    "##FORMAT=<ID=OTH,Number=1,Type=Integer,Description=\"total counts for other bases from REF and ALT\">\n"						\
-    "##FORMAT=<ID=ALL,Number=5,Type=Integer,Description=\"total counts for all bases in order of A,C,G,T,N\">\n"
-
-#define CSP_VCF_CELLS_CONTIG "##contig=<ID=1>\n##contig=<ID=2>\n##contig=<ID=3>\n##contig=<ID=4>\n##contig=<ID=5>\n"                             \
-    "##contig=<ID=6>\n##contig=<ID=7>\n##contig=<ID=8>\n##contig=<ID=9>\n##contig=<ID=10>\n"									\
-    "##contig=<ID=11>\n##contig=<ID=12>\n##contig=<ID=13>\n##contig=<ID=14>\n##contig=<ID=15>\n"									\
-    "##contig=<ID=16>\n##contig=<ID=17>\n##contig=<ID=18>\n##contig=<ID=19>\n##contig=<ID=20>\n"									\
-    "##contig=<ID=21>\n##contig=<ID=22>\n##contig=<ID=X>\n##contig=<ID=Y>\n"
-
-#define CSP_MTX_HEADER "%%MatrixMarket matrix coordinate integer general\n"                                                         \
-    "%\n"
-
-#define CSP_VCF_BASE_HEADER "##fileformat=VCFv4.2\n"
 
 /*@abstract  Set values for internal variables of csp_mplp_t to prepare for pileup. 
 @param mplp  Pointer of csp_mplp_t structure.
@@ -1015,15 +964,15 @@ static int pileup_regions(void *args) {
     return n;
 }
 
-/*@abstract    Create csp_fs_t structure for tmp file.
+/*@abstract    Create jfile_t structure for tmp file.
 @param fs      The file struct that the tmp file is based on.
 @param idx     A number as suffix.
 @param is_zip  If the tmp files should be zipped.
 @param s       Pointer of kstring_t.
-@return        Pointer to csp_fs_t for tmp file if success, NULL otherwise.
+@return        Pointer to jfile_t for tmp file if success, NULL otherwise.
  */
-static inline csp_fs_t* create_tmp_fs(csp_fs_t *fs, int idx, int is_zip, kstring_t *s) {
-    csp_fs_t *t;
+static inline jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
+    jfile_t *t;
     if (NULL == (t = csp_fs_init())) { return NULL; }
     ksprintf(s, "%s.%d", fs->fn, idx); 
     t->fn = strdup(ks_str(s)); t->fm = "wb"; t->is_zip = is_zip; t->is_tmp = 1;
@@ -1036,11 +985,11 @@ static inline csp_fs_t* create_tmp_fs(csp_fs_t *fs, int idx, int is_zip, kstring
 @param is_zip  If the tmp files should be zipped.
 @return        Pointer to the array of tmp file structs if success, NULL otherwise. 
  */
-static csp_fs_t** create_tmp_files(csp_fs_t *fs, int n, int is_zip) {
+static jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip) {
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-    csp_fs_t *t = NULL, **tfs = NULL;
+    jfile_t *t = NULL, **tfs = NULL;
     int i, j;
-    if (NULL == (tfs = (csp_fs_t**) calloc(n, sizeof(csp_fs_t*)))) { goto fail; }
+    if (NULL == (tfs = (jfile_t**) calloc(n, sizeof(jfile_t*)))) { goto fail; }
     for (i = 0; i < n; i++) {
         if (NULL == (t = create_tmp_fs(fs, i, is_zip, s))) { goto fail; }
         else { tfs[i] = t; ks_clear(s); }
@@ -1056,11 +1005,11 @@ static csp_fs_t** create_tmp_files(csp_fs_t *fs, int n, int is_zip) {
 }
 
 /*@abstract  Remove tmp files and free memory.
-@param fs    Pointer of array of csp_fs_t structures to be removed and freed.
+@param fs    Pointer of array of jfile_t structures to be removed and freed.
 @param n     Size of array.
 @return      Num of tmp files that are removed if no error, -1 otherwise.
  */
-static inline int destroy_tmp_files(csp_fs_t **fs, const int n) {
+static inline int destroy_tmp_files(jfile_t **fs, const int n) {
     int i, m;
     m = csp_fs_remove_all(fs, n);
     for (i = 0; i < n; i++) { csp_fs_destroy(fs[i]); }
@@ -1079,7 +1028,7 @@ static inline int destroy_tmp_files(csp_fs_t **fs, const int n) {
                 -2, I/O error.
 @return       Num of tmp mtx files that are successfully merged.
 */
-static int merge_mtx(csp_fs_t *out, csp_fs_t **in, const int n, size_t *ns, size_t *nr, int *ret) {
+static int merge_mtx(jfile_t *out, jfile_t **in, const int n, size_t *ns, size_t *nr, int *ret) {
     size_t k = 1, m = 0;
     int i = 0;
     kstring_t in_ks = KS_INITIALIZE, *in_buf = &in_ks;
@@ -1116,7 +1065,7 @@ static int merge_mtx(csp_fs_t *out, csp_fs_t **in, const int n, size_t *ns, size
                 -2, I/O error.
 @return       Num of tmp vcf files that are successfully merged.
 */
-static int merge_vcf(csp_fs_t *out, csp_fs_t **in, const int n, int *ret) {
+static int merge_vcf(jfile_t *out, jfile_t **in, const int n, int *ret) {
 #define TMP_BUFSIZE 1048576
     size_t lr, lw;
     char buf[TMP_BUFSIZE];
@@ -1140,7 +1089,7 @@ static int merge_vcf(csp_fs_t *out, csp_fs_t **in, const int n, int *ret) {
 }
 
 /*@abstract  Rewrite mtx file to fill in the stat info.
-@param fs    Pointer of csp_fs_t that to be rewriten.
+@param fs    Pointer of jfile_t that to be rewriten.
 @param ns    Num of SNPs.
 @param nsmp  Num of samples.
 @param nr    Num of records.
@@ -1151,10 +1100,10 @@ static int merge_vcf(csp_fs_t *out, csp_fs_t **in, const int n, int *ret) {
                 so use this function to fill and rewrite.
              2. @p fs is not open when this function is just called and will keep not open when this function ends.
  */
-static int rewrite_mtx(csp_fs_t *fs, size_t ns, int nsmp, size_t nr) {
+static int rewrite_mtx(jfile_t *fs, size_t ns, int nsmp, size_t nr) {
 #define TMP_BUFSIZE 1048576
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-    csp_fs_t *new = NULL;
+    jfile_t *new = NULL;
     char buf[TMP_BUFSIZE];
     int r, ret = -1;
     size_t lr, lw;
@@ -1207,7 +1156,7 @@ static int run_mode_with_fetch(global_settings *gs) {
     /* core part. */
     if (gs->tp && gs->nthread > 1) {
         int nthread = gs->nthread;
-        csp_fs_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
+        jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
         thread_data **td = NULL, *d = NULL;
         int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
         int i, ret;
@@ -1389,7 +1338,7 @@ static int run_mode_with_pileup(global_settings *gs) {
     int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nin;
     /* core part. */
     if (gs->tp && gs->nthread > 1) {
-        csp_fs_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
+        jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
         thread_data **td = NULL, *d = NULL;
         int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
         int i, ret;
@@ -1733,14 +1682,14 @@ static int check_global_args(global_settings *gs) {
 }
 
 /*@abstract    Output headers to files (vcf, mtx etc.)
-@param fs      Pointer of csp_fs_t that the header will be writen into.
-@param fm      File mode; if NULL, use default file mode inside csp_fs_t.
+@param fs      Pointer of jfile_t that the header will be writen into.
+@param fm      File mode; if NULL, use default file mode inside jfile_t.
 @param header  Header to be outputed, ends with '\0'.
 @param len     Size of header.
 @return        0 if success, negative numbers otherwise:
                  -1, open error; -2, write error; -3, close error.
  */
-static inline int output_headers(csp_fs_t *fs, char *fm, char *header, size_t len) {
+static inline int output_headers(jfile_t *fs, char *fm, char *header, size_t len) {
     int ret;
     if (csp_fs_open(fs, fm) <= 0) { return -1; }
     if (csp_fs_puts(header, fs) != len) { ret = -2; goto fail; }
@@ -1903,7 +1852,7 @@ int main(int argc, char **argv) {
     if (NULL == (gs.out_mtx_ad = csp_fs_init()) || NULL == (gs.out_mtx_dp = csp_fs_init()) || \
         NULL == (gs.out_mtx_oth = csp_fs_init()) || NULL == (gs.out_samples = csp_fs_init()) || \
         NULL == (gs.out_vcf_base = csp_fs_init()) || (gs.is_genotype && NULL == (gs.out_vcf_cells = csp_fs_init()))) {
-        fprintf(stderr, "[E::%s] fail to create csp_fs_t.\n", __func__);
+        fprintf(stderr, "[E::%s] fail to create jfile_t.\n", __func__);
         goto fail;
     }
     gs.out_mtx_ad->is_zip = 0; gs.out_mtx_ad->is_tmp = 0;
