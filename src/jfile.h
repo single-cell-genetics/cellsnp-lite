@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <unistd.h>
+#include <zlib.h>
 #include "htslib/kstring.h"        // do not use "kstring.h" as it's different from "htslib/kstring.h"
 #include "htslib/bgzf.h"
 #include "config.h"
@@ -71,26 +72,26 @@ typedef struct {
 @param       Void.
 @return      Pointer of jfile_t if success, NULL otherwise.
  */
-static inline jfile_t* jf_init(void); 
-static inline void jf_destroy(jfile_t* p);
-static inline void jf_set_bufsize(jfile_t *p, size_t bufsize);
+inline jfile_t* jf_init(void); 
+inline void jf_destroy(jfile_t* p);
+inline void jf_set_bufsize(jfile_t *p, size_t bufsize);
 
 /* If the jfile_t is open. 0:no; 1:yes. */
-static inline int jf_isopen(jfile_t *p);
+inline int jf_isopen(jfile_t *p);
 
 /*@abstract  Open jfile_t for reading or writing.
 @param p     Pointer of jfile_t.
 @param mode  Open mode as in fopen(). if NULL, use default mode inside jfile_t.
 @return      1 if success, 0 if already open, -1 if error. 
  */
-static inline int jf_open(jfile_t *p, char *mode);
+inline int jf_open(jfile_t *p, char *mode);
 
 /*@abstract  Read from jfile_t without Input buffer.
 @param p     Pointer of jfile_t.
 @param buf   Buffer where the read content will be pushed into.
 @param len   Size of content to be read.
 @return      Value returned as gzread/fread. */
-static inline ssize_t jf_read(jfile_t *p, char *buf, size_t len);
+inline ssize_t jf_read(jfile_t *p, char *buf, size_t len);
 
 /*@abstract  Get a line from jfile_t without Input buffer.
 @param p     Pointer of jfile_t.
@@ -99,7 +100,7 @@ static inline ssize_t jf_read(jfile_t *p, char *buf, size_t len);
 
 @note        kgetline() is defined in htslib/kstring.h 
 */
-static inline int jf_getln(jfile_t *p, kstring_t *s);
+inline int jf_getln(jfile_t *p, kstring_t *s);
 
 /*@abstract  Output functions below are like kxxx() functions in htslib/kstring.h with Output buffer.
 @return      Value returned are like in fxxx()/kxxx() functions (fputc()/kputc() etc.), which are 
@@ -109,12 +110,12 @@ static inline int jf_getln(jfile_t *p, kstring_t *s);
 @param p     Pointer of jfile_t.
 @return      0 if success, EOF otherwise.
  */
-static inline int jf_flush(jfile_t *p);
-static inline int jf_printf(jfile_t *p, const char *fmt, ...);
-static inline int jf_putc(int c, jfile_t *p); 
-static inline int jf_putc_(int c, jfile_t *p);
-static inline int jf_puts(const char *s, jfile_t *p); 
-static inline int jf_write(jfile_t *p, char *buf, size_t len);
+inline int jf_flush(jfile_t *p);
+inline int jf_printf(jfile_t *p, const char *fmt, ...);
+inline int jf_putc(int c, jfile_t *p); 
+inline int jf_putc_(int c, jfile_t *p);
+inline int jf_puts(const char *s, jfile_t *p); 
+inline int jf_write(jfile_t *p, char *buf, size_t len);
 
 /*@abstract  Close jfile_t but does not destroy it.
 @param p     Pointer of jfile_t.
@@ -122,20 +123,20 @@ static inline int jf_write(jfile_t *p, char *buf, size_t len);
 
 @note        Even fail, the jfile_t will still be set to not open.
  */
-static inline int jf_close(jfile_t *p);
+inline int jf_close(jfile_t *p);
 
 /*@abstract   Remove file.
 @param p      Pointer of jfile_t to be removed.
 @return       1 if success, 0 if file does not exist, -1 if failure.
  */
-static inline int jf_remove(jfile_t *p);
+inline int jf_remove(jfile_t *p);
 
 /*@abstract   Remove all files in array.
 @param fs     Pointer of array of jfile_t to be removed.
 @param n      Size of array.
 @return       Num of files have been removed if no error, -1 otherwise.
  */
-static inline int jf_remove_all(jfile_t **fs, const int n);
+inline int jf_remove_all(jfile_t **fs, const int n);
 
 /* 
 * File Functions
@@ -148,7 +149,7 @@ static inline int jf_remove_all(jfile_t **fs, const int n);
 
 @note         Only works for Unix system as the path seperator used in this function is '/'.
  */
-static inline char* join_path(const char *p1, const char *p2);
+inline char* join_path(const char *p1, const char *p2);
 
 /*@abstract      Merge several files into one.
 @param in_fn     Names of input files to be merged.
@@ -156,19 +157,19 @@ static inline char* join_path(const char *p1, const char *p2);
 @param out_fn    Name of output file.
 @return          Num of files have been merged.
  */
-static int merge_files(char **in_fn, const int n, const char *out_fn);
+int merge_files(char **in_fn, const int n, const char *out_fn);
 
 /*@abstract  Remove file.
 @param fn    Name of file to be removed.
 @return      1 if success, 0 if file does not exist, -1 if failure.
  */
-static inline int remove_file(char *fn);
+inline int remove_file(char *fn);
 
 /*@abstract   Remove several files.
 @param fn     Names of files to be removed.
 @param n      Num of files.
 @return       Num of files have been removed if no error, -1 otherwise.
  */
-static inline int remove_files(char **fn, const int n);
+inline int remove_files(char **fn, const int n);
 
 #endif

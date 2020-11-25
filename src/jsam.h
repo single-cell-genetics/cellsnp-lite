@@ -21,13 +21,13 @@
 @note        If the translation failed, this function will try "<name> - chr" if name starts with "chr", try
              "chr + <name>" otherwise. 
  */
-static inline int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s);
+inline int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s);
 
 /*@abstract  Convert chrom name to be the same with the one in sam header. 
 @return      Pointer to ref/chrom name if success, NULL otherwise.
 @note        No need to free the returned char* pointer when success.
 */
-static inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s);
+inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s);
 
 /*@abstract   The two functions below convert raw cigar op/len value to real value.
 @param c      Raw cigar op/len value stored in bam1_t, can be an element of cigar array obtained by bam_get_cigar(b) [uint32_t].
@@ -54,7 +54,7 @@ static inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kst
   */
 #define seq_nt16_char2int(c) (seq_nt16_idx2int(seq_nt16_char2idx(c)))
 
-static char csp_nt5_str[] = "ACGTN";
+const char csp_nt5_str[5];
 
 /*@abstract  Convert index in "ACGTN" to a letter.
 @param i     Index in "ACGTN"
@@ -82,6 +82,6 @@ static char csp_nt5_str[] = "ACGTN";
 @note   1. To speed up, the caller should guarantee parameters b and tag are valid. 
         2. The data of the pointer returned by this function is part of bam1_t, so do not double free!
  */
-static inline char* get_bam_aux_str(bam1_t *b, const char tag[2]);
+inline char* get_bam_aux_str(bam1_t *b, const char tag[2]);
 
 #endif

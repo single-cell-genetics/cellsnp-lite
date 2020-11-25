@@ -8,6 +8,7 @@
 #include "htslib/vcf.h"
 #include "htslib/sam.h"
 #include "kvec.h"
+#include "jstring.h"
 #include "snp.h"
 
 /* 
@@ -17,20 +18,20 @@
 /*@note      The pointer returned successfully by csp_snp_init() should be freed
              by csp_snp_destroy() when no longer used.
  */
-static inline csp_snp_t* csp_snp_init(void) { return (csp_snp_t*) calloc(1, sizeof(csp_snp_t)); }
+inline csp_snp_t* csp_snp_init(void) { return (csp_snp_t*) calloc(1, sizeof(csp_snp_t)); }
 
-static inline void csp_snp_destroy(csp_snp_t *p) { 
+inline void csp_snp_destroy(csp_snp_t *p) { 
     if (p) { free(p->chr); free(p); } 
 }
 
-static inline void csp_snp_reset(csp_snp_t *p) {
+inline void csp_snp_reset(csp_snp_t *p) {
     if (p) { free(p->chr); memset(p, 0, sizeof(csp_snp_t)); }
 }
 
 /*@note        If length of Ref or Alt is larger than 1, then the SNP would be skipped.
                If length of Ref or Alt is 0, then their values would be infered during pileup.
  */
-static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip) {
+size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip) {
     htsFile *fp = NULL;
     bcf_hdr_t *hdr = NULL;
     bcf1_t *rec = NULL;

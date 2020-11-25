@@ -36,8 +36,8 @@ typedef struct {
 @note        The pointer returned successfully by thdata_init() should be freed
              by thdata_destroy() when no longer used.
  */
-static inline thread_data* thdata_init(void);
-static inline void thdata_destroy(thread_data *p);
-static inline void thdata_print(FILE *fp, thread_data *p);
+inline thread_data* thdata_init(void);
+inline void thdata_destroy(thread_data *p);
+inline void thdata_print(FILE *fp, thread_data *p);
 
 #endif

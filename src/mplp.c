@@ -24,7 +24,7 @@
               2. The pointer returned successfully by csp_pileup_init() should be freed
                  by csp_pileup_destroy() when no longer used.
  */
-static inline csp_pileup_t* csp_pileup_init(void) {
+inline csp_pileup_t* csp_pileup_init(void) {
     csp_pileup_t *p = (csp_pileup_t*) malloc(sizeof(csp_pileup_t));
     if (p) {
         if (NULL == (p->b = bam_init1())) { free(p); return NULL; }
@@ -32,7 +32,7 @@ static inline csp_pileup_t* csp_pileup_init(void) {
     return p;
 }
 
-static inline void csp_pileup_destroy(csp_pileup_t *p) { 
+inline void csp_pileup_destroy(csp_pileup_t *p) { 
     if (p) {
         if (p->b) bam_destroy1(p->b);	
         free(p);
@@ -41,7 +41,7 @@ static inline void csp_pileup_destroy(csp_pileup_t *p) {
 
 /* reset the csp_pileup_t structure without reallocating memory.
    return 0 if success, -1 otherwise. */
-static inline int csp_pileup_reset(csp_pileup_t *p) {
+inline int csp_pileup_reset(csp_pileup_t *p) {
     if (p) {
         if (p->b) { bam_destroy1(p->b); }
         memset(p, 0, sizeof(csp_pileup_t)); 
@@ -52,9 +52,9 @@ static inline int csp_pileup_reset(csp_pileup_t *p) {
 
 /* only reset part of the csp_pileup_t as values of parameters in other parts will be immediately overwritten after
    calling this function. It's often called by pileup_read_with_fetch(). */
-static inline void csp_pileup_reset_(csp_pileup_t *p) { }
+inline void csp_pileup_reset_(csp_pileup_t *p) { }
 
-static inline void csp_pileup_print(FILE *fp, csp_pileup_t *p) {
+inline void csp_pileup_print(FILE *fp, csp_pileup_t *p) {
     fprintf(fp, "qpos = %d\n", p->qpos);
     fprintf(fp, "base = %c, qual = %d\n", p->base, p->qual);
     fprintf(fp, "is_refskip = %d, is_del = %d\n", p->is_refskip, p->is_del);
@@ -62,13 +62,13 @@ static inline void csp_pileup_print(FILE *fp, csp_pileup_t *p) {
     fprintf(fp, "len_aln = %d\n", p->laln);
 }
 
-static inline csp_umi_unit_t* csp_umi_unit_init(void) {
+inline csp_umi_unit_t* csp_umi_unit_init(void) {
     csp_umi_unit_t *p = (csp_umi_unit_t*) calloc(1, sizeof(csp_umi_unit_t));
     return p;   /* will set values just after this function is called so no need to set init values here. */
 }
-static inline void csp_umi_unit_destroy(csp_umi_unit_t *p) { free(p); }
+inline void csp_umi_unit_destroy(csp_umi_unit_t *p) { free(p); }
 
-static inline csp_list_uu_t* csp_list_uu_init(void) {
+inline csp_list_uu_t* csp_list_uu_init(void) {
     csp_list_uu_t *v = (csp_list_uu_t*) malloc(sizeof(csp_list_uu_t));
     if (v) { kv_init(*v); }
     return v;
@@ -77,7 +77,7 @@ static inline csp_list_uu_t* csp_list_uu_init(void) {
 SZ_NUMERIC_OP_INIT(cu_d, double)
 SZ_NUMERIC_OP_INIT(cu_s, size_t)
 
-static inline int get_qual_vector(double qual, double cap_bq, double min_bq, double *rv) {
+inline int get_qual_vector(double qual, double cap_bq, double min_bq, double *rv) {
     double bq = max2(min2(cap_bq, qual), min_bq);
     double p = pow(0.1, bq / 10);
     rv[0] = log(1 - p);              rv[1] = log(0.75 - 2.0 / 3 * p);
@@ -88,7 +88,7 @@ static inline int get_qual_vector(double qual, double cap_bq, double min_bq, dou
 /*@note         TODO: In some special cases, ref=A and alt=AG for example, the ref_idx would be equal with alt_idx.
                 Should be fixed in future.
  */
-static int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_idx, int db, double *gl, int *n) {
+int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_idx, int db, double *gl, int *n) {
     int8_t other_idx[4], noth, i;
     size_t ref_read, alt_read;
     double *ref_qual, *alt_qual, oth_qual, tmp_qual;
@@ -117,7 +117,7 @@ static int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_
 
 /*@note           It's usually called when the input pos has no ref or alt.
  */
-static inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx) {
+inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx) {
     int8_t i, k1, k2;
     size_t m1, m2;
     if (bc[0] < bc[1]) { m1 = bc[1]; m2 = bc[0]; k1 = 1; k2 = 0; }
@@ -130,9 +130,9 @@ static inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx
 }
 
 /* note that the @p qu is also initialized after calling calloc(). */
-static inline csp_plp_t* csp_plp_init(void) { return (csp_plp_t*) calloc(1, sizeof(csp_plp_t)); }
+inline csp_plp_t* csp_plp_init(void) { return (csp_plp_t*) calloc(1, sizeof(csp_plp_t)); }
 
-static inline void csp_plp_destroy(csp_plp_t *p) { 
+inline void csp_plp_destroy(csp_plp_t *p) { 
     if (p) { 
         int i;
         for (i = 0; i < 5; i++) { csp_list_qu_destroy(p->qu[i]); }
@@ -141,7 +141,7 @@ static inline void csp_plp_destroy(csp_plp_t *p) {
     }
 }
 
-static inline void csp_plp_reset(csp_plp_t *p) {
+inline void csp_plp_reset(csp_plp_t *p) {
     if (p) {   // TODO: reset based on is_genotype.
         int i;
         memset(p->bc, 0, sizeof(p->bc));
@@ -153,7 +153,7 @@ static inline void csp_plp_reset(csp_plp_t *p) {
     }
 }
 
-static void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
+void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
     int i, j;
     csp_map_ug_iter u;
     fprintf(fp, "%stotal read count = %ld\n", prefix, p->tc);
@@ -184,7 +184,7 @@ static void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
     }
 }
 
-static int csp_plp_str_vcf(csp_plp_t *p, kstring_t *s) {
+int csp_plp_str_vcf(csp_plp_t *p, kstring_t *s) {
     if (p->tc <= 0) { kputs(".:.:.:.:.:.", s); return 0; }
     double gl[5];
     int i, m;
@@ -200,7 +200,7 @@ static int csp_plp_str_vcf(csp_plp_t *p, kstring_t *s) {
     return 0;
 }
 
-static int csp_plp_to_vcf(csp_plp_t *p, jfile_t *s) {
+int csp_plp_to_vcf(csp_plp_t *p, jfile_t *s) {
     if (p->tc <= 0) { jf_puts(".:.:.:.:.:.", s); return 0; }
     double gl[5];
     int i, m;
@@ -220,12 +220,12 @@ static int csp_plp_to_vcf(csp_plp_t *p, jfile_t *s) {
              2. The valid pointer returned by this function should be freed by csp_mplp_destroy() function
                    when no longer used.
  */
-static inline csp_mplp_t* csp_mplp_init(void) { 
+inline csp_mplp_t* csp_mplp_init(void) { 
     csp_mplp_t *p = (csp_mplp_t*) calloc(1, sizeof(csp_mplp_t));
     return p;
 }
 
-static inline void csp_mplp_destroy(csp_mplp_t *p) { 
+inline void csp_mplp_destroy(csp_mplp_t *p) { 
     if (p) {
         if (p->hsg) { csp_map_sg_destroy(p->hsg); }
         if (p->hsg_iter) { free(p->hsg_iter); }
@@ -236,7 +236,7 @@ static inline void csp_mplp_destroy(csp_mplp_t *p) {
     }
 }
 
-static inline void csp_mplp_reset(csp_mplp_t *p) {
+inline void csp_mplp_reset(csp_mplp_t *p) {
     if (p) {
         memset(p->bc, 0, sizeof(p->bc));
         p->tc = p->ad = p->dp = p->oth = 0;
@@ -249,7 +249,7 @@ static inline void csp_mplp_reset(csp_mplp_t *p) {
     }
 }
 
-static void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
+void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
     int i;
     csp_plp_t *plp;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
@@ -271,7 +271,7 @@ static void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
     ks_free(s);
 }
 
-static inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
+inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
     int i;
     fprintf(fp, "%sref_idx = %d, alt_idx = %d\n", prefix, p->ref_idx, p->alt_idx);
     fprintf(fp, "%sinf_rid = %d, inf_aid = %d\n", prefix, p->inf_rid, p->inf_aid);
@@ -287,7 +287,7 @@ static inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
              2. The HashMap (for sgnames) in csp_mplp_t should be empty or NULL.
              3. The keys of HashMap are exactly pointers to sg names coming directly from @p s.
  */
-static int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
+int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     if (NULL == p || NULL == s || 0 == n) { return -1; }
     int i, r;
     csp_map_sg_iter k;
@@ -311,7 +311,7 @@ static int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     return 0;
 }
 
-static inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s) {
+inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s) {
     int i;
     for (i = 0; i < mplp->nsg; i++) {
         kputc_('\t', s);
@@ -320,7 +320,7 @@ static inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s) {
     return 0;
 }
 
-static inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s) {
+inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s) {
     int i;
     for (i = 0; i < mplp->nsg; i++) {
         jf_putc_('\t', s);
@@ -329,7 +329,7 @@ static inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s) {
     return 0;
 }
 
-static inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth, size_t idx) {
+inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth, size_t idx) {
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {
@@ -343,7 +343,7 @@ static inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t
 
 /*@note          This function is used for tmp files.
  */
-static inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth) {
+inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth) {
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {
@@ -356,7 +356,7 @@ static inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstri
     return 0; 
 }
 
-static int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *fs_oth, size_t idx) {
+int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *fs_oth, size_t idx) {
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {

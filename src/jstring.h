@@ -22,7 +22,7 @@
 @param n       Num of char* elements in the array.
 @return        Void.
  */
-static inline void str_arr_destroy(char **a, const int n);
+inline void str_arr_destroy(char **a, const int n);
 
 /*abstract    Join an array of strings (char*) by a delim char.
 @param a      Pointer to the char* array.
@@ -31,6 +31,6 @@ static inline void str_arr_destroy(char **a, const int n);
 @param s      Pointer of the kstring_t structure to save the result.
 @return       Num of elements that are successfully joined.
  */
-static inline int str_arr_join(char **a, const int n, int c, kstring_t *s);
+inline int str_arr_join(char **a, const int n, int c, kstring_t *s);
 
 #endif

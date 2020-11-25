@@ -23,9 +23,9 @@ typedef struct {
 @note    The pointer returned successfully by csp_bam_fs_init() should be freed
          by csp_bam_fs_destroy() when no longer used.
  */
-static inline csp_bam_fs* csp_bam_fs_init(void);
+inline csp_bam_fs* csp_bam_fs_init(void);
 
-static inline void csp_bam_fs_destroy(csp_bam_fs *p);
+inline void csp_bam_fs_destroy(csp_bam_fs *p);
 
 /*@abstract  Build the csp_bam_fs structure.  
 @param fn    Filename of the bam/sam/cram.
@@ -36,8 +36,8 @@ static inline void csp_bam_fs_destroy(csp_bam_fs *p);
 @note        The pointer returned successfully by csp_bam_fs_build() should be freed
              by csp_bam_fs_destroy() when no longer used.
 */
-static inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret);
+inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret);
 
-static inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn);
+inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn);
 
 #endif

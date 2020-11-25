@@ -10,9 +10,9 @@
 * File API
  */
 
-static inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
+inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
 
-static inline void csp_bam_fs_destroy(csp_bam_fs *p) {
+inline void csp_bam_fs_destroy(csp_bam_fs *p) {
     if (p) {
         if (p->idx) { hts_idx_destroy(p->idx); }
         if (p->hdr) { sam_hdr_destroy(p->hdr); }
@@ -21,7 +21,7 @@ static inline void csp_bam_fs_destroy(csp_bam_fs *p) {
     }
 }
 
-static inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
+inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
     csp_bam_fs *p;
     if (NULL == fn) { *ret = -1; return NULL; }
     if (NULL == (p = csp_bam_fs_init())) { *ret = -1; return NULL; }
@@ -35,7 +35,7 @@ static inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
     return NULL;		
 }
 
-static inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn) {
+inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn) {
     if (NULL == p) { return -1; }
     if (p->idx) { hts_idx_destroy(p->idx); }
     if (p->hdr) { sam_hdr_destroy(p->hdr); }

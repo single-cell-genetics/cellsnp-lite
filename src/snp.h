@@ -27,9 +27,9 @@ typedef struct {
 @note        The pointer returned successfully by csp_snp_init() should be freed
              by csp_snp_destroy() when no longer used.
  */
-static inline csp_snp_t* csp_snp_init(void);
-static inline void csp_snp_destroy(csp_snp_t *p); 
-static inline void csp_snp_reset(csp_snp_t *p); 
+inline csp_snp_t* csp_snp_init(void);
+inline void csp_snp_destroy(csp_snp_t *p); 
+inline void csp_snp_reset(csp_snp_t *p); 
 
 /*@abstract  A list containing of several pointers to the csp_snp_t structure.
 @param a     Array of csp_snp_t* pointers.
@@ -69,7 +69,7 @@ typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
 @note          If length of Ref or Alt is larger than 1, then the SNP would be skipped.
                If length of Ref or Alt is 0, then their values would be infered during pileup.
  */
-static size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip);
+size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip);
 #define get_snplist(fn, pl, ret, print_skip) get_snplist_from_vcf(fn, pl, ret, print_skip)
 
 #endif
