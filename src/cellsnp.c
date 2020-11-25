@@ -104,12 +104,12 @@ static void gll_setting_free(global_settings *gs) {
         if (gs->in_fn_file) { free(gs->in_fn_file); gs->in_fn_file = NULL; }
         if (gs->in_fns) { str_arr_destroy(gs->in_fns, gs->nin); gs->in_fns = NULL; }
         if (gs->out_dir) { free(gs->out_dir); gs->out_dir = NULL; }
-        if (gs->out_vcf_base) { csp_fs_destroy(gs->out_vcf_base); gs->out_vcf_base = NULL; }
-        if (gs->out_vcf_cells) { csp_fs_destroy(gs->out_vcf_cells); gs->out_vcf_cells = NULL; } 
-        if (gs->out_samples) { csp_fs_destroy(gs->out_samples); gs->out_samples = NULL; }    
-        if (gs->out_mtx_ad) { csp_fs_destroy(gs->out_mtx_ad); gs->out_mtx_ad = NULL; }
-        if (gs->out_mtx_dp) { csp_fs_destroy(gs->out_mtx_dp); gs->out_mtx_dp = NULL; }
-        if (gs->out_mtx_oth) { csp_fs_destroy(gs->out_mtx_oth); gs->out_mtx_oth = NULL; } 
+        if (gs->out_vcf_base) { jf_destroy(gs->out_vcf_base); gs->out_vcf_base = NULL; }
+        if (gs->out_vcf_cells) { jf_destroy(gs->out_vcf_cells); gs->out_vcf_cells = NULL; } 
+        if (gs->out_samples) { jf_destroy(gs->out_samples); gs->out_samples = NULL; }    
+        if (gs->out_mtx_ad) { jf_destroy(gs->out_mtx_ad); gs->out_mtx_ad = NULL; }
+        if (gs->out_mtx_dp) { jf_destroy(gs->out_mtx_dp); gs->out_mtx_dp = NULL; }
+        if (gs->out_mtx_oth) { jf_destroy(gs->out_mtx_oth); gs->out_mtx_oth = NULL; } 
         if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
         csp_snplist_destroy(gs->pl);
         if (gs->barcode_file) { free(gs->barcode_file); gs->barcode_file = NULL; }
@@ -493,24 +493,24 @@ static size_t pileup_positions_with_fetch(void *args) {
     d->ns = d->nr_ad = d->nr_dp = d->nr_oth = 0;
     /* prepare data and structures. 
     */
-    if (csp_fs_open(d->out_mtx_ad, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_ad, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx AD file '%s'.\n", __func__, d->out_mtx_ad->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_mtx_dp, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_dp, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx DP file '%s'.\n", __func__, d->out_mtx_dp->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_mtx_oth, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_oth, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx OTH file '%s'.\n", __func__, d->out_mtx_oth->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_vcf_base, NULL) <= 0) { 
+    if (jf_open(d->out_vcf_base, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp vcf BASE file '%s'.\n", __func__, d->out_vcf_base->fn);
         goto fail;
     }
     if (gs->is_genotype) {
-        if (csp_fs_open(d->out_vcf_cells, NULL) <= 0) { 
+        if (jf_open(d->out_vcf_cells, NULL) <= 0) { 
             fprintf(stderr, "[E::%s] failed to open tmp vcf CELLS file '%s'.\n", __func__, d->out_vcf_cells->fn);
             goto fail;
         }
@@ -566,18 +566,18 @@ static size_t pileup_positions_with_fetch(void *args) {
         csp_mplp_to_mtx(mplp, d->out_mtx_ad, d->out_mtx_dp, d->out_mtx_oth, d->ns);
         ksprintf(s, "%s\t%ld\t.\t%c\t%c\t.\tPASS\tAD=%ld;DP=%ld;OTH=%ld", a[n]->chr, a[n]->pos + 1, \
                 seq_nt16_int2char(mplp->ref_idx), seq_nt16_int2char(mplp->alt_idx), mplp->ad, mplp->dp, mplp->oth);
-        csp_fs_puts(ks_str(s), d->out_vcf_base); csp_fs_putc('\n', d->out_vcf_base);
+        jf_puts(ks_str(s), d->out_vcf_base); jf_putc('\n', d->out_vcf_base);
         if (gs->is_genotype) {
-            csp_fs_puts(ks_str(s), d->out_vcf_cells);
-            csp_fs_puts("\tGT:AD:DP:OTH:PL:ALL", d->out_vcf_cells);
+            jf_puts(ks_str(s), d->out_vcf_cells);
+            jf_puts("\tGT:AD:DP:OTH:PL:ALL", d->out_vcf_cells);
             csp_mplp_to_vcf(mplp, d->out_vcf_cells);
-            csp_fs_putc('\n', d->out_vcf_cells);
+            jf_putc('\n', d->out_vcf_cells);
         }
         csp_mplp_reset(mplp); ks_clear(s);
     }
     ks_free(s); s = NULL;
-    csp_fs_close(d->out_mtx_ad); csp_fs_close(d->out_mtx_dp); csp_fs_close(d->out_mtx_oth);
-    csp_fs_close(d->out_vcf_base); if (gs->is_genotype) { csp_fs_close(d->out_vcf_cells); }
+    jf_close(d->out_mtx_ad); jf_close(d->out_mtx_dp); jf_close(d->out_mtx_oth);
+    jf_close(d->out_vcf_base); if (gs->is_genotype) { jf_close(d->out_vcf_cells); }
     csp_pileup_destroy(pileup);
     for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
     free(bam_fs);
@@ -586,11 +586,11 @@ static size_t pileup_positions_with_fetch(void *args) {
     return n;
   fail:
     if (s) { ks_free(s); }
-    if (csp_fs_isopen(d->out_mtx_ad)) { csp_fs_close(d->out_mtx_ad); }
-    if (csp_fs_isopen(d->out_mtx_dp)) { csp_fs_close(d->out_mtx_dp); }
-    if (csp_fs_isopen(d->out_mtx_oth)) { csp_fs_close(d->out_mtx_oth); }
-    if (csp_fs_isopen(d->out_vcf_base)) { csp_fs_close(d->out_vcf_base); }
-    if (gs->is_genotype && csp_fs_isopen(d->out_vcf_cells)) { csp_fs_close(d->out_vcf_cells); }
+    if (jf_isopen(d->out_mtx_ad)) { jf_close(d->out_mtx_ad); }
+    if (jf_isopen(d->out_mtx_dp)) { jf_close(d->out_mtx_dp); }
+    if (jf_isopen(d->out_mtx_oth)) { jf_close(d->out_mtx_oth); }
+    if (jf_isopen(d->out_vcf_base)) { jf_close(d->out_vcf_base); }
+    if (gs->is_genotype && jf_isopen(d->out_vcf_cells)) { jf_close(d->out_vcf_cells); }
     if (pileup) csp_pileup_destroy(pileup);
     if (bam_fs) {
         for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
@@ -799,24 +799,24 @@ static int pileup_regions(void *args) {
     d->ns = d->nr_ad = d->nr_dp = d->nr_oth = 0;
     /* prepare data and structures. 
     */
-    if (csp_fs_open(d->out_mtx_ad, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_ad, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx AD file '%s'.\n", __func__, d->out_mtx_ad->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_mtx_dp, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_dp, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx DP file '%s'.\n", __func__, d->out_mtx_dp->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_mtx_oth, NULL) <= 0) { 
+    if (jf_open(d->out_mtx_oth, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx OTH file '%s'.\n", __func__, d->out_mtx_oth->fn);
         goto fail;
     }
-    if (csp_fs_open(d->out_vcf_base, NULL) <= 0) { 
+    if (jf_open(d->out_vcf_base, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp vcf BASE file '%s'.\n", __func__, d->out_vcf_base->fn);
         goto fail;
     }
     if (gs->is_genotype) {
-        if (csp_fs_open(d->out_vcf_cells, NULL) <= 0) { 
+        if (jf_open(d->out_vcf_cells, NULL) <= 0) { 
             fprintf(stderr, "[E::%s] failed to open tmp vcf CELLS file '%s'.\n", __func__, d->out_vcf_cells->fn);
             goto fail;
         }
@@ -903,12 +903,12 @@ static int pileup_regions(void *args) {
             csp_mplp_to_mtx(mplp, d->out_mtx_ad, d->out_mtx_dp, d->out_mtx_oth, d->ns);
             ksprintf(s, "%s\t%d\t.\t%c\t%c\t.\tPASS\tAD=%ld;DP=%ld;OTH=%ld", a[n], pos + 1, \
                     seq_nt16_int2char(mplp->ref_idx), seq_nt16_int2char(mplp->alt_idx), mplp->ad, mplp->dp, mplp->oth);
-            csp_fs_puts(ks_str(s), d->out_vcf_base); csp_fs_putc('\n', d->out_vcf_base);
+            jf_puts(ks_str(s), d->out_vcf_base); jf_putc('\n', d->out_vcf_base);
             if (gs->is_genotype) {
-                csp_fs_puts(ks_str(s), d->out_vcf_cells);
-                csp_fs_puts("\tGT:AD:DP:OTH:PL:ALL", d->out_vcf_cells);
+                jf_puts(ks_str(s), d->out_vcf_cells);
+                jf_puts("\tGT:AD:DP:OTH:PL:ALL", d->out_vcf_cells);
                 csp_mplp_to_vcf(mplp, d->out_vcf_cells);
-                csp_fs_putc('\n', d->out_vcf_cells);
+                jf_putc('\n', d->out_vcf_cells);
             }
             csp_mplp_reset(mplp); ks_clear(s);
             #if VERBOSE
@@ -928,8 +928,8 @@ static int pileup_regions(void *args) {
         #endif
     }
     ks_free(s); s = NULL;
-    csp_fs_close(d->out_mtx_ad); csp_fs_close(d->out_mtx_dp); csp_fs_close(d->out_mtx_oth);
-    csp_fs_close(d->out_vcf_base); if (gs->is_genotype) { csp_fs_close(d->out_vcf_cells); }
+    jf_close(d->out_mtx_ad); jf_close(d->out_mtx_dp); jf_close(d->out_mtx_oth);
+    jf_close(d->out_vcf_base); if (gs->is_genotype) { jf_close(d->out_vcf_cells); }
     for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
     free(data);
     free(mp_plp); free(mp_n);
@@ -944,11 +944,11 @@ static int pileup_regions(void *args) {
     return n;
   fail:
     if (s) { ks_free(s); }
-    if (csp_fs_isopen(d->out_mtx_ad)) { csp_fs_close(d->out_mtx_ad); }
-    if (csp_fs_isopen(d->out_mtx_dp)) { csp_fs_close(d->out_mtx_dp); }
-    if (csp_fs_isopen(d->out_mtx_oth)) { csp_fs_close(d->out_mtx_oth); }
-    if (csp_fs_isopen(d->out_vcf_base)) { csp_fs_close(d->out_vcf_base); }
-    if (gs->is_genotype && csp_fs_isopen(d->out_vcf_cells)) { csp_fs_close(d->out_vcf_cells); }
+    if (jf_isopen(d->out_mtx_ad)) { jf_close(d->out_mtx_ad); }
+    if (jf_isopen(d->out_mtx_dp)) { jf_close(d->out_mtx_dp); }
+    if (jf_isopen(d->out_mtx_oth)) { jf_close(d->out_mtx_oth); }
+    if (jf_isopen(d->out_vcf_base)) { jf_close(d->out_vcf_base); }
+    if (gs->is_genotype && jf_isopen(d->out_vcf_cells)) { jf_close(d->out_vcf_cells); }
     if (data) {
         for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
         free(data); 
@@ -973,7 +973,7 @@ static int pileup_regions(void *args) {
  */
 static inline jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
     jfile_t *t;
-    if (NULL == (t = csp_fs_init())) { return NULL; }
+    if (NULL == (t = jf_init())) { return NULL; }
     ksprintf(s, "%s.%d", fs->fn, idx); 
     t->fn = strdup(ks_str(s)); t->fm = "wb"; t->is_zip = is_zip; t->is_tmp = 1;
     return t;
@@ -998,7 +998,7 @@ static jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip) {
   fail:
     ks_free(s);
     if (tfs) {
-        for (j = 0; j < i; j++) csp_fs_destroy(tfs[j]);
+        for (j = 0; j < i; j++) jf_destroy(tfs[j]);
         free(tfs);
     }
     return NULL; 
@@ -1011,8 +1011,8 @@ static jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip) {
  */
 static inline int destroy_tmp_files(jfile_t **fs, const int n) {
     int i, m;
-    m = csp_fs_remove_all(fs, n);
-    for (i = 0; i < n; i++) { csp_fs_destroy(fs[i]); }
+    m = jf_remove_all(fs, n);
+    for (i = 0; i < n; i++) { jf_destroy(fs[i]); }
     free(fs);
     return m;
 }
@@ -1033,18 +1033,18 @@ static int merge_mtx(jfile_t *out, jfile_t **in, const int n, size_t *ns, size_t
     int i = 0;
     kstring_t in_ks = KS_INITIALIZE, *in_buf = &in_ks;
     *ret = -1;
-    if (! csp_fs_isopen(out) && csp_fs_open(out, NULL) <= 0) { *ret = -2; goto fail; }
+    if (! jf_isopen(out) && jf_open(out, NULL) <= 0) { *ret = -2; goto fail; }
     for (; i < n; i++) {
-        if (csp_fs_open(in[i], "rb") <= 0) { *ret = -2; goto fail; }
-        while (csp_fs_getln(in[i], in_buf) >= 0) {
+        if (jf_open(in[i], "rb") <= 0) { *ret = -2; goto fail; }
+        while (jf_getln(in[i], in_buf) >= 0) {
             if (0 == ks_len(in_buf)) {    // empty line, meaning ending of a SNP.
                 k++;
             } else {
-                csp_fs_printf(out, "%ld\t%s\n", k, ks_str(in_buf));
+                jf_printf(out, "%ld\t%s\n", k, ks_str(in_buf));
                 m++; ks_clear(in_buf);
             }
         }
-        csp_fs_close(in[i]);
+        jf_close(in[i]);
     }
     ks_free(in_buf); in_buf = NULL;
     *ns = k - 1; *nr = m;
@@ -1052,7 +1052,7 @@ static int merge_mtx(jfile_t *out, jfile_t **in, const int n, size_t *ns, size_t
     return i;
   fail:
     if (in_buf) { ks_free(in_buf); }
-    if (i < n && csp_fs_isopen(in[i])) { csp_fs_close(in[i]); }
+    if (i < n && jf_isopen(in[i])) { jf_close(in[i]); }
     return i;
 }
 
@@ -1071,19 +1071,19 @@ static int merge_vcf(jfile_t *out, jfile_t **in, const int n, int *ret) {
     char buf[TMP_BUFSIZE];
     int i = 0;
     *ret = -1;
-    if (! csp_fs_isopen(out) && csp_fs_open(out, NULL) <= 0) { *ret = -2; goto fail; }
+    if (! jf_isopen(out) && jf_open(out, NULL) <= 0) { *ret = -2; goto fail; }
     for (; i < n; i++) {
-        if (csp_fs_open(in[i], "rb") <= 0) { *ret = -2; goto fail; }
-        while ((lr = csp_fs_read(in[i], buf, TMP_BUFSIZE)) > 0) {
-            lw = csp_fs_write(out, buf, lr);
+        if (jf_open(in[i], "rb") <= 0) { *ret = -2; goto fail; }
+        while ((lr = jf_read(in[i], buf, TMP_BUFSIZE)) > 0) {
+            lw = jf_write(out, buf, lr);
             if (lw != lr) { *ret = -2; goto fail; }
         }
-        csp_fs_close(in[i]);
+        jf_close(in[i]);
     }
     *ret = 0;
     return i;
   fail:
-    if (i < n && csp_fs_isopen(in[i])) { csp_fs_close(in[i]); }
+    if (i < n && jf_isopen(in[i])) { jf_close(in[i]); }
     return i;
 #undef TMP_BUFSIZE
 }
@@ -1109,34 +1109,34 @@ static int rewrite_mtx(jfile_t *fs, size_t ns, int nsmp, size_t nr) {
     size_t lr, lw;
     if (NULL == (new = create_tmp_fs(fs, 0, fs->is_zip, s))) { goto fail; }
     ks_clear(s);
-    if (csp_fs_open(fs, "rb") <= 0 || csp_fs_open(new, "wb") <= 0) { goto fail; }
-    while ((r = csp_fs_getln(fs, s)) >= 0 && ks_len(s) && ks_str(s)[0] == '%') {
-        csp_fs_puts(ks_str(s), new); csp_fs_putc('\n', new);
+    if (jf_open(fs, "rb") <= 0 || jf_open(new, "wb") <= 0) { goto fail; }
+    while ((r = jf_getln(fs, s)) >= 0 && ks_len(s) && ks_str(s)[0] == '%') {
+        jf_puts(ks_str(s), new); jf_putc('\n', new);
         ks_clear(s);
     }
     if (r < 0 || 0 == ks_len(s)) { // has no records. TODO: distinguish EOF and error when r = 1.
         if (nr != 0) { ret = 1; goto fail; }
     }
-    csp_fs_printf(new, "%ld\t%d\t%ld\n", ns, nsmp, nr);
+    jf_printf(new, "%ld\t%d\t%ld\n", ns, nsmp, nr);
     if (nr) { 
-        csp_fs_puts(ks_str(s), new); csp_fs_putc('\n', new);
+        jf_puts(ks_str(s), new); jf_putc('\n', new);
         ks_clear(s);
     }  
-    while ((lr = csp_fs_read(fs, buf, TMP_BUFSIZE)) > 0) {
-        lw = csp_fs_write(new, buf, lr);
+    while ((lr = jf_read(fs, buf, TMP_BUFSIZE)) > 0) {
+        lw = jf_write(new, buf, lr);
         if (lw != lr) { goto fail; }
     }
-    csp_fs_close(fs); csp_fs_close(new);
-    csp_fs_remove(fs);
+    jf_close(fs); jf_close(new);
+    jf_remove(fs);
     if (rename(new->fn, fs->fn) != 0) { goto fail; }
-    csp_fs_destroy(new); new = NULL;
+    jf_destroy(new); new = NULL;
     ks_free(s);
     return 0;
   fail:
     ks_free(s);
-    if (csp_fs_isopen(fs)) { csp_fs_close(fs); }
+    if (jf_isopen(fs)) { jf_close(fs); }
     if (new) {
-        if (csp_fs_isopen(new)) { csp_fs_close(new); }
+        if (jf_isopen(new)) { jf_close(new); }
     }
     return ret;
 #undef TMP_BUFSIZE
@@ -1217,34 +1217,34 @@ static int run_mode_with_fetch(global_settings *gs) {
             nr_ad += td[i]->nr_ad; nr_dp += td[i]->nr_dp; nr_oth += td[i]->nr_oth;
             ns += td[i]->ns;
         }
-        if (csp_fs_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
+        if (jf_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
         merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_ad) { fprintf(stderr, "[E::%s] failed to merge mtx AD.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_ad);
+        jf_close(gs->out_mtx_ad);
 
-        if (csp_fs_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
+        if (jf_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
         merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_dp) { fprintf(stderr, "[E::%s] failed to merge mtx DP.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_dp);
+        jf_close(gs->out_mtx_dp);
 
-        if (csp_fs_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
+        if (jf_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
         merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_oth) { fprintf(stderr, "[E::%s] failed to merge mtx OTH.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_oth);
+        jf_close(gs->out_mtx_oth);
 
-        if (csp_fs_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
+        if (jf_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
         merge_vcf(gs->out_vcf_base, out_tmp_vcf_base, mtd, &ret);
         if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf BASE.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_vcf_base);
+        jf_close(gs->out_vcf_base);
 
         if (gs->is_genotype) {
-            if (csp_fs_open(gs->out_vcf_cells, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf CELLS.\n", __func__); goto fail; }
+            if (jf_open(gs->out_vcf_cells, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf CELLS.\n", __func__); goto fail; }
             merge_vcf(gs->out_vcf_cells, out_tmp_vcf_cells, mtd, &ret);
             if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf CELLS.\n", __func__); goto fail; }    
-            csp_fs_close(gs->out_vcf_cells);     
+            jf_close(gs->out_vcf_cells);     
         }
         /* clean */
         for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
@@ -1287,11 +1287,11 @@ static int run_mode_with_fetch(global_settings *gs) {
         if (out_tmp_vcf_cells && destroy_tmp_files(out_tmp_vcf_cells, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
         }
-        if (csp_fs_isopen(gs->out_mtx_ad)) { csp_fs_close(gs->out_mtx_ad); }
-        if (csp_fs_isopen(gs->out_mtx_dp)) { csp_fs_close(gs->out_mtx_dp); }
-        if (csp_fs_isopen(gs->out_mtx_oth)) { csp_fs_close(gs->out_mtx_oth); }
-        if (csp_fs_isopen(gs->out_vcf_base)) { csp_fs_close(gs->out_vcf_base); }
-        if (gs->is_genotype && csp_fs_isopen(gs->out_vcf_cells)) { csp_fs_close(gs->out_vcf_cells); }
+        if (jf_isopen(gs->out_mtx_ad)) { jf_close(gs->out_mtx_ad); }
+        if (jf_isopen(gs->out_mtx_dp)) { jf_close(gs->out_mtx_dp); }
+        if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
+        if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
+        if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
         return -1;
     } else if (1 == gs->nthread) {  // only one thread.
         thread_data *d = NULL;
@@ -1396,34 +1396,34 @@ static int run_mode_with_pileup(global_settings *gs) {
             nr_ad += td[i]->nr_ad; nr_dp += td[i]->nr_dp; nr_oth += td[i]->nr_oth;
             ns += td[i]->ns;
         }
-        if (csp_fs_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
+        if (jf_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
         merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_ad) { fprintf(stderr, "[E::%s] failed to merge mtx AD.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_ad);
+        jf_close(gs->out_mtx_ad);
 
-        if (csp_fs_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
+        if (jf_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
         merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_dp) { fprintf(stderr, "[E::%s] failed to merge mtx DP.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_dp);
+        jf_close(gs->out_mtx_dp);
 
-        if (csp_fs_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
-        csp_fs_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
+        if (jf_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
+        jf_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
         merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, mtd, &ns_merge, &nr_merge, &ret);
         if (ret < 0 || ns_merge != ns || nr_merge != nr_oth) { fprintf(stderr, "[E::%s] failed to merge mtx OTH.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_mtx_oth);
+        jf_close(gs->out_mtx_oth);
 
-        if (csp_fs_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
+        if (jf_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
         merge_vcf(gs->out_vcf_base, out_tmp_vcf_base, mtd, &ret);
         if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf BASE.\n", __func__); goto fail; }
-        csp_fs_close(gs->out_vcf_base);
+        jf_close(gs->out_vcf_base);
 
         if (gs->is_genotype) {
-            if (csp_fs_open(gs->out_vcf_cells, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf CELLS.\n", __func__); goto fail; }
+            if (jf_open(gs->out_vcf_cells, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf CELLS.\n", __func__); goto fail; }
             merge_vcf(gs->out_vcf_cells, out_tmp_vcf_cells, mtd, &ret);
             if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf CELLS.\n", __func__); goto fail; }    
-            csp_fs_close(gs->out_vcf_cells);     
+            jf_close(gs->out_vcf_cells);     
         }
         /* clean */
         for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
@@ -1466,11 +1466,11 @@ static int run_mode_with_pileup(global_settings *gs) {
         if (out_tmp_vcf_cells && destroy_tmp_files(out_tmp_vcf_cells, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
         }
-        if (csp_fs_isopen(gs->out_mtx_ad)) { csp_fs_close(gs->out_mtx_ad); }
-        if (csp_fs_isopen(gs->out_mtx_dp)) { csp_fs_close(gs->out_mtx_dp); }
-        if (csp_fs_isopen(gs->out_mtx_oth)) { csp_fs_close(gs->out_mtx_oth); }
-        if (csp_fs_isopen(gs->out_vcf_base)) { csp_fs_close(gs->out_vcf_base); }
-        if (gs->is_genotype && csp_fs_isopen(gs->out_vcf_cells)) { csp_fs_close(gs->out_vcf_cells); }
+        if (jf_isopen(gs->out_mtx_ad)) { jf_close(gs->out_mtx_ad); }
+        if (jf_isopen(gs->out_mtx_dp)) { jf_close(gs->out_mtx_dp); }
+        if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
+        if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
+        if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
         return -1;
     } else if (1 == gs->nthread) {  // only one thread.
         thread_data *d = NULL;
@@ -1691,12 +1691,12 @@ static int check_global_args(global_settings *gs) {
  */
 static inline int output_headers(jfile_t *fs, char *fm, char *header, size_t len) {
     int ret;
-    if (csp_fs_open(fs, fm) <= 0) { return -1; }
-    if (csp_fs_puts(header, fs) != len) { ret = -2; goto fail; }
-    if (csp_fs_close(fs) < 0) { ret = -3; goto fail; }
+    if (jf_open(fs, fm) <= 0) { return -1; }
+    if (jf_puts(header, fs) != len) { ret = -2; goto fail; }
+    if (jf_close(fs) < 0) { ret = -3; goto fail; }
     return 0;
   fail:
-    if (csp_fs_isopen(fs)) { csp_fs_close(fs); }
+    if (jf_isopen(fs)) { jf_close(fs); }
     return ret; 
 }
 
@@ -1849,9 +1849,9 @@ int main(int argc, char **argv) {
         goto fail;
     }
     /* prepare output files. */
-    if (NULL == (gs.out_mtx_ad = csp_fs_init()) || NULL == (gs.out_mtx_dp = csp_fs_init()) || \
-        NULL == (gs.out_mtx_oth = csp_fs_init()) || NULL == (gs.out_samples = csp_fs_init()) || \
-        NULL == (gs.out_vcf_base = csp_fs_init()) || (gs.is_genotype && NULL == (gs.out_vcf_cells = csp_fs_init()))) {
+    if (NULL == (gs.out_mtx_ad = jf_init()) || NULL == (gs.out_mtx_dp = jf_init()) || \
+        NULL == (gs.out_mtx_oth = jf_init()) || NULL == (gs.out_samples = jf_init()) || \
+        NULL == (gs.out_vcf_base = jf_init()) || (gs.is_genotype && NULL == (gs.out_vcf_cells = jf_init()))) {
         fprintf(stderr, "[E::%s] fail to create jfile_t.\n", __func__);
         goto fail;
     }

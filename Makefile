@@ -9,8 +9,9 @@ LDFLAGS=-L$(htslib_lib_dir)
 BIN_DIR=/usr/local/bin
 BIN_NAME=cellsnp-lite
 
-scripts=cellsnp.c thpool.c
-headers=general_util.h cellsnp_util.h thpool.h kvec.h
+src_dir=src
+scripts=$(src_dir)/cellsnp.c $(src_dir)/thpool.c
+headers=$(src_dir)/config.h $(src_dir)/csp.h $(src_dir)/default.h $(src_dir)/jfile.h $(src_dir)/jmemory.h $(src_dir)/jnumeric.h $(src_dir)/jsam.h $(src_dir)/jstring.h $(src_dir)/kvec.h $(src_dir)/mplp.h $(src_dir)/snp.h $(src_dir)/thpool.h $(src_dir)/thread.h
 
 all: $(BIN_NAME)
 
