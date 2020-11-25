@@ -36,13 +36,8 @@ typedef struct {
 @note        The pointer returned successfully by thdata_init() should be freed
              by thdata_destroy() when no longer used.
  */
-static inline thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
-
-static inline void thdata_destroy(thread_data *p) { free(p); }
-
-static inline void thdata_print(FILE *fp, thread_data *p) {
-    fprintf(fp, "\tm = %ld, n = %ld\n", p->m, p->n);
-    fprintf(fp, "\ti = %d, ret = %d\n", p->i, p->ret);
-}
+static inline thread_data* thdata_init(void);
+static inline void thdata_destroy(thread_data *p);
+static inline void thdata_print(FILE *fp, thread_data *p);
 
 #endif

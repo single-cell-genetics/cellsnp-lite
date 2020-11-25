@@ -67,7 +67,7 @@ The sz_pool_##name##_t
 #define SZ_POOL_INIT2(SCOPE, name, base_type, base_free_f, base_reset_f)                      \
     typedef struct {                                                                            \
         size_t l, n, m;                                                                         \
-        base_type **a;														                \
+        base_type **a;										  \
         int is_reset;  		                                                                      \
     } sz_pool_##name##_t;                                                                       \
     SCOPE sz_pool_##name##_t* sz_pool_init_##name(void) {                                        \
@@ -75,29 +75,29 @@ The sz_pool_##name##_t
     }                                                                                         \
     SCOPE void sz_pool_destroy_##name(sz_pool_##name##_t *p) {                                  \
         size_t k;                                                                             \
-        for (k = 0; k < p->n; k++) { base_free_f(p->a[k]); }							      \
+        for (k = 0; k < p->n; k++) { base_free_f(p->a[k]); }					     \
         free(p->a); free(p);                                                                   \
     }                                                                                       \
-    SCOPE base_type* sz_pool_get_##name(sz_pool_##name##_t *p) {							\
-        if (p->l < p->n) { 																	\
-            base_type *t = p->a[p->l++]; 													\
-            if (p->is_reset) base_reset_f(t); 													\
-            return t; 																		\
-        } else if (p->n >= p->m) { 																\
-            if (p->m) { p->m++; kroundup32(p->m); }											\
-            else { p->m = 16; } 															\
-            p->a = (base_type**) realloc(p->a, sizeof(base_type*) * p->m); 					\
-        }   																					\
+    SCOPE base_type* sz_pool_get_##name(sz_pool_##name##_t *p) {				\
+        if (p->l < p->n) { 									\
+            base_type *t = p->a[p->l++]; 							\
+            if (p->is_reset) base_reset_f(t); 							\
+            return t; 										\
+        } else if (p->n >= p->m) { 								\
+            if (p->m) { p->m++; kroundup32(p->m); }						\
+            else { p->m = 16; } 									\
+            p->a = (base_type**) realloc(p->a, sizeof(base_type*) * p->m); 			\
+        }   												\
         p->a[p->n++] = (base_type*) calloc(1, sizeof(base_type));    /* whatif still p->m <= p->n */ \
-        return p->a[p->l++];    /* assert p->l = p->n */									\
-    }																							\
+        return p->a[p->l++];    /* assert p->l = p->n */						\
+    }													\
     SCOPE void sz_pool_reset_##name(sz_pool_##name##_t *p) { p->l = 0; p->is_reset = 1; }		\
-    SCOPE size_t sz_pool_size_##name(sz_pool_##name##_t *p) { return p->n; }					\
-    SCOPE size_t sz_pool_max_##name(sz_pool_##name##_t *p) { return p->m; }						\
-    SCOPE size_t sz_pool_used_##name(sz_pool_##name##_t *p) { return p->l; }					\
+    SCOPE size_t sz_pool_size_##name(sz_pool_##name##_t *p) { return p->n; }				\
+    SCOPE size_t sz_pool_max_##name(sz_pool_##name##_t *p) { return p->m; }				\
+    SCOPE size_t sz_pool_used_##name(sz_pool_##name##_t *p) { return p->l; }				\
     SCOPE base_type* sz_pool_A_##name(sz_pool_##name##_t *p, size_t i) { return p->a[i]; }
 
-#define SZ_POOL_INIT(name, base_type, base_free_f, base_reset_f) 							\
+#define SZ_POOL_INIT(name, base_type, base_free_f, base_reset_f) 					\
         SZ_POOL_INIT2(static inline, name, base_type, base_free_f, base_reset_f)
 
 /*@abstract    Declare a SZ_POOL. 
