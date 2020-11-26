@@ -208,10 +208,13 @@ static size_t csp_fetch_core(void *args) {
     bam_fs = (csp_bam_fs**) calloc(gs->nin, sizeof(csp_bam_fs*));  	
     if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs array.\n", __func__); goto fail; }
     for (nfs = 0; nfs < gs->nin; nfs++) {
-        if (NULL == (bs = csp_bam_fs_build(gs->in_fns[nfs], &ret))) {
-            fprintf(stderr, "[E::%s] could not build csp_bam_fs structure.\n", __func__);
+        if (NULL == (bs = csp_bam_fs_init())) { fprintf(stderr, "[E::%s] failed to create csp_bam_fs.\n", __func__); goto fail; }
+        if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) {
+            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]);
             goto fail;
-        } else { bam_fs[nfs] = bs; }
+        }
+        bs->hdr = d->bfs[nfs]->hdr; bs->idx = d->bfs[nfs]->idx;
+        bam_fs[nfs] = bs;
     }
     if (NULL == (pileup = csp_pileup_init())) { 
         fprintf(stderr, "[E::%s] Out of memory allocating csp_pileup_t struct.\n", __func__); 
@@ -265,7 +268,7 @@ static size_t csp_fetch_core(void *args) {
     jf_close(d->out_mtx_ad); jf_close(d->out_mtx_dp); jf_close(d->out_mtx_oth);
     jf_close(d->out_vcf_base); if (gs->is_genotype) { jf_close(d->out_vcf_cells); }
     csp_pileup_destroy(pileup);
-    for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
+    for (i = 0; i < nfs; i++) { hts_close(bam_fs[i]->fp); free(bam_fs[i]); }
     free(bam_fs);
     csp_mplp_destroy(mplp);
     d->ret = 0;
@@ -279,7 +282,7 @@ static size_t csp_fetch_core(void *args) {
     if (gs->is_genotype && jf_isopen(d->out_vcf_cells)) { jf_close(d->out_vcf_cells); }
     if (pileup) csp_pileup_destroy(pileup);
     if (bam_fs) {
-        for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
+        for (i = 0; i < nfs; i++) { hts_close(bam_fs[i]->fp); free(bam_fs[i]); }
         free(bam_fs);		
     }
     if (mplp) { csp_mplp_destroy(mplp); }
@@ -297,13 +300,35 @@ int csp_fetch(global_settings *gs) {
         return -1;
     }
     int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nsid;
+    csp_bam_fs **bam_fs = NULL;       /* use array instead of single element to compatible with multi-input-files. */
+    int i, nfs = 0;
+    csp_bam_fs *bs = NULL;
+    bam_fs = (csp_bam_fs**) calloc(gs->nin, sizeof(csp_bam_fs*));  	
+    if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs array.\n", __func__); goto fail0; }
+    for (nfs = 0; nfs < gs->nin; nfs++) {
+        if (NULL == (bs = csp_bam_fs_init())) { fprintf(stderr, "[E::%s] failed to create csp_bam_fs.\n", __func__); goto fail0; }
+        if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) { 
+            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]); 
+            goto fail0; 
+        }
+        if (NULL == (bs->hdr = sam_hdr_read(bs->fp))) {
+            fprintf(stderr, "[E::%s] failed to read header for %s.\n", __func__, gs->in_fns[nfs]);
+            goto fail0; 
+        }
+        if (NULL == (bs->idx = sam_index_load(bs->fp, gs->in_fns[nfs]))) {
+            fprintf(stderr, "[E::%s] failed to load index for %s.\n", __func__, gs->in_fns[nfs]);
+            goto fail0; 
+        }
+        hts_close(bs->fp); bs->fp = NULL;
+        bam_fs[nfs] = bs;
+    }
     /* core part. */
     if (gs->tp && gs->nthread > 1) {
         int nthread = gs->nthread;
         jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
         thread_data **td = NULL, *d = NULL;
         int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
-        int i, ret;
+        int ret;
         size_t npos, mpos, rpos, tpos, ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
         out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
         /* calc number of threads and number of SNPs for each thread. */
@@ -340,7 +365,7 @@ int csp_fetch(global_settings *gs) {
                 goto fail; 
             }
             tpos = ntd < rpos ? mpos + 1 : mpos;
-            d->i = ntd; d->gs = gs; d->n = npos; d->m = tpos;
+            d->i = ntd; d->gs = gs; d->bfs = bam_fs; d->nfs = nfs; d->n = npos; d->m = tpos;
             d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
             d->out_vcf_base = out_tmp_vcf_base[ntd]; d->out_vcf_cells = gs->is_genotype ? out_tmp_vcf_cells[ntd] : NULL;
             td[ntd] = d;
@@ -410,7 +435,7 @@ int csp_fetch(global_settings *gs) {
                 fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
             } out_tmp_vcf_cells = NULL;
         }
-        return 0;
+        goto clean;
       fail:
         if (td) {
             for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
@@ -436,14 +461,14 @@ int csp_fetch(global_settings *gs) {
         if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
         if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
         if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
-        return -1;
+        goto fail0;
     } else if (1 == gs->nthread) {  // only one thread.
         thread_data *d = NULL;
         if (NULL == (d = thdata_init())) { 
             fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
             goto fail1; 
         }
-        d->gs = gs; d->n = 0; d->m = csp_snplist_size(gs->pl); d->i = 0; 
+        d->gs = gs; d->bfs = bam_fs; d->nfs = nfs; d->n = 0; d->m = csp_snplist_size(gs->pl); d->i = 0; 
         d->out_mtx_ad = gs->out_mtx_ad; d->out_mtx_dp = gs->out_mtx_dp; d->out_mtx_oth = gs->out_mtx_oth;
         d->out_vcf_base = gs->out_vcf_base; d->out_vcf_cells = gs->is_genotype ? gs->out_vcf_cells : NULL;
         csp_fetch_core(d);
@@ -461,11 +486,24 @@ int csp_fetch(global_settings *gs) {
             goto fail1;
         }
         thdata_destroy(d); d = NULL;
-        return 0;
+        goto clean;
       fail1:
         if (d) { thdata_destroy(d); }
-        return -1;
+        goto fail0;
     } /* else: do nothing. should not come here! */
+
+  clean:
+    if (bam_fs) {
+        for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
+        free(bam_fs);
+    }
+    return 0;
+
+  fail0:
+    if (bam_fs) {
+        for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
+        free(bam_fs);
+    }
     return -1;
 }
 

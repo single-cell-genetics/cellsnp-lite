@@ -213,6 +213,20 @@ inline void csp_bam_fs_destroy(csp_bam_fs *p) {
     }
 }
 
+inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
+    csp_bam_fs *p;
+    if (NULL == fn) { *ret = -1; return NULL; }
+    if (NULL == (p = csp_bam_fs_init())) { *ret = -1; return NULL; }
+    if (NULL == (p->fp = hts_open(fn, "rb"))) { *ret = -2; goto fail; }
+    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { *ret = -2; goto fail; }
+    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { *ret = -2; goto fail; }
+    *ret = 0;
+    return p;
+  fail:
+    csp_bam_fs_destroy(p);
+    return NULL;		
+}
+
 /* 
 * Thread API
 */

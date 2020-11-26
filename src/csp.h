@@ -148,6 +148,7 @@ typedef struct {
  */
 inline csp_bam_fs* csp_bam_fs_init(void);
 inline void csp_bam_fs_destroy(csp_bam_fs *p);
+inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret);
 
 /* 
  * Thread operatoins API/routine
@@ -158,6 +159,8 @@ inline void csp_bam_fs_destroy(csp_bam_fs *p);
 */
 /*@abstract    The data structure used as thread-func parameter.
 @param gs      Pointer to the global_settings structure.
+@param bfs     Array of csp_bam_fs.
+@param nfs     Size of @p bfs.
 @param n       Pos of next element in the snp-list/chrom-list to be used by certain thread.
 @param m       Total size of elements to be used by certain thread, must not be changed.
 @param i       Id of the thread data.
@@ -168,6 +171,8 @@ inline void csp_bam_fs_destroy(csp_bam_fs *p);
  */
 typedef struct {
     global_settings *gs;
+    csp_bam_fs **bfs;
+    int nfs;
     size_t m, n;   // for snp-list or chrom-list.
     int i;
     int ret;
