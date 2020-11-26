@@ -14,7 +14,6 @@
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
-#include "thread.h"
 
 /* auxiliary data used by @func mp_func. */
 typedef struct {

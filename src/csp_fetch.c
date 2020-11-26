@@ -15,7 +15,6 @@
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
-#include "thread.h"
 
 /*@abstract  Pileup one read obtained by sam_itr_next().
 @param pos   Pos of the reference sequence. 0-based.
