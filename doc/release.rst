@@ -2,6 +2,12 @@
 History
 =======
 
+Release v1.1.0 (26/11/2020)
+===========================
+* split cellsnp_utils.h & general_utils.h & cellsnp.c into separate modules
+  and scripts (small .h and .c files)
+* bgzip temporary files
+
 Release v1.0.1 (17/11/2020)
 ===========================
 * fix a bug of m2 & k2 in csp_infer_allele() which could lead to error AD
