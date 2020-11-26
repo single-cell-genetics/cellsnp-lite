@@ -5,6 +5,7 @@
 /* TODO: 
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
+- merge csp_fetch() and csp_pileup() for the two functions share most codes?
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
 - Write test scripts for some key functions.
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
@@ -51,8 +52,8 @@ static void gll_set_default(global_settings *gs) {
         gs->barcode_file = NULL; gs->nbarcode = 0; gs->barcodes = NULL; 
         gs->sid_list_file = NULL; gs->sample_ids = NULL; gs->nsid = 0;
         char *chrom_tmp[] = CSP_CHROM_ALL;
-        gs->chrom_all = (char**) calloc(CSP_NCHROM, sizeof(char*));
-        for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) { gs->chrom_all[gs->nchrom] = safe_strdup(chrom_tmp[gs->nchrom]); }
+        gs->chroms = (char**) calloc(CSP_NCHROM, sizeof(char*));
+        for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) { gs->chroms[gs->nchrom] = safe_strdup(chrom_tmp[gs->nchrom]); }
         gs->cell_tag = safe_strdup(CSP_CELL_TAG); gs->umi_tag = safe_strdup(CSP_UMI_TAG);
         gs->nthread = CSP_NTHREAD; gs->tp = NULL;
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
@@ -224,12 +225,12 @@ static int check_global_args(global_settings *gs) {
         }
     }
     /* 1. In current version, one and only one of pos_list and chrom(s) would exist and work. Prefer pos_list. 
-       2. Sometimes, snp_list_file and chrom_all are both not NULL as the chrom_all has been set to default value when
-          global_settings structure was just created. In this case, free chrom_all and save snp_list_file. */
+       2. Sometimes, snp_list_file and chroms are both not NULL as the chroms has been set to default value when
+          global_settings structure was just created. In this case, free chroms and save snp_list_file. */
     if (NULL == gs->snp_list_file || 0 == strcmp(gs->snp_list_file, "None") || 0 == strcmp(gs->snp_list_file, "none")) { 
-        if (NULL == gs->chrom_all) { fprintf(stderr, "[E::%s] should specify -R/--regionsVCF or --chrom option.\n", __func__); return -1; }
+        if (NULL == gs->chroms) { fprintf(stderr, "[E::%s] should specify -R/--regionsVCF or --chrom option.\n", __func__); return -1; }
         if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
-    } else if (gs->chrom_all) { str_arr_destroy(gs->chrom_all, gs->nchrom); gs->chrom_all = NULL; gs->nchrom = 0; }
+    } else if (gs->chroms) { str_arr_destroy(gs->chroms, gs->nchrom); gs->chroms = NULL; gs->nchrom = 0; }
     if (gs->umi_tag) {
         if (0 == strcmp(gs->umi_tag, "Auto")) {
             if (gs->barcodes) { free(gs->umi_tag); gs->umi_tag = strdup("UR"); }
@@ -354,8 +355,8 @@ int main(int argc, char **argv) {
                     } else { break; }
             case 'p': gs.nthread = atoi(optarg); break;
             case 1:  
-                    if (gs.chrom_all) { str_arr_destroy(gs.chrom_all, gs.nchrom); gs.nchrom = 0; }
-                    if (NULL == (gs.chrom_all = hts_readlist(optarg, 0, &gs.nchrom))) {
+                    if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
+                    if (NULL == (gs.chroms = hts_readlist(optarg, 0, &gs.nchrom))) {
                         fprintf(stderr, "[E::%s] could not read chrom-list '%s'\n", __func__, optarg);
                         goto fail;
                     }  else { break; }
@@ -495,7 +496,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "[I::%s] mode 3: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
             if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); print_time = 1; goto fail; } 
         }
-    } else if (gs.chrom_all) { 
+    } else if (gs.chroms) { 
         if (gs.barcodes) { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
         else { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in one bulk sample.\n", __func__, gs.nchrom); }
         if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2 failed.\n", __func__); print_time = 1; goto fail; }

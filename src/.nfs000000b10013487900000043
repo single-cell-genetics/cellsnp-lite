@@ -40,7 +40,7 @@ struct _gll_settings {
     char *sid_list_file;   // Name of the file containing a list of sample IDs, one sample-ID per line.
     char **sample_ids;     // Pointer to the array of sample IDs.
     int nsid;              // Num of sample IDs.
-    char **chroms;      // Pointer to the array of the chromosomes to use.
+    char **chrom_all;      // Pointer to the array of the chromosomes to use.
     int nchrom;            // Num of chromosomes.
     char *cell_tag;        // Tag for cell barcodes, NULL means no cell tags.
     char *umi_tag;         // Tag for UMI: UR, NULL. NULL means no UMI but read counts.
@@ -161,9 +161,7 @@ inline void csp_bam_fs_destroy(csp_bam_fs* p);
 @param gs      Pointer to the global_settings structure.
 @param bfs     Array of csp_bam_fs.
 @param nfs     Size (Number of elements) of @p bfs.
-@param iter    Array of hts_itr_t**. 
-@param niter   Size of @p iter.
-@param nitr    Size of one element of @p iter.
+@param iter    Array of hts_itr_t. 
 @param n       Pos of next element in the snp-list/chrom-list to be used by certain thread.
 @param m       Total size of elements to be used by certain thread, must not be changed.
 @param i       Id of the thread data.
@@ -176,8 +174,7 @@ typedef struct {
     global_settings *gs;
     csp_bam_fs **bfs;
     int nfs;
-    hts_itr_t ***iter;
-    int niter, nitr;
+    hts_itr_t **iter;
     size_t m, n;   // for snp-list or chrom-list.
     int i;
     int ret;

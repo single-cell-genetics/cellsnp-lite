@@ -33,7 +33,7 @@ void gll_setting_free(global_settings *gs) {
         if (gs->barcodes) { str_arr_destroy(gs->barcodes, gs->nbarcode); gs->barcodes = NULL; }
         if (gs->sid_list_file) { free(gs->sid_list_file); gs->sid_list_file = NULL; }
         if (gs->sample_ids) { str_arr_destroy(gs->sample_ids, gs->nsid); gs->sample_ids = NULL; }
-        if (gs->chrom_all) { str_arr_destroy(gs->chrom_all, gs->nchrom); gs->chrom_all = NULL; }
+        if (gs->chroms) { str_arr_destroy(gs->chroms, gs->nchrom); gs->chroms = NULL; }
         if (gs->cell_tag) { free(gs->cell_tag); gs->cell_tag = NULL; }
         if (gs->umi_tag) { free(gs->umi_tag); gs->umi_tag = NULL; }
         if (gs->tp) { thpool_destroy(gs->tp); gs->tp = NULL; }
@@ -50,7 +50,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%snum_of_pos = %lu\n", prefix, csp_snplist_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
-        for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chrom_all[i]);
+        for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
         fputc('\n', fp);
         fprintf(fp, "%scell-tag = %s, umi-tag = %s\n", prefix, gs->cell_tag, gs->umi_tag);
         fprintf(fp, "%snum_of_threads = %d\n", prefix, gs->nthread);
@@ -204,27 +204,14 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
 
 inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
 
-inline void csp_bam_fs_destroy(csp_bam_fs *p) {
+inline void csp_bam_fs_destroy(csp_bam_fs* p) {
     if (p) {
+        if (p->iter) { hts_itr_destroy(p->iter); }
         if (p->idx) { hts_idx_destroy(p->idx); }
         if (p->hdr) { sam_hdr_destroy(p->hdr); }
         if (p->fp)  { hts_close(p->fp); }
         free(p);
     }
-}
-
-inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret) {
-    csp_bam_fs *p;
-    if (NULL == fn) { *ret = -1; return NULL; }
-    if (NULL == (p = csp_bam_fs_init())) { *ret = -1; return NULL; }
-    if (NULL == (p->fp = hts_open(fn, "rb"))) { *ret = -2; goto fail; }
-    if (NULL == (p->hdr = sam_hdr_read(p->fp))) { *ret = -2; goto fail; }
-    if (NULL == (p->idx = sam_index_load(p->fp, fn))) { *ret = -2; goto fail; }
-    *ret = 0;
-    return p;
-  fail:
-    csp_bam_fs_destroy(p);
-    return NULL;		
 }
 
 /* 
