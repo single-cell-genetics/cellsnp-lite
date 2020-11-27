@@ -28,20 +28,12 @@ static inline mp_aux_t* mp_aux_init(void) {
     return (mp_aux_t*) calloc(1, sizeof(mp_aux_t));
 }
 
-/*@note  As all elements other than 'itr' are from external sources, 
-         only itr needs to be freed/reset. */
+/*@note  As all elements are from external sources so no need to be freed/reset. */
 static inline void mp_aux_destroy(mp_aux_t *p) {
-    if (p) {
-        if (p->itr) { hts_itr_destroy(p->itr); }
-        free(p);
-    }
+    if (p) { free(p); }
 }
 
-static inline void mp_aux_reset(mp_aux_t *p) {
-    if (p) {
-        if (p->itr) { hts_itr_destroy(p->itr); p->itr = NULL; }
-    }
-}
+static inline void mp_aux_reset(mp_aux_t *p) { }
 
 /*@abstract  bam_plp_auto_f used by bam_mplp_init to extract valid reads to be pushed into bam_mpileup stack.
 @param data  Pointer to auxiliary data.
@@ -190,10 +182,10 @@ static int csp_pileup_core(void *args) {
     global_settings *gs = d->gs;
     char **a = gs->chroms + d->n;
     int n = 0;                   /* n is the num of chroms that are successfully processed. */
-    const char *ref = NULL;
-    csp_bam_fs **bam_fs = NULL;       /* use array instead of single element to compatible with multi-input-files. */
-    int nfs = 0;
-    csp_bam_fs *bs = NULL;
+    csp_bam_fs **bam_fs = d->bfs;
+    int nfs = d->nfs;
+    htsFile **fp = NULL;
+    int nfp = 0;
     csp_pileup_t *pileup = NULL;
     csp_mplp_t *mplp = NULL;
     bam_mplp_t mp_iter = NULL;
@@ -210,6 +202,9 @@ static int csp_pileup_core(void *args) {
     fprintf(stderr, "[D::%s][Thread-%d] thread options:\n", __func__, d->i);
     thdata_print(stderr, d);
 #endif
+    assert(d->nfs == gs->nin);
+    assert(d->niter == d->m);
+    assert(d->nitr == gs->nin);
     d->ret = -1;
     d->ns = d->nr_ad = d->nr_dp = d->nr_oth = 0;
     /* prepare data and structures. 
@@ -236,21 +231,20 @@ static int csp_pileup_core(void *args) {
             goto fail;
         }
     }
+    /* open input files */ 
+    fp = (htsFile**) calloc(gs->nin, sizeof(htsFile*));
+    if (NULL == fp) { fprintf(stderr, "[E::%s] failed to open input files\n", __func__); goto fail; }                 
+    for (; nfp < gs->nin; ) {
+        if (d->i == 0) {               // the caller has opened input files for Thread-0 
+            fp[nfp] = bam_fs[nfp]->fp; nfp++;
+        } else if (NULL == (fp[nfp] = hts_open(gs->in_fns[nfp], "rb"))) {
+            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfp]);
+            goto fail;
+        } else { nfp++; }
+    }
     /* prepare mplp for pileup. */
     if (NULL == (mplp = csp_mplp_init())) { fprintf(stderr, "[E::%s] could not init csp_mplp_t structure.\n", __func__); goto fail; }
     if (csp_mplp_prepare(mplp, gs) < 0) { fprintf(stderr, "[E::%s] could not prepare csp_mplp_t structure.\n", __func__); goto fail; }
-    /* create file structures for input bam/sam/cram. */
-    bam_fs = (csp_bam_fs**) calloc(gs->nin, sizeof(csp_bam_fs*));  	
-    if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs array.\n", __func__); goto fail; }
-    for (nfs = 0; nfs < gs->nin; nfs++) {
-        if (NULL == (bs = csp_bam_fs_init())) { fprintf(stderr, "[E::%s] failed to create csp_bam_fs.\n", __func__); goto fail; }
-        if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) {
-            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]);
-            goto fail;
-        }
-        bs->hdr = d->bfs[nfs]->hdr;
-        bam_fs[nfs] = bs;
-    }
     if (NULL == (pileup = csp_pileup_init())) { 
         fprintf(stderr, "[E::%s] Out of memory allocating csp_pileup_t struct.\n", __func__); 
         goto fail; 
@@ -264,7 +258,7 @@ static int csp_pileup_core(void *args) {
         if (NULL == (data[ndat] = mp_aux_init())) {
             fprintf(stderr, "[E::%s] failed to allocate space for mp_aux_t.\n", __func__);
             goto fail;
-        } else { data[ndat]->fp = bam_fs[ndat]->fp; data[ndat]->gs = gs; }
+        } else { data[ndat]->fp = fp[ndat]; data[ndat]->gs = gs; }
     }
     if (NULL == (mp_plp = (const bam_pileup1_t**) calloc(nfs, sizeof(bam_pileup1_t*)))) {
         fprintf(stderr, "[E::%s] failed to allocate space for mp_plp.\n", __func__);
@@ -291,16 +285,7 @@ static int csp_pileup_core(void *args) {
             fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
         #endif
         /* create bam_mplp_* mpileup structure from htslib */
-        for (i = 0; i < ndat; i++) { 
-            if (NULL == (ref = csp_fmt_chr_name(a[n], bam_fs[i]->hdr, s))) {
-                fprintf(stderr, "[E::%s] could not parse name for chrom %s.\n", __func__, a[n]);
-                goto fail;
-            } else { ks_clear(s); }
-            if (NULL == (data[i]->itr = sam_itr_querys(bam_fs[i]->idx, bam_fs[i]->hdr, ref))) {
-                fprintf(stderr, "[E::%s] could not parse region for chrom %s.\n", __func__, a[n]);
-                goto fail;
-            }
-        }
+        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto fail;
@@ -350,13 +335,14 @@ static int csp_pileup_core(void *args) {
     jf_close(d->out_vcf_base); if (gs->is_genotype) { jf_close(d->out_vcf_cells); }
     for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
     free(data);
+    if (d->i > 0) {
+        for (i = 0; i < nfp; i++) { hts_close(fp[i]); }
+    } free(fp); fp = NULL;
     free(mp_plp); free(mp_n);
     // do not free mp_iter here, otherwise will lead to double free error!!!
     // seems bam_mplp_* will free the mp_iter by default.
     //bam_mplp_destroy(mp_iter);   
     csp_pileup_destroy(pileup);
-    for (i = 0; i < nfs; i++) { hts_close(bam_fs[i]->fp); free(bam_fs[i]); }
-    free(bam_fs);
     csp_mplp_destroy(mplp);
     d->ret = 0;
     return n;
@@ -371,13 +357,14 @@ static int csp_pileup_core(void *args) {
         for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
         free(data); 
     }
+    if (fp) {
+        if (d->i > 0) {
+            for (i = 0; i < nfp; i++) { hts_close(fp[i]); }
+        } free(fp);
+    }
     if (mp_plp) free(mp_plp);
     if (mp_n) free(mp_n);
     if (pileup) csp_pileup_destroy(pileup);
-    if (bam_fs) {
-        for (i = 0; i < nfs; i++) { hts_close(bam_fs[i]->fp); free(bam_fs[i]); }
-        free(bam_fs);		
-    }
     if (mplp) { csp_mplp_destroy(mplp); }
     return n;
 }
@@ -461,16 +448,16 @@ int csp_pileup(global_settings *gs) {
         if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs* array.\n", __func__); goto fail; }
         for (nfs = 0; nfs < gs->nin; ) {
             if (NULL == (bs = csp_bam_fs_init())) { fprintf(stderr, "[E::%s] failed to create csp_bam_fs.\n", __func__); goto fail; }
-            if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) {
-                fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]);
-                goto fail;
-            }
             if (ntd == 0) {
+                if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) {
+                    fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]);
+                    goto fail;
+                }
                 if (NULL == (bs->hdr = sam_hdr_read(bs->fp))) {
                     fprintf(stderr, "[E::%s] failed to read header for %s.\n", __func__, gs->in_fns[nfs]);
                     goto fail;
                 }
-                if (NULL == (idx[nidx] = sam_idx_load(bs->fp, gs->in_fns[nfs]))) {
+                if (NULL == (idx[nidx] = sam_index_load(bs->fp, gs->in_fns[nfs]))) {
                     fprintf(stderr, "[E::%s] failed to load index for %s.\n", __func__, gs->in_fns[nfs]);
                     goto fail;
                 } else { nidx++; }
@@ -500,7 +487,7 @@ int csp_pileup(global_settings *gs) {
         }
         assert(niter == d->m);
         assert(nitr == gs->nin);
-        titer[titer++] = iter;
+        titer[ntiter++] = iter;
         // construct thdata
         d->i = ntd; d->gs = gs; d->bfs = bam_fs; d->nfs = nfs; d->iter = iter; d->niter = niter; d->nitr = nitr;
         d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
@@ -511,7 +498,7 @@ int csp_pileup(global_settings *gs) {
         }
         td[ntd] = d;
     }
-    assert(titer == mtd);
+    assert(ntiter == mtd);
     // clean idx
     for (i = 0; i < nidx; i++) { hts_idx_destroy(idx[i]); }
     free(idx); idx = NULL;
@@ -579,8 +566,11 @@ int csp_pileup(global_settings *gs) {
         free(titer[i]);
     }
     free(titer); titer = NULL;
-    for (i = 0; i < ntfs; i++) {
-        for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(tfs[i][j]); }
+    // hdr of other thdata should be set to NULL before being destroyed
+    // otherwise will cause double free error!
+    for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(tfs[0][j]); }
+    for (i = 1; i < ntfs; i++) {
+        for (j = 0; j < nfs; j++) { tfs[i][j]->hdr = NULL; csp_bam_fs_destroy(tfs[i][j]); }
         free(tfs[i]);
     }
     free(tfs); tfs = NULL;
@@ -625,8 +615,9 @@ int csp_pileup(global_settings *gs) {
         free(titer);
     }
     if (tfs) {
-        for (i = 0; i < ntfs; i++) {
-            for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(tfs[i][j]); }
+        for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(tfs[0][j]); }
+        for (i = 1; i < ntfs; i++) {
+            for (j = 0; j < nfs; j++) { tfs[i][j]->hdr = NULL; csp_bam_fs_destroy(tfs[i][j]); }
             free(tfs[i]);
         }
         free(tfs);
