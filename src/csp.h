@@ -138,7 +138,6 @@ typedef struct {
     htsFile *fp;
     sam_hdr_t *hdr;   // hdr is needed by sam_read1().
     hts_idx_t *idx;
-    hts_itr_t *iter;
 } csp_bam_fs;
 
 /*@abstract  Create a csp_bam_fs structure.

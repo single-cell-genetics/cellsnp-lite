@@ -206,7 +206,6 @@ inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof
 
 inline void csp_bam_fs_destroy(csp_bam_fs* p) {
     if (p) {
-        if (p->iter) { hts_itr_destroy(p->iter); }
         if (p->idx) { hts_idx_destroy(p->idx); }
         if (p->hdr) { sam_hdr_destroy(p->hdr); }
         if (p->fp)  { hts_close(p->fp); }
