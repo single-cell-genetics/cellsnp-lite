@@ -5,7 +5,7 @@
 /* TODO: 
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
-- merge codes of <nthread = 1> and <ntthread > 1) for csp_fetch() and csp_pileup()
+- separate htsFile from csp_bam_fs as it cannot be shared among threads
 - merge csp_fetch() and csp_pileup() for the two functions share most codes?
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
 - Write test scripts for some key functions.
