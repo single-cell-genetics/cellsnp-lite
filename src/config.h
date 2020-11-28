@@ -10,7 +10,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellsnp-lite"
-#define CSP_VERSION "1.1.0"
+#define CSP_VERSION "1.1.1"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 #define JF_ZIP_TYPE 2     // use bgzip as zip method for JFile
