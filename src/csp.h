@@ -13,37 +13,6 @@
 #include "snp.h"
 #include "thpool.h"
 
-/*
-* BAM/SAM/CRAM File
- */
-
-/*@abstract  Packing the common bam file related pointers into a structure. */
-typedef struct {
-    htsFile *fp;
-    sam_hdr_t *hdr;   // hdr is needed by sam_read1().
-    hts_idx_t *idx;
-} csp_bam_fs;
-
-/*@abstract  Create a csp_bam_fs structure.
-@return  Pointer to the csp_bam_fs structure if success, NULL otherwise.
-
-@note    The pointer returned successfully by csp_bam_fs_init() should be freed
-         by csp_bam_fs_destroy() when no longer used.
- */
-inline csp_bam_fs* csp_bam_fs_init(void);
-inline void csp_bam_fs_destroy(csp_bam_fs *p);
-
-/*@abstract  Build the csp_bam_fs structure.  
-@param fn    Filename of the bam/sam/cram.
-@param ret   Pointer to the state.
-             0 if success, -1 for memory error, -2 for open/parse sam file error.
-@return      The pointer to the csp_bam_fs structure if success, NULL otherwise.
-
-@note        The pointer returned successfully by csp_bam_fs_build() should be freed
-             by csp_bam_fs_destroy() when no longer used.
-*/
-inline csp_bam_fs* csp_bam_fs_build(const char *fn, int *ret);
-inline int csp_bam_fs_reset(csp_bam_fs *p, const char *fn);
 
 /* 
  * Global settings
@@ -71,7 +40,7 @@ struct _gll_settings {
     char *sid_list_file;   // Name of the file containing a list of sample IDs, one sample-ID per line.
     char **sample_ids;     // Pointer to the array of sample IDs.
     int nsid;              // Num of sample IDs.
-    char **chrom_all;      // Pointer to the array of the chromosomes to use.
+    char **chroms;      // Pointer to the array of the chromosomes to use.
     int nchrom;            // Num of chromosomes.
     char *cell_tag;        // Tag for cell barcodes, NULL means no cell tags.
     char *umi_tag;         // Tag for UMI: UR, NULL. NULL means no UMI but read counts.
@@ -159,6 +128,70 @@ int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settin
           do mplp statistics.
  */
 int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs);
+
+/*
+* BAM/SAM/CRAM File
+ */
+
+/*@abstract  Packing the common bam file related pointers into a structure. */
+typedef struct {
+    htsFile *fp;
+    sam_hdr_t *hdr;   // hdr is needed by sam_read1().
+    hts_idx_t *idx;
+} csp_bam_fs;
+
+/*@abstract  Create a csp_bam_fs structure.
+@return  Pointer to the csp_bam_fs structure if success, NULL otherwise.
+
+@note    The pointer returned successfully by csp_bam_fs_init() should be freed
+         by csp_bam_fs_destroy() when no longer used.
+ */
+inline csp_bam_fs* csp_bam_fs_init(void);
+inline void csp_bam_fs_destroy(csp_bam_fs* p);
+
+/* 
+ * Thread operatoins API/routine
+ */
+
+/* 
+* Thread API
+*/
+/*@abstract    The data structure used as thread-func parameter.
+@param gs      Pointer to the global_settings structure.
+@param bfs     Array of csp_bam_fs.
+@param nfs     Size (Number of elements) of @p bfs.
+@param iter    Array of hts_itr_t**. 
+@param niter   Size of @p iter.
+@param nitr    Size of one element of @p iter.
+@param n       Pos of next element in the snp-list/chrom-list to be used by certain thread.
+@param m       Total size of elements to be used by certain thread, must not be changed.
+@param i       Id of the thread data.
+@param ret     Running state of the thread.
+@param ns      Num of SNPs that passed all filters.
+@param nr_*    Num of records for each output matrix file. 
+@param out_*   Pointers of output files.
+ */
+typedef struct {
+    global_settings *gs;
+    csp_bam_fs **bfs;
+    int nfs;
+    hts_itr_t ***iter;
+    int niter, nitr;
+    size_t m, n;   // for snp-list or chrom-list.
+    int i;
+    int ret;
+    size_t ns, nr_ad, nr_dp, nr_oth;
+    jfile_t *out_mtx_ad, *out_mtx_dp, *out_mtx_oth, *out_vcf_base, *out_vcf_cells;
+} thread_data;
+
+/*@abstract  Create the thread_data structure.
+@return      Pointer to the structure if success, NULL otherwise.
+@note        The pointer returned successfully by thdata_init() should be freed
+             by thdata_destroy() when no longer used.
+ */
+inline thread_data* thdata_init(void);
+inline void thdata_destroy(thread_data *p);
+inline void thdata_print(FILE *fp, thread_data *p);
 
 /*
  * File Routine

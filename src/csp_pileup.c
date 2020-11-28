@@ -14,7 +14,6 @@
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
-#include "thread.h"
 
 /* auxiliary data used by @func mp_func. */
 typedef struct {
@@ -29,20 +28,12 @@ static inline mp_aux_t* mp_aux_init(void) {
     return (mp_aux_t*) calloc(1, sizeof(mp_aux_t));
 }
 
-/*@note  As all elements other than 'itr' are from external sources, 
-         only itr needs to be freed/reset. */
+/*@note  As all elements are from external sources so no need to be freed/reset. */
 static inline void mp_aux_destroy(mp_aux_t *p) {
-    if (p) {
-        if (p->itr) { hts_itr_destroy(p->itr); }
-        free(p);
-    }
+    if (p) { free(p); }
 }
 
-static inline void mp_aux_reset(mp_aux_t *p) {
-    if (p) {
-        if (p->itr) { hts_itr_destroy(p->itr); p->itr = NULL; }
-    }
-}
+static inline void mp_aux_reset(mp_aux_t *p) { }
 
 /*@abstract  bam_plp_auto_f used by bam_mplp_init to extract valid reads to be pushed into bam_mpileup stack.
 @param data  Pointer to auxiliary data.
@@ -189,12 +180,12 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
 static int csp_pileup_core(void *args) {
     thread_data *d = (thread_data*) args;
     global_settings *gs = d->gs;
-    char **a = gs->chrom_all + d->n;
+    char **a = gs->chroms + d->n;
     int n = 0;                   /* n is the num of chroms that are successfully processed. */
-    const char *ref = NULL;
-    csp_bam_fs **bam_fs = NULL;       /* use array instead of single element to compatible with multi-input-files. */
-    int nfs = 0;
-    csp_bam_fs *bs = NULL;
+    csp_bam_fs **bam_fs = d->bfs;
+    int nfs = d->nfs;
+    htsFile **fp = NULL;
+    int nfp = 0;
     csp_pileup_t *pileup = NULL;
     csp_mplp_t *mplp = NULL;
     bam_mplp_t mp_iter = NULL;
@@ -211,6 +202,9 @@ static int csp_pileup_core(void *args) {
     fprintf(stderr, "[D::%s][Thread-%d] thread options:\n", __func__, d->i);
     thdata_print(stderr, d);
 #endif
+    assert(d->nfs == gs->nin);
+    assert(d->niter == d->m);
+    assert(d->nitr == gs->nin);
     d->ret = -1;
     d->ns = d->nr_ad = d->nr_dp = d->nr_oth = 0;
     /* prepare data and structures. 
@@ -237,18 +231,20 @@ static int csp_pileup_core(void *args) {
             goto fail;
         }
     }
+    /* open input files */ 
+    fp = (htsFile**) calloc(gs->nin, sizeof(htsFile*));
+    if (NULL == fp) { fprintf(stderr, "[E::%s] failed to open input files\n", __func__); goto fail; }                 
+    for (; nfp < gs->nin; ) {
+        if (d->i == 0) {               // the caller has opened input files for Thread-0 
+            fp[nfp] = bam_fs[nfp]->fp; nfp++;
+        } else if (NULL == (fp[nfp] = hts_open(gs->in_fns[nfp], "rb"))) {
+            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfp]);
+            goto fail;
+        } else { nfp++; }
+    }
     /* prepare mplp for pileup. */
     if (NULL == (mplp = csp_mplp_init())) { fprintf(stderr, "[E::%s] could not init csp_mplp_t structure.\n", __func__); goto fail; }
     if (csp_mplp_prepare(mplp, gs) < 0) { fprintf(stderr, "[E::%s] could not prepare csp_mplp_t structure.\n", __func__); goto fail; }
-    /* create file structures for input bam/sam/cram. */
-    bam_fs = (csp_bam_fs**) calloc(gs->nin, sizeof(csp_bam_fs*));  	
-    if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs array.\n", __func__); goto fail; }
-    for (nfs = 0; nfs < gs->nin; nfs++) {
-        if (NULL == (bs = csp_bam_fs_build(gs->in_fns[nfs], &ret))) {
-            fprintf(stderr, "[E::%s] could not build csp_bam_fs structure.\n", __func__);
-            goto fail;
-        } else { bam_fs[nfs] = bs; }
-    }
     if (NULL == (pileup = csp_pileup_init())) { 
         fprintf(stderr, "[E::%s] Out of memory allocating csp_pileup_t struct.\n", __func__); 
         goto fail; 
@@ -262,7 +258,7 @@ static int csp_pileup_core(void *args) {
         if (NULL == (data[ndat] = mp_aux_init())) {
             fprintf(stderr, "[E::%s] failed to allocate space for mp_aux_t.\n", __func__);
             goto fail;
-        } else { data[ndat]->fp = bam_fs[ndat]->fp; data[ndat]->gs = gs; }
+        } else { data[ndat]->fp = fp[ndat]; data[ndat]->gs = gs; }
     }
     if (NULL == (mp_plp = (const bam_pileup1_t**) calloc(nfs, sizeof(bam_pileup1_t*)))) {
         fprintf(stderr, "[E::%s] failed to allocate space for mp_plp.\n", __func__);
@@ -289,16 +285,7 @@ static int csp_pileup_core(void *args) {
             fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
         #endif
         /* create bam_mplp_* mpileup structure from htslib */
-        for (i = 0; i < ndat; i++) { 
-            if (NULL == (ref = csp_fmt_chr_name(a[n], bam_fs[i]->hdr, s))) {
-                fprintf(stderr, "[E::%s] could not parse name for chrom %s.\n", __func__, a[n]);
-                goto fail;
-            } else { ks_clear(s); }
-            if (NULL == (data[i]->itr = sam_itr_querys(bam_fs[i]->idx, bam_fs[i]->hdr, ref))) {
-                fprintf(stderr, "[E::%s] could not parse region for chrom %s.\n", __func__, a[n]);
-                goto fail;
-            }
-        }
+        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto fail;
@@ -348,13 +335,14 @@ static int csp_pileup_core(void *args) {
     jf_close(d->out_vcf_base); if (gs->is_genotype) { jf_close(d->out_vcf_cells); }
     for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
     free(data);
+    if (d->i > 0) {
+        for (i = 0; i < nfp; i++) { hts_close(fp[i]); }
+    } free(fp); fp = NULL;
     free(mp_plp); free(mp_n);
     // do not free mp_iter here, otherwise will lead to double free error!!!
     // seems bam_mplp_* will free the mp_iter by default.
     //bam_mplp_destroy(mp_iter);   
     csp_pileup_destroy(pileup);
-    for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
-    free(bam_fs);
     csp_mplp_destroy(mplp);
     d->ret = 0;
     return n;
@@ -369,13 +357,14 @@ static int csp_pileup_core(void *args) {
         for (i = 0; i < ndat; i++) { mp_aux_destroy(data[i]); }
         free(data); 
     }
+    if (fp) {
+        if (d->i > 0) {
+            for (i = 0; i < nfp; i++) { hts_close(fp[i]); }
+        } free(fp);
+    }
     if (mp_plp) free(mp_plp);
     if (mp_n) free(mp_n);
     if (pileup) csp_pileup_destroy(pileup);
-    if (bam_fs) {
-        for (i = 0; i < nfs; i++) csp_bam_fs_destroy(bam_fs[i]);
-        free(bam_fs);		
-    }
     if (mplp) { csp_mplp_destroy(mplp); }
     return n;
 }
@@ -386,34 +375,45 @@ static int csp_pileup_core(void *args) {
  */
 int csp_pileup(global_settings *gs) {
     /* check options (input) */
-    if (NULL == gs || gs->nin <= 0 || gs->nchrom <= 0 || NULL == gs->out_dir) {
+    if (NULL == gs || gs->nin <= 0 || gs->nchrom <= 0 || NULL == gs->out_dir || \
+            (gs->nthread > 1 && ! gs->tp)) {
         fprintf(stderr, "[E::%s] error options for fetch modes.\n", __func__);
         return -1;
     }
     int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nin;
     /* core part. */
-    if (gs->tp && gs->nthread > 1) {
-        jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
-        thread_data **td = NULL, *d = NULL;
-        int ntd = 0, mtd; // ntd: num of thread-data structures that have been created. mtd: size of td array.
-        int i, ret;
-        size_t ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
-        out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
-        /* calc number of threads and number of chroms for each thread. */
-        mtd = gs->nchrom;
-        /* create output tmp filenames. */
-        if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, CSP_TMP_ZIP))) {
-            fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
-            goto fail;
-        }
-        if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, CSP_TMP_ZIP))) {
-            fprintf(stderr, "[E::%s] fail to create tmp files for mtx_DP.\n", __func__);
-            goto fail;
-        }
-        if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, CSP_TMP_ZIP))) {
-            fprintf(stderr, "[E::%s] fail to create tmp files for mtx_OTH.\n", __func__);
-            goto fail;
-        }
+    thread_data **td = NULL, *d = NULL;
+    int ntd = 0, mtd;            // ntd: num of thread-data structures that have been created. mtd: size of td array.
+    csp_bam_fs **bam_fs = NULL;       /* use array instead of single element to compatible with multi-input-files. */
+    csp_bam_fs *bs = NULL;
+    int nfs = 0;
+    hts_itr_t ****titer = NULL;
+    hts_itr_t ***iter = NULL;
+    hts_itr_t **itr = NULL;
+    int ntiter = 0, niter = 0, nitr = 0;
+    const char *ref = NULL;
+    char **a = NULL;
+    kstring_t ks = KS_INITIALIZE, *s = &ks;
+    int i, j, k, ret;
+    size_t ns, nr_ad, nr_dp, nr_oth, ns_merge, nr_merge;
+    jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
+    out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
+    /* calc number of threads and number of chroms for each thread. */
+    mtd = gs->nthread > 1 ? gs->nchrom : 1;
+    /* create output tmp filenames. */
+    if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, CSP_TMP_ZIP))) {
+        fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);
+        goto fail;
+    }
+    if (NULL == (out_tmp_mtx_dp = create_tmp_files(gs->out_mtx_dp, mtd, CSP_TMP_ZIP))) {
+        fprintf(stderr, "[E::%s] fail to create tmp files for mtx_DP.\n", __func__);
+        goto fail;
+    }
+    if (NULL == (out_tmp_mtx_oth = create_tmp_files(gs->out_mtx_oth, mtd, CSP_TMP_ZIP))) {
+        fprintf(stderr, "[E::%s] fail to create tmp files for mtx_OTH.\n", __func__);
+        goto fail;
+    }
+    if (mtd > 1) {
         if (NULL == (out_tmp_vcf_base = create_tmp_files(gs->out_vcf_base, mtd, CSP_TMP_ZIP))) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_BASE.\n", __func__);
             goto fail;
@@ -422,53 +422,119 @@ int csp_pileup(global_settings *gs) {
             fprintf(stderr, "[E::%s] fail to create tmp files for vcf_CELLS.\n", __func__);
             goto fail;
         }
-        /* prepare data for thread pool and run. */
-        td = (thread_data**) calloc(mtd, sizeof(thread_data*));
-        if (NULL == td) { fprintf(stderr, "[E::%s] could not initialize the array of thread_data structure.\n", __func__); goto fail; }
-        for (; ntd < mtd; ntd++) {
-            if (NULL == (d = thdata_init())) {
-                fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
-                goto fail; 
+    }
+    /* create csp_bam_fs structures */
+    // open input files and construct hdr for Thread-0 and 
+    // other threads would use directly hdr of Thread-0 and by themselves open input files.
+    bam_fs = (csp_bam_fs**) calloc(gs->nin, sizeof(csp_bam_fs*));
+    if (NULL == bam_fs) { fprintf(stderr, "[E::%s] could not initialize csp_bam_fs* array.\n", __func__); goto fail; }
+    for (nfs = 0; nfs < gs->nin; nfs++) {
+        if (NULL == (bs = csp_bam_fs_init())) { fprintf(stderr, "[E::%s] failed to create csp_bam_fs.\n", __func__); goto fail; }
+        if (NULL == (bs->fp = hts_open(gs->in_fns[nfs], "rb"))) {
+            fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfs]);
+            goto fail;
+        }
+        if (NULL == (bs->hdr = sam_hdr_read(bs->fp))) {
+            fprintf(stderr, "[E::%s] failed to read header for %s.\n", __func__, gs->in_fns[nfs]);
+            goto fail;
+        }
+        if (NULL == (bs->idx = sam_index_load(bs->fp, gs->in_fns[nfs]))) {
+            fprintf(stderr, "[E::%s] failed to load index for %s.\n", __func__, gs->in_fns[nfs]);
+            goto fail;
+        }
+        bam_fs[nfs] = bs;
+    } bs = NULL;
+    /* prepare hts_itr_t */
+    titer = (hts_itr_t****) calloc(mtd, sizeof(hts_itr_t***));
+    if (NULL == titer) { fprintf(stderr, "[E::%s] could not initialize hts_itr_t*** array.\n", __func__); goto fail; }
+    /* prepare data for thread pool. */
+    td = (thread_data**) calloc(mtd, sizeof(thread_data*));
+    if (NULL == td) { fprintf(stderr, "[E::%s] could not initialize the array of thread_data structure.\n", __func__); goto fail; }
+    for (; ntd < mtd; ntd++) {
+        if (NULL == (d = thdata_init())) {
+            fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
+            goto fail; 
+        }
+        d->n = ntd; d->m = mtd > 1 ? 1 : gs->nchrom;
+        a = gs->chroms + d->n;
+        d->i = ntd; d->gs = gs;
+        // construct csp_bam_fs
+        d->bfs = bam_fs; d->nfs = nfs;
+        // construct hts_itr_t
+        iter = (hts_itr_t***) calloc(d->m, sizeof(hts_itr_t**));
+        if (NULL == iter) { fprintf(stderr, "[E::%s] failed to allocate space for hts_itr_t***\n", __func__); goto fail; }
+        for (niter = 0; niter < d->m; niter++) {
+            itr = (hts_itr_t**) calloc(gs->nin, sizeof(hts_itr_t*));
+            if (NULL == itr) { fprintf(stderr, "[E::%s] failed to allocate space for hts_itr_t**\n", __func__); goto fail; }
+            for (nitr = 0; nitr < gs->nin; nitr++) {
+                if (NULL == (ref = csp_fmt_chr_name(a[niter], bam_fs[nitr]->hdr, s))) {
+                    fprintf(stderr, "[E::%s] could not parse name for chrom %s.\n", __func__, a[niter]);
+                    goto fail;
+                } else { ks_clear(s); }
+                if (NULL == (itr[nitr] = sam_itr_querys(bam_fs[nitr]->idx, bam_fs[nitr]->hdr, ref))) {
+                    fprintf(stderr, "[E::%s] could not parse region for chrom %s.\n", __func__, a[niter]);
+                    goto fail;
+                }
             }
-            d->i = ntd; d->gs = gs; d->n = ntd; d->m = 1;
-            d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
+            iter[niter] = itr;
+        } itr = NULL;
+        titer[ntiter++] = iter;
+        d->iter = iter; d->niter = niter; d->nitr = nitr; iter = NULL;
+        #if DEBUG
+            assert(niter == d->m);
+            assert(nitr == gs->nin);
+        #endif
+        // construct thdata
+        d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
+        if (mtd > 1) {
             d->out_vcf_base = out_tmp_vcf_base[ntd]; d->out_vcf_cells = gs->is_genotype ? out_tmp_vcf_cells[ntd] : NULL;
-            td[ntd] = d;
-            if (thpool_add_work(gs->tp, (void*) csp_pileup_core, d) < 0) {
-                fprintf(stderr, "[E::%s] could not add thread work (No. %d)\n", __func__, ntd++);
+        } else {
+            d->out_vcf_base = gs->out_vcf_base; d->out_vcf_cells = gs->is_genotype ? gs->out_vcf_cells : NULL;
+        }
+        td[ntd] = d;
+    } d = NULL;
+    // clean idx
+    for (i = 0; i < nfs; i++) { hts_idx_destroy(bam_fs[i]->idx); bam_fs[i]->idx = NULL; }
+    // run threads
+    if (mtd > 1) {
+        for (i = 0; i < mtd; i++) {
+            if (thpool_add_work(gs->tp, (void*) csp_pileup_core, td[i]) < 0) {
+                fprintf(stderr, "[E::%s] could not add thread work (No. %d)\n", __func__, i);
                 goto fail;
-            } // make sure do not to free pointer d when fail.
+            }
         }
         thpool_wait(gs->tp);
-        /* check running status of threads. */
-        #if DEBUG
-            for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
-        #endif
-        for (i = 0; i < mtd; i++) { if (td[i]->ret < 0) goto fail; }
-        /* merge tmp files. */
-        ns = nr_ad = nr_dp = nr_oth = 0;
-        for (i = 0; i < mtd; i++) {
-            nr_ad += td[i]->nr_ad; nr_dp += td[i]->nr_dp; nr_oth += td[i]->nr_oth;
-            ns += td[i]->ns;
-        }
-        if (jf_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
-        jf_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
-        merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, mtd, &ns_merge, &nr_merge, &ret);
-        if (ret < 0 || ns_merge != ns || nr_merge != nr_ad) { fprintf(stderr, "[E::%s] failed to merge mtx AD.\n", __func__); goto fail; }
-        jf_close(gs->out_mtx_ad);
+    } else { csp_pileup_core(td[0]); }
+    /* check running status of threads. */
+    #if DEBUG
+        for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
+    #endif
+    for (i = 0; i < mtd; i++) { if (td[i]->ret < 0) goto fail; }
+    /* merge tmp files. */
+    ns = nr_ad = nr_dp = nr_oth = 0;
+    for (i = 0; i < mtd; i++) {
+        nr_ad += td[i]->nr_ad; nr_dp += td[i]->nr_dp; nr_oth += td[i]->nr_oth;
+        ns += td[i]->ns;
+    }
+    if (jf_open(gs->out_mtx_ad, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx AD.\n", __func__); goto fail; }
+    jf_printf(gs->out_mtx_ad, "%ld\t%d\t%ld\n", ns, nsample, nr_ad);
+    merge_mtx(gs->out_mtx_ad, out_tmp_mtx_ad, mtd, &ns_merge, &nr_merge, &ret);
+    if (ret < 0 || ns_merge != ns || nr_merge != nr_ad) { fprintf(stderr, "[E::%s] failed to merge mtx AD.\n", __func__); goto fail; }
+    jf_close(gs->out_mtx_ad);
 
-        if (jf_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
-        jf_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
-        merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, mtd, &ns_merge, &nr_merge, &ret);
-        if (ret < 0 || ns_merge != ns || nr_merge != nr_dp) { fprintf(stderr, "[E::%s] failed to merge mtx DP.\n", __func__); goto fail; }
-        jf_close(gs->out_mtx_dp);
+    if (jf_open(gs->out_mtx_dp, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx DP.\n", __func__); goto fail; }
+    jf_printf(gs->out_mtx_dp, "%ld\t%d\t%ld\n", ns, nsample, nr_dp);
+    merge_mtx(gs->out_mtx_dp, out_tmp_mtx_dp, mtd, &ns_merge, &nr_merge, &ret);
+    if (ret < 0 || ns_merge != ns || nr_merge != nr_dp) { fprintf(stderr, "[E::%s] failed to merge mtx DP.\n", __func__); goto fail; }
+    jf_close(gs->out_mtx_dp);
 
-        if (jf_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
-        jf_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
-        merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, mtd, &ns_merge, &nr_merge, &ret);
-        if (ret < 0 || ns_merge != ns || nr_merge != nr_oth) { fprintf(stderr, "[E::%s] failed to merge mtx OTH.\n", __func__); goto fail; }
-        jf_close(gs->out_mtx_oth);
+    if (jf_open(gs->out_mtx_oth, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open mtx OTH.\n", __func__); goto fail; }
+    jf_printf(gs->out_mtx_oth, "%ld\t%d\t%ld\n", ns, nsample, nr_oth);
+    merge_mtx(gs->out_mtx_oth, out_tmp_mtx_oth, mtd, &ns_merge, &nr_merge, &ret);
+    if (ret < 0 || ns_merge != ns || nr_merge != nr_oth) { fprintf(stderr, "[E::%s] failed to merge mtx OTH.\n", __func__); goto fail; }
+    jf_close(gs->out_mtx_oth);
 
+    if (mtd > 1) {
         if (jf_open(gs->out_vcf_base, NULL) < 0) { fprintf(stderr, "[E::%s] failed to open vcf BASE.\n", __func__); goto fail; }
         merge_vcf(gs->out_vcf_base, out_tmp_vcf_base, mtd, &ret);
         if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf BASE.\n", __func__); goto fail; }
@@ -480,18 +546,33 @@ int csp_pileup(global_settings *gs) {
             if (ret < 0) { fprintf(stderr, "[E::%s] failed to merge vcf CELLS.\n", __func__); goto fail; }    
             jf_close(gs->out_vcf_cells);     
         }
-        /* clean */
-        for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
-        free(td); td = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
-        } out_tmp_mtx_ad = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
-        } out_tmp_mtx_dp = NULL;
-        if (destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
-        } out_tmp_mtx_oth = NULL;
+    }
+    /* clean */
+    for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
+    free(td); td = NULL;
+    ks_free(s); s = NULL;
+    for (i = 0; i < ntiter; i++) {
+        for (j = 0; j < niter; j++) {
+            for (k = 0; k < nitr; k++) { hts_itr_destroy(titer[i][j][k]); }
+            free(titer[i][j]);
+        }
+        free(titer[i]);
+    }
+    free(titer); titer = NULL;
+    // hdr of other thdata should be set to NULL before being destroyed
+    // otherwise will cause double free error!
+    for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(bam_fs[j]); }
+    free(bam_fs); bam_fs = NULL;
+    if (destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
+    } out_tmp_mtx_ad = NULL;
+    if (destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
+    } out_tmp_mtx_dp = NULL;
+    if (destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
+    } out_tmp_mtx_oth = NULL;
+    if (mtd > 1) {
         if (destroy_tmp_files(out_tmp_vcf_base, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf BASE files.\n", __func__);
         } out_tmp_vcf_base = NULL;
@@ -500,62 +581,64 @@ int csp_pileup(global_settings *gs) {
                 fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
             } out_tmp_vcf_cells = NULL;
         }
-        return 0;
-      fail:
-        if (td) {
-            for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
-            free(td);
+    }
+    return 0;
+  fail:
+    if (td) {
+        for (i = 0; i < mtd; i++) { thdata_destroy(td[i]); }
+        free(td);
+    }
+    if (d) { thdata_destroy(d); }
+    if (s) { ks_free(s); }
+    if (titer) {
+        for (i = 0; i < ntiter; i++) {
+            for (j = 0; j < niter; j++) {
+                for (k = 0; k < nitr; k++) { hts_itr_destroy(titer[i][j][k]); }
+                free(titer[i][j]);
+            }
+            free(titer[i]);
         }
-        if (out_tmp_mtx_ad && destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
+        free(titer);
+    }
+    if (iter) {
+        for (j = 0; j < niter; j++) {
+            for (k = 0; k < nitr; k++) { hts_itr_destroy(iter[j][k]); }
+            free(iter[j]);
         }
-        if (out_tmp_mtx_dp && destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
-        }
-        if (out_tmp_mtx_oth && destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
-            fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
-        }
+        free(iter);        
+    }
+    if (itr) {
+        for (k = 0; k < nitr; k++) { hts_itr_destroy(itr[k]); }
+        free(itr);
+    }
+    if (bs) { csp_bam_fs_destroy(bs); }
+    if (bam_fs) {
+        for (j = 0; j < nfs; j++) { csp_bam_fs_destroy(bam_fs[j]); }
+        free(bam_fs);
+    }
+    if (out_tmp_mtx_ad && destroy_tmp_files(out_tmp_mtx_ad, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx AD files.\n", __func__);
+    }
+    if (out_tmp_mtx_dp && destroy_tmp_files(out_tmp_mtx_dp, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx DP files.\n", __func__);
+    }
+    if (out_tmp_mtx_oth && destroy_tmp_files(out_tmp_mtx_oth, mtd) < 0) {
+        fprintf(stderr, "[W::%s] failed to remove tmp mtx OTH files.\n", __func__);
+    }
+    if (mtd > 1) {
         if (out_tmp_vcf_base && destroy_tmp_files(out_tmp_vcf_base, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf BASE files.\n", __func__);
         }
         if (out_tmp_vcf_cells && destroy_tmp_files(out_tmp_vcf_cells, mtd) < 0) {
             fprintf(stderr, "[W::%s] failed to remove tmp vcf CELLS files.\n", __func__);
         }
-        if (jf_isopen(gs->out_mtx_ad)) { jf_close(gs->out_mtx_ad); }
-        if (jf_isopen(gs->out_mtx_dp)) { jf_close(gs->out_mtx_dp); }
-        if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
-        if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
-        if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
-        return -1;
-    } else if (1 == gs->nthread) {  // only one thread.
-        thread_data *d = NULL;
-        if (NULL == (d = thdata_init())) { 
-            fprintf(stderr, "[E::%s] could not initialize the thread_data structure.\n", __func__); 
-            goto fail1; 
-        }
-        d->gs = gs; d->n = 0; d->m = (size_t) gs->nchrom; d->i = 0; 
-        d->out_mtx_ad = gs->out_mtx_ad; d->out_mtx_dp = gs->out_mtx_dp; d->out_mtx_oth = gs->out_mtx_oth;
-        d->out_vcf_base = gs->out_vcf_base; d->out_vcf_cells = gs->is_genotype ? gs->out_vcf_cells : NULL;
-        csp_pileup_core(d);
-        if (d->ret < 0) { goto fail1; }
-        if (rewrite_mtx(gs->out_mtx_ad, d->ns, nsample, d->nr_ad) != 0) {
-            fprintf(stderr, "[E::%s] failed to rewrite mtx AD.\n", __func__);
-            goto fail1;
-        }
-        if (rewrite_mtx(gs->out_mtx_dp, d->ns, nsample, d->nr_dp) != 0) { 
-            fprintf(stderr, "[E::%s] failed to rewrite mtx DP.\n", __func__);
-            goto fail1;
-        }
-        if (rewrite_mtx(gs->out_mtx_oth, d->ns, nsample, d->nr_oth) != 0) { 
-            fprintf(stderr, "[E::%s] failed to rewrite mtx OTH.\n", __func__);
-            goto fail1;
-        }
-        thdata_destroy(d); d = NULL;
-        return 0;
-      fail1:
-        if (d) { thdata_destroy(d); }
-        return -1;
-    } /* else: do nothing. should not come here! */
+    }
+    if (jf_isopen(gs->out_mtx_ad)) { jf_close(gs->out_mtx_ad); }
+    if (jf_isopen(gs->out_mtx_dp)) { jf_close(gs->out_mtx_dp); }
+    if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
+    if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
+    if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
     return -1;
 }
+
 

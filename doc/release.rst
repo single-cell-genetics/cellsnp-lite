@@ -2,6 +2,13 @@
 History
 =======
 
+Release v1.1.1 (28/11/2020)
+===========================
+* use only single copy of hdr & idx in csp_bam_fs for fetch method
+* use only single copy of hdr (and no idx) for pileup method
+* merge nthread > 1 and nthread = 1 for fetch method
+* merge nthread > 1 and nthread = 1 for pileup method
+
 Release v1.1.0 (26/11/2020)
 ===========================
 * split cellsnp_utils.h & general_utils.h & cellsnp.c into separate modules
