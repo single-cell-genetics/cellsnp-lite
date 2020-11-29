@@ -57,6 +57,7 @@ static void gll_set_default(global_settings *gs) {
         for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) { gs->chroms[gs->nchrom] = safe_strdup(chrom_tmp[gs->nchrom]); }
         gs->cell_tag = safe_strdup(CSP_CELL_TAG); gs->umi_tag = safe_strdup(CSP_UMI_TAG);
         gs->nthread = CSP_NTHREAD; gs->tp = NULL;
+        gs->mthread = CSP_NTHREAD; gs->tp_errno = 0; gs->tp_ntry = 0;
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
         gs->double_gl = 0;
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
@@ -354,7 +355,7 @@ int main(int argc, char **argv) {
                         fprintf(stderr, "[E::%s] could not read sample-id file '%s'\n", __func__, optarg);
                         goto fail;
                     } else { break; }
-            case 'p': gs.nthread = atoi(optarg); break;
+            case 'p': gs.mthread = gs.nthread = atoi(optarg); break;
             case 1:  
                     if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
                     if (NULL == (gs.chroms = hts_readlist(optarg, 0, &gs.nchrom))) {
@@ -391,25 +392,20 @@ int main(int argc, char **argv) {
         }
     }
     fprintf(stderr, "[I::%s] start time: %s\n", __func__, time_str);
-#if DEBUG
+  #if DEBUG
     fprintf(stderr, "[D::%s] global settings before checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
-#endif
+  #endif
     /* check global settings */
     if ((ret = check_global_args(&gs)) < 0) { 
         fprintf(stderr, "[E::%s] error global settings\n", __func__);
         if (ret == -1) { print_usage(stderr); }
         goto fail;
     }
-#if DEBUG
+  #if DEBUG
     fprintf(stderr, "[D::%s] global settings after checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
-#endif
-    /* prepare running data & options for each thread based on the checked global parameters.*/
-    if (gs.nthread > 1 && NULL == (gs.tp = thpool_init(gs.nthread))) {
-        fprintf(stderr, "[E::%s] could not initialize the thread pool.\n", __func__);
-        goto fail;
-    }
+  #endif
     /* prepare output files. */
     if (NULL == (gs.out_mtx_ad = jf_init()) || NULL == (gs.out_mtx_dp = jf_init()) || \
         NULL == (gs.out_mtx_oth = jf_init()) || NULL == (gs.out_samples = jf_init()) || \

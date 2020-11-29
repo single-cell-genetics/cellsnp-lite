@@ -14,6 +14,7 @@
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 #define JF_ZIP_TYPE 2     // use bgzip as zip method for JFile
+#define CSP_FIT_MULTI_SMP 1         // if let nthread auto fit multi samples. 0, no; 1, yes.
 
 typedef struct _gll_settings global_settings;
 

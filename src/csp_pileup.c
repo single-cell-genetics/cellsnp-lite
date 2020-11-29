@@ -124,17 +124,17 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
     const bam_pileup1_t *bp = NULL;
     int i, j, r, ret, st, state = -1;
     size_t npushed = 0;
-    #if DEBUG
-        size_t npileup = 0;
-    #endif
+  #if DEBUG
+    size_t npileup = 0;
+  #endif
     mplp->ref_idx = -1;
     mplp->alt_idx = -1;
     for (i = 0; i < nfs; i++) {
         for (j = 0; j < mp_n[i]; j++) {
             bp = mp_plp[i] + j;
-            #if DEBUG
-                npileup++;
-            #endif
+          #if DEBUG
+            npileup++;
+          #endif
             if (0 == (st = pileup_read(pos, bp, pileup, gs))) { // no need to reset pileup as the values in it will be immediately overwritten.
                 if (use_barcodes(gs)) { r = csp_mplp_push(pileup, mplp, -1, gs); }
                 else if (use_sid(gs)) { r = csp_mplp_push(pileup, mplp, i, gs); }
@@ -144,16 +144,16 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
             } else if (st < 0) { state = -1; goto fail; }
         }
     }
-    #if DEBUG
-        fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
-        csp_mplp_print_(stderr, mplp, "\t");
-    #endif
+  #if DEBUG
+    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
+    csp_mplp_print_(stderr, mplp, "\t");
+  #endif
     if (npushed < gs->min_count) { state = 1; goto fail; }
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) { state = (ret > 0) ? 1 : -1; goto fail; }
-    #if DEBUG
-        fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);
-        csp_mplp_print_(stderr, mplp, "\t");
-    #endif
+  #if DEBUG
+    fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);
+    csp_mplp_print_(stderr, mplp, "\t");
+  #endif
     return 0;
   fail:
     return state;
@@ -198,10 +198,10 @@ static int csp_pileup_core(void *args) {
     int i, r, ret;
     size_t msnp, nsnp, unit = 200000;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-#if DEBUG
+  #if DEBUG
     fprintf(stderr, "[D::%s][Thread-%d] thread options:\n", __func__, d->i);
     thdata_print(stderr, d);
-#endif
+  #endif
     assert(d->nfs == gs->nin);
     assert(d->niter == d->m);
     assert(d->nitr == gs->nin);
@@ -281,9 +281,9 @@ static int csp_pileup_core(void *args) {
         }
     }
     for (msnp = nsnp = 0; n < d->m; n++, msnp = nsnp = 0) {
-        #if VERBOSE
-            fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
-        #endif
+      #if VERBOSE
+        fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
+      #endif
         /* create bam_mplp_* mpileup structure from htslib */
         for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
@@ -314,21 +314,21 @@ static int csp_pileup_core(void *args) {
                 jf_putc('\n', d->out_vcf_cells);
             }
             csp_mplp_reset(mplp); ks_clear(s);
-            #if VERBOSE
-                if ((++nsnp) - msnp >= unit) {
-                    fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed %.2fM SNPs for chrom %s\n", __func__, d->i, nsnp / 1000000.0, a[n]);
-                    msnp = nsnp;
-                }
-            #endif
+          #if VERBOSE
+            if ((++nsnp) - msnp >= unit) {
+                fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed %.2fM SNPs for chrom %s\n", __func__, d->i, nsnp / 1000000.0, a[n]);
+                msnp = nsnp;
+            }
+          #endif
         }
         if (ret < 0) {
             fprintf(stderr, "[E::%s] failed to pileup chrom %s\n", __func__, a[n]);
             goto fail;
         }
         for (i = 0; i < ndat; i++) { mp_aux_reset(data[i]); }
-        #if VERBOSE
-            fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed in total %ld SNPs for chrom %s\n", __func__, d->i, nsnp, a[n]);
-        #endif
+      #if VERBOSE
+        fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed in total %ld SNPs for chrom %s\n", __func__, d->i, nsnp, a[n]);
+      #endif
     }
     ks_free(s); s = NULL;
     jf_close(d->out_mtx_ad); jf_close(d->out_mtx_dp); jf_close(d->out_mtx_oth);
@@ -480,10 +480,10 @@ int csp_pileup(global_settings *gs) {
         } itr = NULL;
         titer[ntiter++] = iter;
         d->iter = iter; d->niter = niter; d->nitr = nitr; iter = NULL;
-        #if DEBUG
-            assert(niter == d->m);
-            assert(nitr == gs->nin);
-        #endif
+      #if DEBUG
+        assert(niter == d->m);
+        assert(nitr == gs->nin);
+      #endif
         // construct thdata
         d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
         if (mtd > 1) {
@@ -506,9 +506,9 @@ int csp_pileup(global_settings *gs) {
         thpool_wait(gs->tp);
     } else { csp_pileup_core(td[0]); }
     /* check running status of threads. */
-    #if DEBUG
-        for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
-    #endif
+  #if DEBUG
+    for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
+  #endif
     for (i = 0; i < mtd; i++) { if (td[i]->ret < 0) goto fail; }
     /* merge tmp files. */
     ns = nr_ad = nr_dp = nr_oth = 0;
