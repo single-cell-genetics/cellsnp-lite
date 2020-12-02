@@ -3,6 +3,8 @@
  */
 
 /* TODO: 
+- Let pileup method auto fit multi files
+- add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc)
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
 - separate htsFile from csp_bam_fs as it cannot be shared among threads
@@ -24,6 +26,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <libgen.h>
 #include <time.h>
 #include "thpool.h"
@@ -56,7 +59,8 @@ static void gll_set_default(global_settings *gs) {
         gs->chroms = (char**) calloc(CSP_NCHROM, sizeof(char*));
         for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) { gs->chroms[gs->nchrom] = safe_strdup(chrom_tmp[gs->nchrom]); }
         gs->cell_tag = safe_strdup(CSP_CELL_TAG); gs->umi_tag = safe_strdup(CSP_UMI_TAG);
-        gs->nthread = CSP_NTHREAD; gs->tp = NULL;
+        gs->nthread = CSP_NTHREAD; gs->tp = NULL; gs->tp_max_open = TP_MAX_OPEN;
+        gs->mthread = CSP_NTHREAD; gs->tp_errno = 0; gs->tp_ntry = 0;
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
         gs->double_gl = 0;
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
@@ -76,66 +80,55 @@ static void print_usage(FILE *fp) {
     char *tmp_filter_noumi = bam_flag2str(CSP_EXCL_FMASK_NOUMI);
 
     fprintf(fp, 
-"\n"
-"Usage: %s [options]\n", CSP_NAME);
+        "\n"
+        "Usage: %s [options]\n", CSP_NAME);
     fprintf(fp,
-"\n"
-"Options:\n"
-"  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
-"                       Mode 1&2: one sam/bam file with single cell.\n"
-"                       Mode 3: one or multiple bulk sam/bam files,\n"
-"                       no barcodes needed, but sample ids and regionsVCF.\n"
-"  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.\n"
-"  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
-"  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
-"                           If None, pileup the genome. Needed for bulk samples.\n"
-"  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
-"  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
-"  -I, --sampleIDs STR      Comma separated sample ids.\n"
-"  -V, --version            Print software version and exit.\n"
-"  -h, --help               Show this help message and exit.\n");
-    fprintf(fp,
-"\n"
-"Optional arguments:\n"
-"  --genotype           If use, do genotyping in addition to counting.\n"
-"  --gzip               If use, the output files will be zipped into BGZF format.\n"
-"  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n"
-"  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
-    fprintf(fp,
-"  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
-    fprintf(fp,
-"  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
-    fprintf(fp,
-"  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n"
-"                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
-    fprintf(fp,
-"  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
-    fprintf(fp,
-"  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
-    fprintf(fp,
-"  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n"
-"\n"
-"Read filtering:\n");
-    fprintf(fp,
-"  --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset [%s]\n", tmp_require);
-    fprintf(fp,
-"  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n"
-"                       (when use UMI) or %s (otherwise)]\n", tmp_filter_umi, tmp_filter_noumi);
-    fprintf(fp,
-"  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
-    fprintf(fp,
-"  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    fprintf(fp,
-"  --countORPHAN        If use, do not skip anomalous read pairs.\n");
+        "\n"
+        "Options:\n"
+        "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
+        "                       Mode 1&2: one sam/bam file with single cell.\n"
+        "                       Mode 3: one or multiple bulk sam/bam files,\n"
+        "                       no barcodes needed, but sample ids and regionsVCF.\n"
+        "  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.\n"
+        "  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
+        "  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
+        "                           If None, pileup the genome. Needed for bulk samples.\n"
+        "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
+        "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
+        "  -I, --sampleIDs STR      Comma separated sample ids.\n"
+        "  -V, --version            Print software version and exit.\n"
+        "  -h, --help               Show this help message and exit.\n"
+        "\n"
+        "Optional arguments:\n"
+        "  --genotype           If use, do genotyping in addition to counting.\n"
+        "  --gzip               If use, the output files will be zipped into BGZF format.\n"
+        "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
+    fprintf(fp, "  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
+    fprintf(fp, "  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
+    fprintf(fp, "  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
+    fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n"
+                "                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
+    fprintf(fp, "  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
+    fprintf(fp, "  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
+    fprintf(fp, "  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Read filtering:\n");
+    fprintf(fp, "  --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset [%s]\n", tmp_require);
+    fprintf(fp, "  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n"
+                "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_umi, tmp_filter_noumi);
+    fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
+    fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
+    fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
 /*
     fprintf(fp,
 "  --maxFLAG INT        Maximum FLAG for read filtering [%d (when use UMI) or %d (otherwise)]\n", \
                         CSP_MAX_FLAG_WITH_UMI, CSP_MAX_FLAG_WITHOUT_UMI);
 */
-    fputs("\n"
-"Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
-"You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
-"https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
+    fputs(
+        "\n"
+        "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
+        "You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
+        "https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
     fputc('\n', fp);
 
     free(tmp_require); 
@@ -156,8 +149,9 @@ static inline int cmp_barcodes(const void *x, const void *y) {
 @note          This is just basic check for the shared parameters of different running modes.
                More careful and personalized check would be performed by each running mode.
  */
-static int check_global_args(global_settings *gs) {
+static int check_args(global_settings *gs) {
     int i;
+    struct rlimit r;
     if (gs->in_fn_file) {
         if (gs->in_fns) { 
             fprintf(stderr, "[E::%s] should not specify -s/--samFile and -S/--samFileList options at the same time.\n", __func__); 
@@ -240,6 +234,19 @@ static int check_global_args(global_settings *gs) {
     }
     //if (gs->max_flag < 0) { gs->max_flag = gs->umi_tag ? CSP_MAX_FLAG_WITH_UMI : CSP_MAX_FLAG_WITHOUT_UMI; }
     if (gs->rflag_filter < 0) gs->rflag_filter = use_umi(gs) ? CSP_EXCL_FMASK_UMI : CSP_EXCL_FMASK_NOUMI;
+    // increase number of max open files
+    if (gs->nin > 1) {
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        fprintf(stderr, "[I::%s] original limits of max open, soft = %d, hard = %d\n", __func__, (int) r.rlim_cur, (int) r.rlim_max);
+        r.rlim_cur = r.rlim_max;
+        if (setrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] setrlimit error.\n", __func__); return -2; }
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        fprintf(stderr, "[I::%s] new limits of max open, soft = %d, hard = %d\n", __func__, (int) r.rlim_cur, (int) r.rlim_max);
+        gs->tp_max_open = (int) r.rlim_cur;
+    } else {
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        gs->tp_max_open = (int) r.rlim_cur;
+    }
     return 0;
 }
 
@@ -354,7 +361,7 @@ int main(int argc, char **argv) {
                         fprintf(stderr, "[E::%s] could not read sample-id file '%s'\n", __func__, optarg);
                         goto fail;
                     } else { break; }
-            case 'p': gs.nthread = atoi(optarg); break;
+            case 'p': gs.mthread = gs.nthread = atoi(optarg); break;
             case 1:  
                     if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
                     if (NULL == (gs.chroms = hts_readlist(optarg, 0, &gs.nchrom))) {
@@ -391,25 +398,20 @@ int main(int argc, char **argv) {
         }
     }
     fprintf(stderr, "[I::%s] start time: %s\n", __func__, time_str);
-#if DEBUG
+  #if DEBUG
     fprintf(stderr, "[D::%s] global settings before checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
-#endif
+  #endif
     /* check global settings */
-    if ((ret = check_global_args(&gs)) < 0) { 
+    if ((ret = check_args(&gs)) < 0) { 
         fprintf(stderr, "[E::%s] error global settings\n", __func__);
         if (ret == -1) { print_usage(stderr); }
         goto fail;
     }
-#if DEBUG
+  #if DEBUG
     fprintf(stderr, "[D::%s] global settings after checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
-#endif
-    /* prepare running data & options for each thread based on the checked global parameters.*/
-    if (gs.nthread > 1 && NULL == (gs.tp = thpool_init(gs.nthread))) {
-        fprintf(stderr, "[E::%s] could not initialize the thread pool.\n", __func__);
-        goto fail;
-    }
+  #endif
     /* prepare output files. */
     if (NULL == (gs.out_mtx_ad = jf_init()) || NULL == (gs.out_mtx_dp = jf_init()) || \
         NULL == (gs.out_mtx_oth = jf_init()) || NULL == (gs.out_samples = jf_init()) || \

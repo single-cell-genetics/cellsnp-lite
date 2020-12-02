@@ -53,7 +53,8 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
         fputc('\n', fp);
         fprintf(fp, "%scell-tag = %s, umi-tag = %s\n", prefix, gs->cell_tag, gs->umi_tag);
-        fprintf(fp, "%snum_of_threads = %d\n", prefix, gs->nthread);
+        fprintf(fp, "%snthreads = %d, tp_max_open = %d\n", prefix, gs->nthread, gs->tp_max_open);
+        fprintf(fp, "%smthreads = %d, tp_errno = %d, tp_ntry = %d\n", prefix, gs->mthread, gs->tp_errno, gs->tp_ntry);
         fprintf(fp, "%smin_count = %d, min_maf = %.2f, double_gl = %d\n", prefix, gs->min_count, gs->min_maf, gs->double_gl);
         fprintf(fp, "%smin_len = %d, min_mapq = %d\n", prefix, gs->min_len, gs->min_mapq);
         //fprintf(fp, "%smax_flag = %d\n", prefix, gs->max_flag);

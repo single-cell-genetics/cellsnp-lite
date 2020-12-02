@@ -15,6 +15,10 @@
 #include "mplp.h"
 #include "snp.h"
 
+#if CSP_FIT_MULTI_SMP
+    #include <errno.h>
+#endif
+
 /* auxiliary data used by @func mp_func. */
 typedef struct {
     htsFile *fp;
@@ -124,17 +128,17 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
     const bam_pileup1_t *bp = NULL;
     int i, j, r, ret, st, state = -1;
     size_t npushed = 0;
-    #if DEBUG
-        size_t npileup = 0;
-    #endif
+  #if DEBUG
+    size_t npileup = 0;
+  #endif
     mplp->ref_idx = -1;
     mplp->alt_idx = -1;
     for (i = 0; i < nfs; i++) {
         for (j = 0; j < mp_n[i]; j++) {
             bp = mp_plp[i] + j;
-            #if DEBUG
-                npileup++;
-            #endif
+          #if DEBUG
+            npileup++;
+          #endif
             if (0 == (st = pileup_read(pos, bp, pileup, gs))) { // no need to reset pileup as the values in it will be immediately overwritten.
                 if (use_barcodes(gs)) { r = csp_mplp_push(pileup, mplp, -1, gs); }
                 else if (use_sid(gs)) { r = csp_mplp_push(pileup, mplp, i, gs); }
@@ -144,16 +148,16 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
             } else if (st < 0) { state = -1; goto fail; }
         }
     }
-    #if DEBUG
-        fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
-        csp_mplp_print_(stderr, mplp, "\t");
-    #endif
+  #if DEBUG
+    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
+    csp_mplp_print_(stderr, mplp, "\t");
+  #endif
     if (npushed < gs->min_count) { state = 1; goto fail; }
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) { state = (ret > 0) ? 1 : -1; goto fail; }
-    #if DEBUG
-        fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);
-        csp_mplp_print_(stderr, mplp, "\t");
-    #endif
+  #if DEBUG
+    fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);
+    csp_mplp_print_(stderr, mplp, "\t");
+  #endif
     return 0;
   fail:
     return state;
@@ -164,8 +168,9 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
 @return      Num of SNPs, including those filtered, that are processed.
 
 @note        1. The internal variable "ret" in thread_data structure saves the running state of the function:
-                  0 if success, 
-                  -1 otherwise.
+                  0 if success, 1 if error of other threads.
+                  -1, undefined errno in this thread.
+                  -2, open error in this thread.
              2. This function could be used by Mode2.
              3. Refering to @func mpileup from bam_plcmd.c in @repo samtools, the @p mp_iter, @p mp_plp and
                 @p mp_n do not need to be reset every time calling bam_mplp_auto(). Guess that there may be 
@@ -198,10 +203,13 @@ static int csp_pileup_core(void *args) {
     int i, r, ret;
     size_t msnp, nsnp, unit = 200000;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-#if DEBUG
+  #if CSP_FIT_MULTI_SMP
+    if (gs->tp_errno) { d->ret = 1; goto fail; }
+  #endif
+  #if DEBUG
     fprintf(stderr, "[D::%s][Thread-%d] thread options:\n", __func__, d->i);
     thdata_print(stderr, d);
-#endif
+  #endif
     assert(d->nfs == gs->nin);
     assert(d->niter == d->m);
     assert(d->nitr == gs->nin);
@@ -209,29 +217,35 @@ static int csp_pileup_core(void *args) {
     d->ns = d->nr_ad = d->nr_dp = d->nr_oth = 0;
     /* prepare data and structures. 
     */
+  #if CSP_FIT_MULTI_SMP
+    if (gs->tp_errno) { d->ret = 1; goto fail; }
+  #endif
     if (jf_open(d->out_mtx_ad, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx AD file '%s'.\n", __func__, d->out_mtx_ad->fn);
-        goto fail;
+        d->ret = -2; goto fail;
     }
     if (jf_open(d->out_mtx_dp, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx DP file '%s'.\n", __func__, d->out_mtx_dp->fn);
-        goto fail;
+        d->ret = -2; goto fail;
     }
     if (jf_open(d->out_mtx_oth, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp mtx OTH file '%s'.\n", __func__, d->out_mtx_oth->fn);
-        goto fail;
+        d->ret = -2; goto fail;
     }
     if (jf_open(d->out_vcf_base, NULL) <= 0) { 
         fprintf(stderr, "[E::%s] failed to open tmp vcf BASE file '%s'.\n", __func__, d->out_vcf_base->fn);
-        goto fail;
+        d->ret = -2; goto fail;
     }
     if (gs->is_genotype) {
         if (jf_open(d->out_vcf_cells, NULL) <= 0) { 
             fprintf(stderr, "[E::%s] failed to open tmp vcf CELLS file '%s'.\n", __func__, d->out_vcf_cells->fn);
-            goto fail;
+            d->ret = -2; goto fail;
         }
     }
     /* open input files */ 
+  #if CSP_FIT_MULTI_SMP
+    if (gs->tp_errno) { d->ret = 1; goto fail; }
+  #endif
     fp = (htsFile**) calloc(gs->nin, sizeof(htsFile*));
     if (NULL == fp) { fprintf(stderr, "[E::%s] failed to open input files\n", __func__); goto fail; }                 
     for (; nfp < gs->nin; ) {
@@ -239,10 +253,13 @@ static int csp_pileup_core(void *args) {
             fp[nfp] = bam_fs[nfp]->fp; nfp++;
         } else if (NULL == (fp[nfp] = hts_open(gs->in_fns[nfp], "rb"))) {
             fprintf(stderr, "[E::%s] failed to open %s.\n", __func__, gs->in_fns[nfp]);
-            goto fail;
+            d->ret = -2; goto fail;
         } else { nfp++; }
     }
     /* prepare mplp for pileup. */
+  #if CSP_FIT_MULTI_SMP
+    if (gs->tp_errno) { d->ret = 1; goto fail; }
+  #endif
     if (NULL == (mplp = csp_mplp_init())) { fprintf(stderr, "[E::%s] could not init csp_mplp_t structure.\n", __func__); goto fail; }
     if (csp_mplp_prepare(mplp, gs) < 0) { fprintf(stderr, "[E::%s] could not prepare csp_mplp_t structure.\n", __func__); goto fail; }
     if (NULL == (pileup = csp_pileup_init())) { 
@@ -281,9 +298,12 @@ static int csp_pileup_core(void *args) {
         }
     }
     for (msnp = nsnp = 0; n < d->m; n++, msnp = nsnp = 0) {
-        #if VERBOSE
-            fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
-        #endif
+      #if CSP_FIT_MULTI_SMP
+        if (gs->tp_errno) { d->ret = 1; goto fail; }
+      #endif
+      #if VERBOSE
+        fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
+      #endif
         /* create bam_mplp_* mpileup structure from htslib */
         for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
@@ -294,6 +314,9 @@ static int csp_pileup_core(void *args) {
         // As each query region is a chrom, so no need to call bam_mplp_init_overlaps() here?
         /* begin mpileup */
         while ((ret = bam_mplp_auto(mp_iter, &tid, &pos, mp_n, mp_plp)) > 0) {
+          #if CSP_FIT_MULTI_SMP
+            if (gs->tp_errno) { d->ret = 1; goto fail; }
+          #endif
             if (tid < 0) { break; }
             if ((r = pileup_snp(pos, mp_n, mp_plp, nfs, pileup, mplp, gs)) != 0) {
                 if (r < 0) {
@@ -314,21 +337,21 @@ static int csp_pileup_core(void *args) {
                 jf_putc('\n', d->out_vcf_cells);
             }
             csp_mplp_reset(mplp); ks_clear(s);
-            #if VERBOSE
-                if ((++nsnp) - msnp >= unit) {
-                    fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed %.2fM SNPs for chrom %s\n", __func__, d->i, nsnp / 1000000.0, a[n]);
-                    msnp = nsnp;
-                }
-            #endif
+          #if VERBOSE
+            if ((++nsnp) - msnp >= unit) {
+                fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed %.2fM SNPs for chrom %s\n", __func__, d->i, nsnp / 1000000.0, a[n]);
+                msnp = nsnp;
+            }
+          #endif
         }
         if (ret < 0) {
             fprintf(stderr, "[E::%s] failed to pileup chrom %s\n", __func__, a[n]);
             goto fail;
         }
         for (i = 0; i < ndat; i++) { mp_aux_reset(data[i]); }
-        #if VERBOSE
-            fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed in total %ld SNPs for chrom %s\n", __func__, d->i, nsnp, a[n]);
-        #endif
+      #if VERBOSE
+        fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed in total %ld SNPs for chrom %s\n", __func__, d->i, nsnp, a[n]);
+      #endif
     }
     ks_free(s); s = NULL;
     jf_close(d->out_mtx_ad); jf_close(d->out_mtx_dp); jf_close(d->out_mtx_oth);
@@ -347,6 +370,10 @@ static int csp_pileup_core(void *args) {
     d->ret = 0;
     return n;
   fail:
+  #if CSP_FIT_MULTI_SMP
+    if (-2 == d->ret && EMFILE == errno) { gs->tp_errno |= TP_EMFILE; }
+    else if (d->ret < 0) { gs->tp_errno |= TP_EUNDEF; }
+  #endif
     if (s) { ks_free(s); }
     if (jf_isopen(d->out_mtx_ad)) { jf_close(d->out_mtx_ad); }
     if (jf_isopen(d->out_mtx_dp)) { jf_close(d->out_mtx_dp); }
@@ -369,19 +396,42 @@ static int csp_pileup_core(void *args) {
     return n;
 }
 
+#if CSP_FIT_MULTI_SMP
+/*@abstract  Infer appropriate number of threads for multi samples to
+             avoid the issue that too many open files
+@param gs    Pointer to global_settings
+@return      Infered nthread value, no more than 1.
+*/
+static inline int infer_nthread(global_settings *gs) {
+    if (gs->tp_ntry == 0) { return gs->mthread; }  // the first time to try, just use the value user specified
+    if (gs->tp_ntry == 1) { 
+        int n0 = 3;      // FIXME!!! the initial files opened by this program. eg. the program itself and lz, lhts etc.
+        int n = gs->nin + 4 + gs->is_genotype;      // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
+        int m = (gs->tp_max_open - n0) / n;
+        if (m >= gs->mthread) { m = gs->mthread - 1; }
+        if (m < 1) { m = 1; }
+        return m;
+    } else { return gs->nthread > 1 ? gs->nthread - 1 : 1; }
+}
+#endif
+
 /*abstract  Run cellSNP Mode with method of pileuping.
 @param gs   Pointer to the global_settings structure.
 @return     0 if success, -1 otherwise.
  */
 int csp_pileup(global_settings *gs) {
     /* check options (input) */
-    if (NULL == gs || gs->nin <= 0 || gs->nchrom <= 0 || NULL == gs->out_dir || \
-            (gs->nthread > 1 && ! gs->tp)) {
+    if (NULL == gs || gs->nin <= 0 || gs->nchrom <= 0 || NULL == gs->out_dir) {
         fprintf(stderr, "[E::%s] error options for fetch modes.\n", __func__);
         return -1;
     }
-    int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nin;
+    /* prepare running data & options for each thread based on the checked global parameters.*/ 
+    if (gs->nthread > 1 && NULL == gs->tp && NULL == (gs->tp = thpool_init(gs->nthread))) {
+        fprintf(stderr, "[E::%s] could not initialize the thread pool.\n", __func__);
+        return -1;
+    }
     /* core part. */
+    int nsample = use_barcodes(gs) ? gs->nbarcode : gs->nin;
     thread_data **td = NULL, *d = NULL;
     int ntd = 0, mtd;            // ntd: num of thread-data structures that have been created. mtd: size of td array.
     csp_bam_fs **bam_fs = NULL;       /* use array instead of single element to compatible with multi-input-files. */
@@ -480,10 +530,10 @@ int csp_pileup(global_settings *gs) {
         } itr = NULL;
         titer[ntiter++] = iter;
         d->iter = iter; d->niter = niter; d->nitr = nitr; iter = NULL;
-        #if DEBUG
-            assert(niter == d->m);
-            assert(nitr == gs->nin);
-        #endif
+      #if DEBUG
+        assert(niter == d->m);
+        assert(nitr == gs->nin);
+      #endif
         // construct thdata
         d->out_mtx_ad = out_tmp_mtx_ad[ntd]; d->out_mtx_dp = out_tmp_mtx_dp[ntd]; d->out_mtx_oth = out_tmp_mtx_oth[ntd];
         if (mtd > 1) {
@@ -506,9 +556,9 @@ int csp_pileup(global_settings *gs) {
         thpool_wait(gs->tp);
     } else { csp_pileup_core(td[0]); }
     /* check running status of threads. */
-    #if DEBUG
-        for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
-    #endif
+  #if DEBUG
+    for (i = 0; i < mtd; i++) { fprintf(stderr, "[D::%s] ret of thread-%d is %d\n", __func__, i, td[i]->ret); }
+  #endif
     for (i = 0; i < mtd; i++) { if (td[i]->ret < 0) goto fail; }
     /* merge tmp files. */
     ns = nr_ad = nr_dp = nr_oth = 0;
@@ -638,7 +688,22 @@ int csp_pileup(global_settings *gs) {
     if (jf_isopen(gs->out_mtx_oth)) { jf_close(gs->out_mtx_oth); }
     if (jf_isopen(gs->out_vcf_base)) { jf_close(gs->out_vcf_base); }
     if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
+  #if CSP_FIT_MULTI_SMP
+    if (gs->tp_errno & TP_EMFILE && ! (gs->tp_errno & TP_EUNDEF) && gs->nthread > 1) {
+        fprintf(stderr, "================================================================================\n");
+        fprintf(stderr, "[W::%s] Last try (nthreads = %d) failed due to the issue of too many open files.\n",
+                         __func__, gs->nthread);
+        gs->tp_ntry++;
+        gs->nthread = infer_nthread(gs);
+        gs->tp_errno = 0;
+        fprintf(stderr, "[W::%s] No.%d re-try: set nthread = %d to fix the issue.\n",
+                         __func__, gs->tp_ntry, gs->nthread);
+        fprintf(stderr, "================================================================================\n");
+        return csp_pileup(gs);
+    } else { return -1; }
+  #else
     return -1;
+  #endif
 }
 
 
