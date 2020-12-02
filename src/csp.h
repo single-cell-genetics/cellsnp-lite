@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
+#include "htslib/regidx.h"
 #include "config.h"
 #include "mplp.h"
 #include "jfile.h"
@@ -39,6 +40,7 @@ struct _gll_settings {
     char *snp_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
     csp_snplist_t pl;      // List of the input SNPs. TODO: local variable.
     int is_target;         // If the provided snp list should be used as target (like -T in samtools/bcftools mpileup). 1, yes; 0, no
+    regidx_t *targets;     // Target regions.
     char *barcode_file;    // Name of the file containing a list of barcodes, one barcode per line.
     char **barcodes;       // Pointer to the array of barcodes.
     int nbarcode;          // Num of the barcodes.

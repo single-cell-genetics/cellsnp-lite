@@ -29,6 +29,7 @@ void gll_setting_free(global_settings *gs) {
         if (gs->out_mtx_oth) { jf_destroy(gs->out_mtx_oth); gs->out_mtx_oth = NULL; } 
         if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
         csp_snplist_destroy(gs->pl);
+        if (gs->targets) { regidx_destroy(gs->targets); gs->targets = NULL; }
         if (gs->barcode_file) { free(gs->barcode_file); gs->barcode_file = NULL; }
         if (gs->barcodes) { str_arr_destroy(gs->barcodes, gs->nbarcode); gs->barcodes = NULL; }
         if (gs->sid_list_file) { free(gs->sid_list_file); gs->sid_list_file = NULL; }
@@ -47,7 +48,8 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%snum of input files = %d\n", prefix, gs->nin);
         fprintf(fp, "%sout_dir = %s\n", prefix, gs->out_dir);
         fprintf(fp, "%sis_out_zip = %d, is_genotype = %d\n", prefix, gs->is_out_zip, gs->is_genotype);
-        fprintf(fp, "%snum_of_pos = %lu, is_target = %d\n", prefix, csp_snplist_size(gs->pl), gs->is_target);
+        fprintf(fp, "%sis_target = %d, num_of_pos = %ld\n", prefix, gs->is_target, 
+                      gs->is_target ? (long) regidx_nregs(gs->targets) : (long) csp_snplist_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);

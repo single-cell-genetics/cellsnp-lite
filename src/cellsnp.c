@@ -3,8 +3,8 @@
  */
 
 /* TODO: 
-- Let pileup method auto fit multi files
-- add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc)
+- add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc,
+  refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
 - separate htsFile from csp_bam_fs as it cannot be shared among threads
@@ -31,6 +31,7 @@
 #include <time.h>
 #include "thpool.h"
 #include "htslib/sam.h"
+#include "htslib/regidx.h"
 #include "config.h"
 #include "csp.h"
 #include "jfile.h"
@@ -52,7 +53,7 @@ static void gll_set_default(global_settings *gs) {
         gs->out_vcf_base = NULL; gs->out_vcf_cells = NULL; gs->out_samples = NULL;
         gs->out_mtx_ad = NULL; gs->out_mtx_dp = NULL; gs->out_mtx_oth = NULL;
         gs->is_genotype = 0; gs->is_out_zip = 0;
-        gs->snp_list_file = NULL; csp_snplist_init(gs->pl); gs->is_target = 0;
+        gs->snp_list_file = NULL; csp_snplist_init(gs->pl); gs->is_target = 0; gs->targets = NULL;
         gs->barcode_file = NULL; gs->nbarcode = 0; gs->barcodes = NULL; 
         gs->sid_list_file = NULL; gs->sample_ids = NULL; gs->nsid = 0;
         char *chrom_tmp[] = CSP_CHROM_ALL;
@@ -495,20 +496,37 @@ int main(int argc, char **argv) {
     */
     if (gs.snp_list_file) {
         fprintf(stderr, "[I::%s] loading the VCF file for given SNPs ...\n", __func__);
-        if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
-            fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-            print_time = 1; goto fail;
-        } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, csp_snplist_size(gs.pl)); }
-        if (gs.barcodes) { 
-            fprintf(stderr, "[I::%s] mode 1: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
-            if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); print_time = 1; goto fail; } 
-        } else { 
-            fprintf(stderr, "[I::%s] mode 3: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
-            if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); print_time = 1; goto fail; } 
+        if (gs.is_target) {
+            char **tmp; 
+            int ntmp;
+            if (NULL == (gs.targets = regidx_init(gs.snp_list_file, NULL, NULL, 0, NULL))) {
+                fprintf(stderr, "[E::%s] failed to load targets from '%s'.\n", __func__, gs.snp_list_file);
+                print_time = 1; goto fail;
+            } else { fprintf(stderr, "[I::%s] pileuping %d candidate variants ...\n", __func__, regidx_nregs(gs.targets)); }
+            if (gs.chroms) { free(gs.chroms); gs.nchrom = 0; }
+            tmp = regidx_seq_names(gs.targets, &ntmp);
+            for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
+                gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
+            }
+            if (gs.barcodes) { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
+            else { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
+            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail; }
+        } else {
+            if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
+                fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
+                print_time = 1; goto fail;
+            } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, csp_snplist_size(gs.pl)); }
+            if (gs.barcodes) { 
+                fprintf(stderr, "[I::%s] mode 1: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
+                if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); print_time = 1; goto fail; } 
+            } else { 
+                fprintf(stderr, "[I::%s] mode 3: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
+                if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); print_time = 1; goto fail; } 
+            }
         }
     } else if (gs.chroms) { 
         if (gs.barcodes) { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
-        else { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in one bulk sample.\n", __func__, gs.nchrom); }
+        else { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
         if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2 failed.\n", __func__); print_time = 1; goto fail; }
     } else {
         fprintf(stderr, "[E::%s] no proper mode to run, check input options.\n", __func__);
