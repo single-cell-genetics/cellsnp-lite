@@ -2,6 +2,11 @@
 History
 =======
 
+Release v1.1.2 (02/12/2020)
+===========================
+* fix the issue of too many open files by 1) increase the soft limit of
+  rlimit; 2) let nthreads auto fit nfiles
+
 Release v1.1.1 (28/11/2020)
 ===========================
 * use only single copy of hdr & idx in csp_bam_fs for fetch method
