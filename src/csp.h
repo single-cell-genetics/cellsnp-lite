@@ -89,6 +89,12 @@ struct _gll_settings {
 */
 #define use_umi(gs) ((gs)->umi_tag)
 
+/*@abstract  Whether to use target regions (-T).
+@param gs    Pointer of global settings structure [global_settings*]
+@return      1, yes; 0, no.
+*/
+#define use_target(gs) ((gs)->is_target)
+
 void gll_setting_free(global_settings *gs); 
 void gll_setting_print(FILE *fp, global_settings *gs, char *prefix);
 

@@ -24,6 +24,7 @@ typedef struct {
     htsFile *fp;
     //sam_hdr_t *hdr;
     hts_itr_t *itr;
+    const char *chrom;
     global_settings *gs;
 } mp_aux_t;
 
@@ -44,7 +45,7 @@ static inline void mp_aux_reset(mp_aux_t *p) { }
 @param b     Pointer to bam1_t structure.
 @return      0 on success, -1 on end, < -1 on non-recoverable errors. refer to htslib/sam.h @func bam_plp_init.
 
-@note        This function refers to @func mplp_func in samtools/bam_plcmd.c.   
+@note        This function refers to @func mplp_func in bcftools/mpileup.c.   
 */
 static int mp_func(void *data, bam1_t *b) {
     int ret;
@@ -60,6 +61,11 @@ static int mp_func(void *data, bam1_t *b) {
         if (gs->rflag_filter && gs->rflag_filter & c->flag ) { continue; }
         if (gs->rflag_require && ! (gs->rflag_require & c->flag)) { continue; }
         if (gs->no_orphan && c->flag & BAM_FPAIRED && ! (c->flag & BAM_FPROPER_PAIR)) { continue; }
+        if (use_target(gs)) {
+            int beg = c->pos, end = bam_endpos(b) - 1;
+            int overlap = regidx_overlap(gs->targets, dat->chrom, beg, end, NULL);
+            if (! overlap) { continue; }
+        }
         break;
     } while (1);
     return ret;
@@ -305,7 +311,7 @@ static int csp_pileup_core(void *args) {
         fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
       #endif
         /* create bam_mplp_* mpileup structure from htslib */
-        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
+        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; data[i]->chrom = a[n]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto fail;
@@ -318,6 +324,10 @@ static int csp_pileup_core(void *args) {
             if (gs->tp_errno) { d->ret = 1; goto fail; }
           #endif
             if (tid < 0) { break; }
+            if (use_target(gs)) {
+                int overlap = regidx_overlap(gs->targets, a[n], pos, pos, NULL);
+                if (! overlap) { continue; }
+            }
             if ((r = pileup_snp(pos, mp_n, mp_plp, nfs, pileup, mplp, gs)) != 0) {
                 if (r < 0) {
                     fprintf(stderr, "[E::%s] failed to pileup snp for %s:%d\n", __func__, a[n], pos);
