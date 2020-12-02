@@ -52,7 +52,7 @@ static void gll_set_default(global_settings *gs) {
         gs->out_vcf_base = NULL; gs->out_vcf_cells = NULL; gs->out_samples = NULL;
         gs->out_mtx_ad = NULL; gs->out_mtx_dp = NULL; gs->out_mtx_oth = NULL;
         gs->is_genotype = 0; gs->is_out_zip = 0;
-        gs->snp_list_file = NULL; csp_snplist_init(gs->pl);
+        gs->snp_list_file = NULL; csp_snplist_init(gs->pl); gs->is_target = 0;
         gs->barcode_file = NULL; gs->nbarcode = 0; gs->barcodes = NULL; 
         gs->sid_list_file = NULL; gs->sample_ids = NULL; gs->nsid = 0;
         char *chrom_tmp[] = CSP_CHROM_ALL;
@@ -93,6 +93,8 @@ static void print_usage(FILE *fp) {
         "  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
         "  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
         "                           If None, pileup the genome. Needed for bulk samples.\n"
+        "  -T, --targetsVCF FILE    Similar as -R, but the next position is accessed by streaming rather\n"
+        "                           than indexing/jumping (like -T in samtools/bcftools mpileup).\n"
         "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
         "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
         "  -I, --sampleIDs STR      Comma separated sample ids.\n"
@@ -299,6 +301,8 @@ int main(int argc, char **argv) {
         {"outdir", required_argument, NULL, 'O'},
         {"regionsVCF", required_argument, NULL, 'R'},
         {"regionsvcf", required_argument, NULL, 'R'},
+        {"targetsVCF", required_argument, NULL, 'T'},
+        {"targetsvcf", required_argument, NULL, 'T'},
         {"barcodeFile", required_argument, NULL, 'b'},
         {"barcodefile", required_argument, NULL, 'b'},
         {"sampleList", required_argument, NULL, 'i'},
@@ -330,7 +334,7 @@ int main(int argc, char **argv) {
         {"countORPHAN", no_argument, NULL, 16}
     };
     if (1 == argc) { print_usage(stderr); goto fail; }
-    while ((c = getopt_long(argc, argv, "hVs:S:O:R:b:i:I:p:", lopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:", lopts, NULL)) != -1) {
         switch (c) {
             case 'h': print_usage(stderr); goto fail;
             case 'V': printf("%s\n", CSP_VERSION); goto fail;
@@ -348,7 +352,10 @@ int main(int argc, char **argv) {
                     gs.out_dir = strdup(optarg); break;
             case 'R': 
                     if (gs.snp_list_file) free(gs.snp_list_file);
-                    gs.snp_list_file = strdup(optarg); break;
+                    gs.snp_list_file = strdup(optarg); gs.is_target = 0; break;
+            case 'T':
+                    if (gs.snp_list_file) free(gs.snp_list_file);
+                    gs.snp_list_file = strdup(optarg); gs.is_target = 1; break;
             case 'b': 
                     if (gs.barcode_file) free(gs.barcode_file);
                     gs.barcode_file = strdup(optarg); break;

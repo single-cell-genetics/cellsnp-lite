@@ -38,6 +38,7 @@ struct _gll_settings {
     int is_genotype;       // If need to do genotyping in addition to counting.
     char *snp_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
     csp_snplist_t pl;      // List of the input SNPs. TODO: local variable.
+    int is_target;         // If the provided snp list should be used as target (like -T in samtools/bcftools mpileup). 1, yes; 0, no
     char *barcode_file;    // Name of the file containing a list of barcodes, one barcode per line.
     char **barcodes;       // Pointer to the array of barcodes.
     int nbarcode;          // Num of the barcodes.
