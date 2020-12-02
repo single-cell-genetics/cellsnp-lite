@@ -540,11 +540,15 @@ int csp_fetch(global_settings *gs) {
     if (gs->is_genotype && jf_isopen(gs->out_vcf_cells)) { jf_close(gs->out_vcf_cells); }
   #if CSP_FIT_MULTI_SMP
     if (gs->tp_errno & TP_EMFILE && ! (gs->tp_errno & TP_EUNDEF) && gs->nthread > 1) {
+        fprintf(stderr, "================================================================================\n");
+        fprintf(stderr, "[W::%s] Last try (nthreads = %d) failed due to the issue of too many open files.\n",
+                         __func__, gs->nthread);
         gs->tp_ntry++;
         gs->nthread = infer_nthread(gs);
         gs->tp_errno = 0;
-        fprintf(stderr, "[W::%s] No.%d re-try: set nthread = %d to fix the issue of too many open files\n",
+        fprintf(stderr, "[W::%s] No.%d re-try: set nthread = %d to fix the issue.\n",
                          __func__, gs->tp_ntry, gs->nthread);
+        fprintf(stderr, "================================================================================\n");
         return csp_fetch(gs);
     } else { return -1; }
   #else

@@ -3,7 +3,6 @@
  */
 
 /* TODO: 
-- Expand warning message when re-try for multi files in csp_fetch()
 - Use getrlimit and setrlimit to increase max open file
 - Let pileup method auto fit multi files
 - add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc)
