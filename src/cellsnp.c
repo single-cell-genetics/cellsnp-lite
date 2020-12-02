@@ -80,66 +80,55 @@ static void print_usage(FILE *fp) {
     char *tmp_filter_noumi = bam_flag2str(CSP_EXCL_FMASK_NOUMI);
 
     fprintf(fp, 
-"\n"
-"Usage: %s [options]\n", CSP_NAME);
+        "\n"
+        "Usage: %s [options]\n", CSP_NAME);
     fprintf(fp,
-"\n"
-"Options:\n"
-"  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
-"                       Mode 1&2: one sam/bam file with single cell.\n"
-"                       Mode 3: one or multiple bulk sam/bam files,\n"
-"                       no barcodes needed, but sample ids and regionsVCF.\n"
-"  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.\n"
-"  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
-"  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
-"                           If None, pileup the genome. Needed for bulk samples.\n"
-"  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
-"  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
-"  -I, --sampleIDs STR      Comma separated sample ids.\n"
-"  -V, --version            Print software version and exit.\n"
-"  -h, --help               Show this help message and exit.\n");
-    fprintf(fp,
-"\n"
-"Optional arguments:\n"
-"  --genotype           If use, do genotyping in addition to counting.\n"
-"  --gzip               If use, the output files will be zipped into BGZF format.\n"
-"  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n"
-"  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
-    fprintf(fp,
-"  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
-    fprintf(fp,
-"  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
-    fprintf(fp,
-"  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n"
-"                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
-    fprintf(fp,
-"  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
-    fprintf(fp,
-"  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
-    fprintf(fp,
-"  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n"
-"\n"
-"Read filtering:\n");
-    fprintf(fp,
-"  --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset [%s]\n", tmp_require);
-    fprintf(fp,
-"  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n"
-"                       (when use UMI) or %s (otherwise)]\n", tmp_filter_umi, tmp_filter_noumi);
-    fprintf(fp,
-"  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
-    fprintf(fp,
-"  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    fprintf(fp,
-"  --countORPHAN        If use, do not skip anomalous read pairs.\n");
+        "\n"
+        "Options:\n"
+        "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
+        "                       Mode 1&2: one sam/bam file with single cell.\n"
+        "                       Mode 3: one or multiple bulk sam/bam files,\n"
+        "                       no barcodes needed, but sample ids and regionsVCF.\n"
+        "  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.\n"
+        "  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
+        "  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
+        "                           If None, pileup the genome. Needed for bulk samples.\n"
+        "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
+        "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
+        "  -I, --sampleIDs STR      Comma separated sample ids.\n"
+        "  -V, --version            Print software version and exit.\n"
+        "  -h, --help               Show this help message and exit.\n"
+        "\n"
+        "Optional arguments:\n"
+        "  --genotype           If use, do genotyping in addition to counting.\n"
+        "  --gzip               If use, the output files will be zipped into BGZF format.\n"
+        "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
+    fprintf(fp, "  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
+    fprintf(fp, "  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
+    fprintf(fp, "  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
+    fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n"
+                "                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
+    fprintf(fp, "  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
+    fprintf(fp, "  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
+    fprintf(fp, "  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Read filtering:\n");
+    fprintf(fp, "  --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset [%s]\n", tmp_require);
+    fprintf(fp, "  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n"
+                "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_umi, tmp_filter_noumi);
+    fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
+    fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
+    fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
 /*
     fprintf(fp,
 "  --maxFLAG INT        Maximum FLAG for read filtering [%d (when use UMI) or %d (otherwise)]\n", \
                         CSP_MAX_FLAG_WITH_UMI, CSP_MAX_FLAG_WITHOUT_UMI);
 */
-    fputs("\n"
-"Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
-"You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
-"https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
+    fputs(
+        "\n"
+        "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
+        "You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
+        "https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
     fputc('\n', fp);
 
     free(tmp_require); 
