@@ -327,8 +327,8 @@ static inline int infer_nthread(global_settings *gs) {
     if (gs->tp_ntry == 0) { return gs->mthread; }  // the first time to try, just use the value user specified
     if (gs->tp_ntry == 1) { 
         int n0 = 3;      // FIXME!!! the initial files opened by this program. eg. the program itself and lz, lhts etc.
-        int n = gs->nin + 4 + gs->is_genotype;
-        int m = (TP_MAX_OPEN - n0) / n;
+        int n = gs->nin + 4 + gs->is_genotype;    // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
+        int m = (gs->tp_max_open - n0) / n;
         if (m >= gs->mthread) { m = gs->mthread - 1; }
         if (m < 1) { m = 1; }
         return m;

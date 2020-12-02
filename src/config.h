@@ -13,8 +13,9 @@
 #define CSP_VERSION "1.1.1"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
-#define JF_ZIP_TYPE 2     // use bgzip as zip method for JFile
-#define CSP_FIT_MULTI_SMP 1         // if let nthread auto fit multi samples. 0, no; 1, yes.
+#define JF_ZIP_TYPE         2            // use bgzip as zip method for JFile
+#define CSP_FIT_MULTI_SMP   1            // if let nthread auto fit multi samples. 0, no; 1, yes.
+#define TP_MAX_OPEN         1024         // default max number of open files
 
 typedef struct _gll_settings global_settings;
 

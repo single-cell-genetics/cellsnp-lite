@@ -14,7 +14,6 @@
 #include "thpool.h"
 
 #if CSP_FIT_MULTI_SMP
-    #define TP_MAX_OPEN     1024         // default max number of open files
     #define TP_EUNDEF       1            // error that undefined
     #define TP_EMFILE      (1 << 1)      // error that too many open files
 #endif
@@ -54,6 +53,7 @@ struct _gll_settings {
     int mthread;           // Num of threads that user specified.
     int tp_errno;          // Error number, each bit could be used.
     int tp_ntry;           // Num of try
+    int tp_max_open;       // Max num of open files for one process
     int min_count;     // Minimum aggragated count.
     double min_maf;    // Minimum minor allele frequency.
     int double_gl;     // 0 or 1. 1: keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5. 0: not keep.

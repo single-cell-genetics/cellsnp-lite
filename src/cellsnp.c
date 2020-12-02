@@ -3,7 +3,6 @@
  */
 
 /* TODO: 
-- Use getrlimit and setrlimit to increase max open file
 - Let pileup method auto fit multi files
 - add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc)
 - Try multi-process (process pool) for multi input samples
@@ -27,6 +26,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <libgen.h>
 #include <time.h>
 #include "thpool.h"
@@ -59,7 +59,7 @@ static void gll_set_default(global_settings *gs) {
         gs->chroms = (char**) calloc(CSP_NCHROM, sizeof(char*));
         for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) { gs->chroms[gs->nchrom] = safe_strdup(chrom_tmp[gs->nchrom]); }
         gs->cell_tag = safe_strdup(CSP_CELL_TAG); gs->umi_tag = safe_strdup(CSP_UMI_TAG);
-        gs->nthread = CSP_NTHREAD; gs->tp = NULL;
+        gs->nthread = CSP_NTHREAD; gs->tp = NULL; gs->tp_max_open = TP_MAX_OPEN;
         gs->mthread = CSP_NTHREAD; gs->tp_errno = 0; gs->tp_ntry = 0;
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
         gs->double_gl = 0;
@@ -160,8 +160,9 @@ static inline int cmp_barcodes(const void *x, const void *y) {
 @note          This is just basic check for the shared parameters of different running modes.
                More careful and personalized check would be performed by each running mode.
  */
-static int check_global_args(global_settings *gs) {
+static int check_args(global_settings *gs) {
     int i;
+    struct rlimit r;
     if (gs->in_fn_file) {
         if (gs->in_fns) { 
             fprintf(stderr, "[E::%s] should not specify -s/--samFile and -S/--samFileList options at the same time.\n", __func__); 
@@ -244,6 +245,19 @@ static int check_global_args(global_settings *gs) {
     }
     //if (gs->max_flag < 0) { gs->max_flag = gs->umi_tag ? CSP_MAX_FLAG_WITH_UMI : CSP_MAX_FLAG_WITHOUT_UMI; }
     if (gs->rflag_filter < 0) gs->rflag_filter = use_umi(gs) ? CSP_EXCL_FMASK_UMI : CSP_EXCL_FMASK_NOUMI;
+    // increase number of max open files
+    if (gs->nin > 1) {
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        fprintf(stderr, "[I::%s] original limits of max open, soft = %d, hard = %d\n", __func__, r.rlim_cur, r.rlim_max);
+        r.rlim_cur = r.rlim_max;
+        if (setrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] setrlimit error.\n", __func__); return -2; }
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        fprintf(stderr, "[I::%s] new limits of max open, soft = %d, hard = %d\n", __func__, r.rlim_cur, r.rlim_max);
+        gs->tp_max_open = r.rlim_cur;
+    } else {
+        if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
+        gs->tp_max_open = r.rlim_cur;
+    }
     return 0;
 }
 
@@ -400,7 +414,7 @@ int main(int argc, char **argv) {
     gll_setting_print(stderr, &gs, "\t");
   #endif
     /* check global settings */
-    if ((ret = check_global_args(&gs)) < 0) { 
+    if ((ret = check_args(&gs)) < 0) { 
         fprintf(stderr, "[E::%s] error global settings\n", __func__);
         if (ret == -1) { print_usage(stderr); }
         goto fail;
