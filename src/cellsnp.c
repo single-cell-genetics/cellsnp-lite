@@ -237,15 +237,15 @@ static int check_args(global_settings *gs) {
     // increase number of max open files
     if (gs->nin > 1) {
         if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
-        fprintf(stderr, "[I::%s] original limits of max open, soft = %d, hard = %d\n", __func__, r.rlim_cur, r.rlim_max);
+        fprintf(stderr, "[I::%s] original limits of max open, soft = %d, hard = %d\n", __func__, (int) r.rlim_cur, (int) r.rlim_max);
         r.rlim_cur = r.rlim_max;
         if (setrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] setrlimit error.\n", __func__); return -2; }
         if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
-        fprintf(stderr, "[I::%s] new limits of max open, soft = %d, hard = %d\n", __func__, r.rlim_cur, r.rlim_max);
-        gs->tp_max_open = r.rlim_cur;
+        fprintf(stderr, "[I::%s] new limits of max open, soft = %d, hard = %d\n", __func__, (int) r.rlim_cur, (int) r.rlim_max);
+        gs->tp_max_open = (int) r.rlim_cur;
     } else {
         if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
-        gs->tp_max_open = r.rlim_cur;
+        gs->tp_max_open = (int) r.rlim_cur;
     }
     return 0;
 }
