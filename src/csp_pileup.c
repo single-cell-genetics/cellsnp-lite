@@ -332,7 +332,7 @@ static int csp_pileup_core(void *args) {
             if (tid < 0) { break; }
             if (use_target(gs)) {
                 int overlap = regidx_overlap(gs->targets, a[n], pos, pos, itr);
-                biallele_t *ale;
+                biallele_t *ale = NULL;
                 if (! overlap) { continue; }   // no need to reset mplp_t here
                 while (regitr_overlap(itr)) {
                     ale = regitr_payload(itr, biallele_t*);

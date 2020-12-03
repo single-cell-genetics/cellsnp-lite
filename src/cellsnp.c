@@ -520,15 +520,19 @@ int main(int argc, char **argv) {
                    fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
                    print_time = 1; goto fail;
                 } else { ale->ref = snp->ref; ale->alt = snp->alt; }
-                if (regidx_push(gs.targets, snp->ref, snp->ref + strlen(snp->ref) - 1, snp->pos, snp->pos, ale) < 0) {
+                if (regidx_push(gs.targets, snp->chr, snp->chr + strlen(snp->chr) - 1, snp->pos, snp->pos, ale) < 0) {
                    biallele_destroy(ale); ale = NULL;
                    fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
                    print_time = 1; goto fail;
                 } else { biallele_destroy(ale); ale = NULL; }
             }
             csp_snplist_destroy(gs.pl);
-            if (gs.chroms) { free(gs.chroms); gs.nchrom = 0; }
             tmp = regidx_seq_names(gs.targets, &ntmp);
+            if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
+            if (NULL == (gs.chroms = (char**) calloc(ntmp, sizeof(char*)))) {
+                fprintf(stderr, "[E::%s] failed to allocate space for gs.chroms\n", __func__);
+                print_time = 1; goto fail;
+            }
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
             }

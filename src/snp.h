@@ -57,6 +57,7 @@ typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
     size_t __j;											\
     for (__j = 0; __j < csp_snplist_size(v); __j++) csp_snp_destroy(csp_snplist_A(v, __j));	\
     kv_destroy(v);										\
+    (v).a = NULL; (v).m = (v).n = 0;                                                            \
 }
 
 /*@abstract    Extract SNP info from bcf/vcf file.

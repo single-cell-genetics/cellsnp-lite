@@ -49,7 +49,9 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%sout_dir = %s\n", prefix, gs->out_dir);
         fprintf(fp, "%sis_out_zip = %d, is_genotype = %d\n", prefix, gs->is_out_zip, gs->is_genotype);
         fprintf(fp, "%sis_target = %d, num_of_pos = %ld\n", prefix, gs->is_target, 
-                      gs->is_target ? (long) regidx_nregs(gs->targets) : (long) csp_snplist_size(gs->pl));
+                      gs->is_target ? 
+                        (gs->targets ? (long) regidx_nregs(gs->targets) : 0) :
+                        (long) csp_snplist_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
