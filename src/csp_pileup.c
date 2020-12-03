@@ -208,6 +208,7 @@ static int csp_pileup_core(void *args) {
     int pos;
     int i, r, ret;
     size_t msnp, nsnp, unit = 200000;
+    regitr_t *itr = NULL;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
   #if CSP_FIT_MULTI_SMP
     if (gs->tp_errno) { d->ret = 1; goto fail; }
@@ -291,6 +292,11 @@ static int csp_pileup_core(void *args) {
         fprintf(stderr, "[E::%s] failed to allocate space for mp_nplp.\n", __func__);
         goto fail;
     }
+    // init reg itr
+    if (use_target(gs) && NULL == (itr = regitr_init(gs->targets))) {
+        fprintf(stderr, "[E::%s] failed to init regitr.\n", __func__);
+        goto fail;
+    }
     /* pileup each SNP. 
     */
     // init mpileup 
@@ -325,8 +331,15 @@ static int csp_pileup_core(void *args) {
           #endif
             if (tid < 0) { break; }
             if (use_target(gs)) {
-                int overlap = regidx_overlap(gs->targets, a[n], pos, pos, NULL);
-                if (! overlap) { continue; }
+                int overlap = regidx_overlap(gs->targets, a[n], pos, pos, itr);
+                biallele_t *ale;
+                if (! overlap) { continue; }   // no need to reset mplp_t here
+                while (regitr_overlap(itr)) {
+                    ale = regitr_payload(itr, biallele_t*);
+                    break;
+                }
+                mplp->ref_idx = ale->ref ? seq_nt16_char2int(ale->ref) : -1;
+                mplp->alt_idx = ale->alt ? seq_nt16_char2int(ale->alt) : -1;                
             }
             if ((r = pileup_snp(pos, mp_n, mp_plp, nfs, pileup, mplp, gs)) != 0) {
                 if (r < 0) {
@@ -377,6 +390,7 @@ static int csp_pileup_core(void *args) {
     //bam_mplp_destroy(mp_iter);   
     csp_pileup_destroy(pileup);
     csp_mplp_destroy(mplp);
+    if (itr) { regitr_destroy(itr); }
     d->ret = 0;
     return n;
   fail:
@@ -403,6 +417,7 @@ static int csp_pileup_core(void *args) {
     if (mp_n) free(mp_n);
     if (pileup) csp_pileup_destroy(pileup);
     if (mplp) { csp_mplp_destroy(mplp); }
+    if (itr) { regitr_destroy(itr); }
     return n;
 }
 
