@@ -500,14 +500,33 @@ int main(int argc, char **argv) {
         if (gs.is_target) {
             char **tmp; 
             int ntmp;
+            size_t i, n;
+            csp_snp_t *snp = NULL;
+            biallele_t *ale = NULL;
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
                 print_time = 1; goto fail;
+            } else { 
+                n = csp_snplist_size(gs.pl);
+                fprintf(stderr, "[I::%s] pileuping %ld candidate variants ...\n", __func__, n); 
             }
-            if (NULL == (gs.targets = regidx_init(gs.snp_list_file, NULL, NULL, 0, NULL))) {
-                fprintf(stderr, "[E::%s] failed to load targets from '%s'.\n", __func__, gs.snp_list_file);
+            if (NULL == (gs.targets = regidx_init(NULL, NULL, NULL, sizeof(biallele_t*), NULL))) {
+                fprintf(stderr, "[E::%s] failed to init regidx for '%s'.\n", __func__, gs.snp_list_file);
                 print_time = 1; goto fail;
-            } else { fprintf(stderr, "[I::%s] pileuping %d candidate variants ...\n", __func__, regidx_nregs(gs.targets)); }
+            } 
+            for (i = 0; i < n; i++) {
+                snp = csp_snplist_A(gs.pl, i);
+                if (NULL == (ale = biallele_init())) { 
+                   fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
+                   print_time = 1; goto fail;
+                } else { ale->ref = snp->ref; ale->alt = snp->alt; }
+                if (regidx_push(gs.targets, snp->ref, snp->ref + strlen(snp->ref) - 1, snp->pos, snp->pos, ale) < 0) {
+                   biallele_destroy(ale); ale = NULL;
+                   fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
+                   print_time = 1; goto fail;
+                } else { biallele_destroy(ale); ale = NULL; }
+            }
+            csp_snplist_destroy(gs.pl);
             if (gs.chroms) { free(gs.chroms); gs.nchrom = 0; }
             tmp = regidx_seq_names(gs.targets, &ntmp);
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
