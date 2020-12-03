@@ -72,4 +72,15 @@ typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
 size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip);
 #define get_snplist(fn, pl, ret, print_skip) get_snplist_from_vcf(fn, pl, ret, print_skip)
 
+/*
+ * Bi-Allele API
+ */
+typedef struct {
+    int8_t ref, alt;
+} biallele_t;
+
+inline biallele_t* biallele_init(void);
+inline void biallele_destroy(biallele_t *p);
+inline void biallele_reset(biallele_t *p);
+
 #endif

@@ -96,3 +96,9 @@ size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int pri
     return n;
 }
 
+/*
+ * Bi-Allele API
+ */
+inline biallele_t* biallele_init(void) { return (biallele_t*) calloc(1, sizeof(biallele_t); }
+inline void biallele_destroy(biallele_t *p) { if (p) { free(p); }
+inline void biallele_reset(biallele_t *p) {}

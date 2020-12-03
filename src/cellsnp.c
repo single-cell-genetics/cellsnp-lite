@@ -5,6 +5,7 @@
 /* TODO: 
 - add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc,
   refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
+- simplify variant names (eg. remove the prefix csp_)
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
 - separate htsFile from csp_bam_fs as it cannot be shared among threads
@@ -499,6 +500,10 @@ int main(int argc, char **argv) {
         if (gs.is_target) {
             char **tmp; 
             int ntmp;
+            if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
+                fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
+                print_time = 1; goto fail;
+            }
             if (NULL == (gs.targets = regidx_init(gs.snp_list_file, NULL, NULL, 0, NULL))) {
                 fprintf(stderr, "[E::%s] failed to load targets from '%s'.\n", __func__, gs.snp_list_file);
                 print_time = 1; goto fail;
