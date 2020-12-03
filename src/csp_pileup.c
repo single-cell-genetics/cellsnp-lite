@@ -137,8 +137,6 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
   #if DEBUG
     size_t npileup = 0;
   #endif
-    mplp->ref_idx = -1;
-    mplp->alt_idx = -1;
     for (i = 0; i < nfs; i++) {
         for (j = 0; j < mp_n[i]; j++) {
             bp = mp_plp[i] + j;
@@ -340,7 +338,7 @@ static int csp_pileup_core(void *args) {
                 }
                 mplp->ref_idx = ale->ref ? seq_nt16_char2int(ale->ref) : -1;
                 mplp->alt_idx = ale->alt ? seq_nt16_char2int(ale->alt) : -1;                
-            }
+            } else { mplp->ref_idx = -1; mplp->alt_idx = -1; }
             if ((r = pileup_snp(pos, mp_n, mp_plp, nfs, pileup, mplp, gs)) != 0) {
                 if (r < 0) {
                     fprintf(stderr, "[E::%s] failed to pileup snp for %s:%d\n", __func__, a[n], pos);

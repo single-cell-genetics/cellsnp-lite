@@ -280,6 +280,11 @@ static inline char* format_fn(char *fn, int is_zip, kstring_t *s) {
     } else { return fn; }
 }
 
+static inline void regidx_payload_free(void *payload) {
+    biallele_t **data = (biallele_t**) payload;
+    biallele_destroy(*data);
+}
+
 int main(int argc, char **argv) {
     /* timing */
     time_t start_time, end_time;
@@ -502,43 +507,49 @@ int main(int argc, char **argv) {
             int ntmp;
             size_t i, n;
             csp_snp_t *snp = NULL;
-            biallele_t *ale = NULL;
+            biallele_t **ale = NULL;
+            if (NULL == (ale = (biallele_t**) calloc(1, sizeof(biallele_t*)))) {
+                fprintf(stderr, "[E::%s] out of space for biallele_t**!\n", __func__);
+                print_time = 1; goto fail0;
+            }
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail;
+                print_time = 1; goto fail0;
             } else { 
                 n = csp_snplist_size(gs.pl);
                 fprintf(stderr, "[I::%s] pileuping %ld candidate variants ...\n", __func__, n); 
             }
-            if (NULL == (gs.targets = regidx_init(NULL, NULL, NULL, sizeof(biallele_t*), NULL))) {
+            if (NULL == (gs.targets = regidx_init(NULL, NULL, regidx_payload_free, sizeof(biallele_t*), NULL))) {
                 fprintf(stderr, "[E::%s] failed to init regidx for '%s'.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail;
+                print_time = 1; goto fail0;
             } 
             for (i = 0; i < n; i++) {
                 snp = csp_snplist_A(gs.pl, i);
-                if (NULL == (ale = biallele_init())) { 
+                if (NULL == (*ale = biallele_init())) { 
                    fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
-                   print_time = 1; goto fail;
-                } else { ale->ref = snp->ref; ale->alt = snp->alt; }
+                   print_time = 1; goto fail0;
+                } else { (*ale)->ref = snp->ref; (*ale)->alt = snp->alt; }
                 if (regidx_push(gs.targets, snp->chr, snp->chr + strlen(snp->chr) - 1, snp->pos, snp->pos, ale) < 0) {
-                   biallele_destroy(ale); ale = NULL;
                    fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
-                   print_time = 1; goto fail;
-                } else { biallele_destroy(ale); ale = NULL; }
-            }
+                   print_time = 1; goto fail0;
+                } 
+            } free(ale); ale = NULL;
             csp_snplist_destroy(gs.pl);
             tmp = regidx_seq_names(gs.targets, &ntmp);
             if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
             if (NULL == (gs.chroms = (char**) calloc(ntmp, sizeof(char*)))) {
                 fprintf(stderr, "[E::%s] failed to allocate space for gs.chroms\n", __func__);
-                print_time = 1; goto fail;
+                print_time = 1; goto fail0;
             }
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
             }
             if (gs.barcodes) { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
             else { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
-            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail; }
+            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail0; }
+          fail0:
+            if (ale) { free(ale); }
+            goto fail;
         } else {
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
