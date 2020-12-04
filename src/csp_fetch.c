@@ -543,6 +543,8 @@ int csp_fetch(global_settings *gs) {
         fprintf(stderr, "================================================================================\n");
         fprintf(stderr, "[W::%s] Last try (nthreads = %d) failed due to the issue of too many open files.\n",
                          __func__, gs->nthread);
+        // reset gs, especially items related to thpool
+        if (gs->tp) { thpool_destroy(gs->tp); gs->tp = NULL; }
         gs->tp_ntry++;
         gs->nthread = infer_nthread(gs);
         gs->tp_errno = 0;
