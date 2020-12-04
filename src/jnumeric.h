@@ -12,7 +12,7 @@
 #define min2(a, b) ((a) < (b) ? (a) : (b))
 #define max2(a, b) ((a) > (b) ? (a) : (b))
 
-/* SZ_NUMERIC_OP functions
+/* JNUMERIC functions
 @abstract     Provide common functions for numeric operations.
 @example
 
@@ -20,7 +20,7 @@
 #include "htslib/kstring.h"
 #include "general_util.h"
 
-SZ_NUMERIC_OP_INIT(test, int)
+JNUMERIC_INIT(test, int)
 
 int main(void) {
     int a[5] = {3, 6, 2, 1, 10};
@@ -37,7 +37,7 @@ int main(void) {
     return 0;
 }
  */
-#define SZ_NUMERIC_OP_INIT2(SCOPE, name, type)							        \
+#define JNUMERIC_INIT2(SCOPE, name, type)							        \
     SCOPE type get_sum_of_arr_##name(type *a, const int n) {						\
         int i;												\
         type sum;												\
@@ -59,16 +59,16 @@ int main(void) {
         return n;											\
     }
 
-/*@abstract    Macro to declare the SZ_NUMERIC_OP functions.
-@param name    Name of SZ_NUMERIC_OP.
+/*@abstract    Macro to declare the JNUMERIC functions.
+@param name    Name of JNUMERIC.
 @param type    The numeric type: int, double, size_t etc.
 
-@example       SZ_NUMERIC_OP_INIT(test, int).
+@example       JNUMERIC_INIT(test, int).
  */
-#define SZ_NUMERIC_OP_INIT(name, type) SZ_NUMERIC_OP_INIT2(static inline, name, type)
+#define JNUMERIC_INIT(name, type) JNUMERIC_INIT2(static inline, name, type)
 
 /*@abstract   Calculate sum of a numeric array.
-@param name   Name of the SZ_NUMERIC_OP.
+@param name   Name of the JNUMERIC.
 @param a      Pointer of the numeric array [type*].
 @param n      Size of the array [int].
 @return       Sum of the array [type].
@@ -76,7 +76,7 @@ int main(void) {
 #define get_sum_of_arr(name, a, n) get_sum_of_arr_##name(a, n)
 
 /*@abstract   Get the index of the maximum element in a numeric array.
-@param name   Name of the SZ_NUMERIC_OP.
+@param name   Name of the JNUMERIC.
 @param a      Pointer of the numeric array [type*].
 @param n      Size of the array [int].
 @return       Index of the maximum element [int].
@@ -84,7 +84,7 @@ int main(void) {
 #define get_idx_of_max(name, a, n) get_idx_of_max_##name(a, n)
 
 /*@abstract   Join elements of a numeric array by a delimiter into string.
-@param name   Name of the SZ_NUMERIC_OP.
+@param name   Name of the JNUMERIC.
 @param a      Pointer of the numeric array [type*].
 @param n      Size of the array [int].
 @param c      The delimiter char [int].

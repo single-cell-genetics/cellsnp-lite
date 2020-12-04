@@ -90,7 +90,7 @@ static int fetch_read(hts_pos_t pos, csp_pileup_t *p, global_settings *gs) {
 }
 
 /*@abstract    Pileup one SNP with method fetch.
-@param snp     Pointer of csp_snp_t structure.
+@param snp     Pointer of snp_t structure.
 @param fs      Pointer of array of pointers to the csp_bam_fs structures.
 @param fp      Pointer of array of htsFile* of input files.
 @param nfs     Size of @p fs.
@@ -102,7 +102,7 @@ static int fetch_read(hts_pos_t pos, csp_pileup_t *p, global_settings *gs) {
 @note          1. This function is mainly called by csp_fetch_core(). Refer to csp_fetch_core() for notes.
                2. The statistics results of all pileuped reads for one SNP is stored in the csp_mplp_t after calling this function.
 */
-static int fetch_snp(csp_snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pileup_t *pileup, csp_mplp_t *mplp, global_settings *gs) 
+static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pileup_t *pileup, csp_mplp_t *mplp, global_settings *gs) 
 {
     csp_bam_fs *bs = NULL;
     hts_itr_t *iter = NULL;
@@ -168,7 +168,7 @@ static int fetch_snp(csp_snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp
 static size_t csp_fetch_core(void *args) {
     thread_data *d = (thread_data*) args;
     global_settings *gs = d->gs;
-    csp_snp_t **a = gs->pl.a + d->n;  /* here we use directly the internal variables in csp_snplist_t structure to speed up. */
+    snp_t **a = gs->pl.a + d->n;  /* here we use directly the internal variables in snplist_t structure to speed up. */
     size_t n = 0;             /* n is the num of SNPs that are successfully processed. */
     csp_bam_fs **bam_fs = d->bfs;
     int nfs = d->nfs;
@@ -342,7 +342,7 @@ static inline int infer_nthread(global_settings *gs) {
  */
 int csp_fetch(global_settings *gs) {
     /* check options (input) */
-    if (NULL == gs || gs->nin <= 0 || (gs->nbarcode <= 0 && gs->nsid <= 0) || csp_snplist_size(gs->pl) <= 0 || \
+    if (NULL == gs || gs->nin <= 0 || (gs->nbarcode <= 0 && gs->nsid <= 0) || snplist_size(gs->pl) <= 0 || \
             NULL == gs->out_dir) {
         fprintf(stderr, "[E::%s] error options for fetch modes.\n", __func__);
         return -1;
@@ -365,9 +365,9 @@ int csp_fetch(global_settings *gs) {
     jfile_t **out_tmp_mtx_ad, **out_tmp_mtx_dp, **out_tmp_mtx_oth, **out_tmp_vcf_base, **out_tmp_vcf_cells;
     out_tmp_mtx_ad = out_tmp_mtx_dp = out_tmp_mtx_oth = out_tmp_vcf_base = out_tmp_vcf_cells = NULL;
     /* calc number of threads and number of SNPs for each thread. */
-    mtd = min2(csp_snplist_size(gs->pl), nthread);
-    mpos = csp_snplist_size(gs->pl) / mtd;
-    rpos = csp_snplist_size(gs->pl) - mpos * mtd;     // number of remaining positions
+    mtd = min2(snplist_size(gs->pl), nthread);
+    mpos = snplist_size(gs->pl) / mtd;
+    rpos = snplist_size(gs->pl) - mpos * mtd;     // number of remaining positions
     /* create output tmp filenames. */
     if (NULL == (out_tmp_mtx_ad = create_tmp_files(gs->out_mtx_ad, mtd, CSP_TMP_ZIP))) {
         fprintf(stderr, "[E::%s] fail to create tmp files for mtx_AD.\n", __func__);

@@ -28,7 +28,7 @@ void gll_setting_free(global_settings *gs) {
         if (gs->out_mtx_dp) { jf_destroy(gs->out_mtx_dp); gs->out_mtx_dp = NULL; }
         if (gs->out_mtx_oth) { jf_destroy(gs->out_mtx_oth); gs->out_mtx_oth = NULL; } 
         if (gs->snp_list_file) { free(gs->snp_list_file); gs->snp_list_file = NULL; }
-        csp_snplist_destroy(gs->pl);
+        snplist_destroy(gs->pl);
         if (gs->targets) { regidx_destroy(gs->targets); gs->targets = NULL; }
         if (gs->barcode_file) { free(gs->barcode_file); gs->barcode_file = NULL; }
         if (gs->barcodes) { str_arr_destroy(gs->barcodes, gs->nbarcode); gs->barcodes = NULL; }
@@ -51,7 +51,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%sis_target = %d, num_of_pos = %ld\n", prefix, gs->is_target, 
                       gs->is_target ? 
                         (gs->targets ? (long) regidx_nregs(gs->targets) : 0) :
-                        (long) csp_snplist_size(gs->pl));
+                        (long) snplist_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
@@ -75,17 +75,17 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
     int i, nsg;
     csp_plp_t *plp;
     /* init HashMap, pool of ul, pool of uu for mplp. */
-    mplp->hsg = csp_map_sg_init();
-    if (NULL == mplp->hsg) { fprintf(stderr, "[E::%s] could not init csp_map_sg_t structure.\n", __func__); return -1; }
+    mplp->hsg = map_sg_init();
+    if (NULL == mplp->hsg) { fprintf(stderr, "[E::%s] could not init map_sg_t structure.\n", __func__); return -1; }
     if (use_umi(gs)) {
         #if DEVELOP
-            mplp->pl = csp_pool_ul_init();
-            if (NULL == mplp->pl) { fprintf(stderr, "[E::%s] could not init csp_pool_ul_t structure.\n", __func__); return -1; }
-            mplp->pu = csp_pool_uu_init();
-            if (NULL == mplp->pu) { fprintf(stderr, "[E::%s] could not init csp_pool_uu_t structure.\n", __func__); return -1; }
+            mplp->pl = pool_ul_init();
+            if (NULL == mplp->pl) { fprintf(stderr, "[E::%s] could not init pool_ul_t structure.\n", __func__); return -1; }
+            mplp->pu = pool_uu_init();
+            if (NULL == mplp->pu) { fprintf(stderr, "[E::%s] could not init pool_uu_t structure.\n", __func__); return -1; }
         #endif
-        mplp->su = csp_pool_ps_init();
-        if (NULL == mplp->su) { fprintf(stderr, "[E::%s] could not init csp_pool_su_t structure.\n", __func__); return -1; }
+        mplp->su = pool_ps_init();
+        if (NULL == mplp->su) { fprintf(stderr, "[E::%s] could not init pool_su_t structure.\n", __func__); return -1; }
     }
     /* set sample names for sample groups. */
     if (use_barcodes(gs)) { sgnames = gs->barcodes; nsg = gs->nbarcode; }
@@ -94,15 +94,15 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
     if (csp_mplp_set_sg(mplp, sgnames, nsg) < 0) { fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); return -1; }
     /* init plp for each sample group in mplp->hsg and init HashMap plp->hug for UMI grouping. */
     for (i = 0; i < nsg; i++) {
-        if (NULL == (plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]))) { 
-            if (NULL == (csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]) = plp = csp_plp_init())) {
+        if (NULL == (plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]))) { 
+            if (NULL == (map_sg_val(mplp->hsg, mplp->hsg_iter[i]) = plp = csp_plp_init())) {
                 fprintf(stderr, "[E::%s] failed to init csp_plp_t for sg HashMap of csp_mplp_t.\n", __func__);
                 return -1;
             }
         }
         if (use_umi(gs)) {
-            plp->hug = csp_map_ug_init();
-            if (NULL == plp->hug) { fprintf(stderr, "[E::%s] could not init csp_map_ug_t structure.\n", __func__); return -1; }
+            plp->hug = map_ug_init();
+            if (NULL == plp->hug) { fprintf(stderr, "[E::%s] could not init map_ug_t structure.\n", __func__); return -1; }
         }
     }
     return 0;
@@ -112,7 +112,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
            a) the parameters are valid, i.e. mplp and gs must not be NULL. In fact, this function is supposed to be 
               called after csp_mplp_t is created and set names of sample-groups, so mplp, mplp->hsg could not be NULL.
            b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
-           c) each key (sample group name) in csp_map_sg_t already has a valid, not NULL, value (csp_plp_t*);
+           c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
               This usually can be done by calling csp_mplp_prepare().
         2. This function is expected to be used by Mode1 & Mode2 & Mode3.
 
@@ -121,8 +121,8 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
           do mplp statistics.
  */
 int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settings *gs) {
-    csp_map_sg_iter k;
-    csp_map_ug_iter u;
+    map_sg_iter k;
+    map_ug_iter u;
     csp_plp_t *plp = NULL;
     char **s;
     int r, idx;
@@ -130,33 +130,33 @@ int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settin
     *  The pileup->cb, pileup->umi could not be NULL as the pileuped read has passed filtering.
     */
     if (use_barcodes(gs)) { 
-        if ((k = csp_map_sg_get(mplp->hsg, pileup->cb)) == csp_map_sg_end(mplp->hsg)) { return 1; }
-        plp = csp_map_sg_val(mplp->hsg, k);
+        if ((k = map_sg_get(mplp->hsg, pileup->cb)) == map_sg_end(mplp->hsg)) { return 1; }
+        plp = map_sg_val(mplp->hsg, k);
     } else if (use_sid(gs)) { 
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[sid]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[sid]);
     } else { return -1; }  // should not come here!
     if (use_umi(gs)) {
-        u = csp_map_ug_get(plp->hug, pileup->umi);
-        if (u == csp_map_ug_end(plp->hug)) {
-            s = csp_pool_ps_get(mplp->su);
+        u = map_ug_get(plp->hug, pileup->umi);
+        if (u == map_ug_end(plp->hug)) {
+            s = pool_ps_get(mplp->su);
             *s = strdup(pileup->umi);
-            u = csp_map_ug_put(plp->hug, *s, &r);
+            u = map_ug_put(plp->hug, *s, &r);
             if (r < 0) { return -2; }
             /* An example for pushing base & qual into HashMap of umi group.
-            csp_list_uu_t *ul = csp_pool_ul_get(mplp->pl);
-            csp_umi_unit_t *uu = csp_pool_uu_get(mplp->pu);
+            list_uu_t *ul = pool_ul_get(mplp->pl);
+            umi_unit_t *uu = pool_uu_get(mplp->pu);
             uu->base = pileup->base; uu->qual = pileup->qual;
-            csp_list_uu_push(ul, uu);
-            csp_map_ug_val(plp->hug, u) = ul;
+            list_uu_push(ul, uu);
+            map_ug_val(plp->hug, u) = ul;
              */
             idx = seq_nt16_idx2int(pileup->base);
             plp->bc[idx]++;
-            csp_list_qu_push(plp->qu[idx], pileup->qual);
+            list_qu_push(plp->qu[idx], pileup->qual);
         } // else: do nothing.
     } else {
         idx = seq_nt16_idx2int(pileup->base);
         plp->bc[idx]++;
-        csp_list_qu_push(plp->qu[idx], pileup->qual);
+        list_qu_push(plp->qu[idx], pileup->qual);
     }
     return 0;
 }
@@ -170,7 +170,7 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     int i, j, k;
     size_t l;
     for (i = 0; i < mplp->nsg; i++) {
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
         for (j = 0; j < 5; j++) { 
             plp->tc += plp->bc[j]; 
             mplp->bc[j] += plp->bc[j];
@@ -178,7 +178,7 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     }
     for (i = 0; i < 5; i++) { mplp->tc += mplp->bc[i]; }
     if (mplp->tc < gs->min_count) { return 1; }
-    csp_infer_allele(mplp->bc, &mplp->inf_rid, &mplp->inf_aid);   // must be called after mplp->bc are completely calculated.
+    infer_allele(mplp->bc, &mplp->inf_rid, &mplp->inf_aid);   // must be called after mplp->bc are completely calculated.
     if (mplp->bc[mplp->inf_aid] < mplp->tc * gs->min_maf) { return 1; }
     if (mplp->ref_idx < 0 || mplp->alt_idx < 0) {  // ref or alt is not valid. Refer to csp_mplp_t.
         mplp->ref_idx = mplp->inf_rid;
@@ -186,14 +186,14 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     }
     mplp->ad = mplp->bc[mplp->alt_idx]; mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad; mplp->oth = mplp->tc - mplp->dp;
     for (i = 0; i < mplp->nsg; i++) {
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
         plp->ad = plp->bc[mplp->alt_idx]; if (plp->ad) mplp->nr_ad++;
         plp->dp = plp->bc[mplp->ref_idx] + plp->ad; if (plp->dp) mplp->nr_dp++;
         plp->oth = plp->tc - plp->dp; if (plp->oth) mplp->nr_oth++;
         if (gs->is_genotype) {
             for (j = 0; j < 5; j++) {
-                for (l = 0; l < csp_list_qu_size(plp->qu[j]); l++) {
-                    if (get_qual_vector(csp_list_qu_A(plp->qu[j], l), 45, 0.25, mplp->qvec) < 0) { return -1; }
+                for (l = 0; l < list_qu_size(plp->qu[j]); l++) {
+                    if (get_qual_vector(list_qu_A(plp->qu[j], l), 45, 0.25, mplp->qvec) < 0) { return -1; }
                     for (k = 0; k < 4; k++) plp->qmat[j][k] += mplp->qvec[k];
                 }
             }

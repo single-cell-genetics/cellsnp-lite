@@ -11,7 +11,7 @@
 #include "htslib/khash.h"
 #include "kvec.h"
 #include "jfile.h"
-#include "jmemory.h"
+#include "jmempool.h"
 #include "config.h"
 
 /*
@@ -62,17 +62,17 @@ inline void csp_pileup_reset_(csp_pileup_t *p);
 inline void csp_pileup_print(FILE *fp, csp_pileup_t *p);
 
 /*@abstract   Pool that stores char*. The real elements in the pool are char**.
-@example      Refer to the example of SZ_POOL in general_util.h.
+@example      Refer to the example of JMEMPOOL in general_util.h.
 @note         This structure is aimed to store dynamically allocated strings(char*).
  */
-#define csp_pool_str_free(s) free(*(s))
-#define csp_pool_str_reset(s) free(*(s))
-SZ_POOL_INIT(ps, char*, csp_pool_str_free, csp_pool_str_reset)
-typedef sz_pool_t(ps) csp_pool_ps_t;
-#define csp_pool_ps_init() sz_pool_init(ps)
-#define csp_pool_ps_destroy(p) sz_pool_destroy(ps, p)
-#define csp_pool_ps_get(p) sz_pool_get(ps, p)
-#define csp_pool_ps_reset(p) sz_pool_reset(ps, p)
+#define pool_str_free(s) free(*(s))
+#define pool_str_reset(s) free(*(s))
+JMEMPOOL_INIT(ps, char*, pool_str_free, pool_str_reset)
+typedef jmempool_t(ps) pool_ps_t;
+#define pool_ps_init() jmempool_init(ps)
+#define pool_ps_destroy(p) jmempool_destroy(ps, p)
+#define pool_ps_get(p) jmempool_get(ps, p)
+#define pool_ps_reset(p) jmempool_reset(ps, p)
 
 /*@abstract    This structure stores stat info of one read of one UMI group for certain query pos.
 @param base    The base for the query pos in the read of the UMI gruop.
@@ -82,58 +82,58 @@ typedef sz_pool_t(ps) csp_pool_ps_t;
  */
 typedef struct {
     int8_t base, qual;
-} csp_umi_unit_t;
+} umi_unit_t;
 
-inline csp_umi_unit_t* csp_umi_unit_init(void);
-#define csp_umi_unit_reset(p)
-inline void csp_umi_unit_destroy(csp_umi_unit_t *p);
+inline umi_unit_t* umi_unit_init(void);
+#define umi_unit_reset(p)
+inline void umi_unit_destroy(umi_unit_t *p);
 
-/*@abstract   Pool that stores csp_umi_unit_t structures. The real elements in the pool are pointers to the csp_umi_unit_t structures.
-              The pool is aimed to save the overhead of reallocating memories for csp_umi_unit_t structures.
-@example      Refer to the example of SZ_POOL in general_util.h.
+/*@abstract   Pool that stores umi_unit_t structures. The real elements in the pool are pointers to the umi_unit_t structures.
+              The pool is aimed to save the overhead of reallocating memories for umi_unit_t structures.
+@example      Refer to the example of JMEMPOOL in general_util.h.
  */
-SZ_POOL_INIT(uu, csp_umi_unit_t, csp_umi_unit_destroy, csp_umi_unit_reset)
-typedef sz_pool_t(uu) csp_pool_uu_t;
-#define csp_pool_uu_init() sz_pool_init(uu)
-#define csp_pool_uu_destroy(p) sz_pool_destroy(uu, p)
-#define csp_pool_uu_get(p) sz_pool_get(uu, p)
-#define csp_pool_uu_reset(p) sz_pool_reset(uu, p)
+JMEMPOOL_INIT(uu, umi_unit_t, umi_unit_destroy, umi_unit_reset)
+typedef jmempool_t(uu) pool_uu_t;
+#define pool_uu_init() jmempool_init(uu)
+#define pool_uu_destroy(p) jmempool_destroy(uu, p)
+#define pool_uu_get(p) jmempool_get(uu, p)
+#define pool_uu_reset(p) jmempool_reset(uu, p)
 
-/* Struct csp_list_uu_t APIs 
+/* Struct list_uu_t APIs 
 @abstract  The structure stores stat info of all reads of one UMI group for certain query pos.
-@param v   Pointer to the csp_list_uu_t structure [csp_list_uu_t*].
+@param v   Pointer to the list_uu_t structure [list_uu_t*].
 
-@note      1. The elements in the list are pointers of csp_umi_unit_t, resetting the list only sets
+@note      1. The elements in the list are pointers of umi_unit_t, resetting the list only sets
               the list's internal var n, which stands for the next available pos in the list, to be 0.
-              After calling reset function, the values (i.e. pointers of csp_umi_unit_t from csp_pool_uu) 
+              After calling reset function, the values (i.e. pointers of umi_unit_t from pool_uu) 
               newly pushed into the list would overwrite the original ones, which will not cause memory error. 
-           2. The parameter in csp_list_uu_xxx functions is pointer of csp_list_uu_t.
+           2. The parameter in list_uu_xxx functions is pointer of list_uu_t.
 
-@example   Refer to the example in kvec.h, but the parameter in csp_list_uu_xxx functions is pointer, 
+@example   Refer to the example in kvec.h, but the parameter in list_uu_xxx functions is pointer, 
            which is different from kv_xxx functions.
  */
-typedef kvec_t(csp_umi_unit_t*) csp_list_uu_t;
-inline csp_list_uu_t* csp_list_uu_init(void);
-#define csp_list_uu_resize(v, size) kv_resize(csp_umi_unit_t*, *(v), size)
-#define csp_list_uu_push(v, x) kv_push(csp_umi_unit_t*, *(v), x)
-#define csp_list_uu_A(v, i) kv_A(*(v), i)
-#define csp_list_uu_size(v) kv_size(*(v))
-#define csp_list_uu_max(v) kv_max(*(v))
-#define csp_list_uu_destroy(v) kv_destroy(*(v))
-#define csp_list_uu_reset(v) ((v)->n = 0)
+typedef kvec_t(umi_unit_t*) list_uu_t;
+inline list_uu_t* list_uu_init(void);
+#define list_uu_resize(v, size) kv_resize(umi_unit_t*, *(v), size)
+#define list_uu_push(v, x) kv_push(umi_unit_t*, *(v), x)
+#define list_uu_A(v, i) kv_A(*(v), i)
+#define list_uu_size(v) kv_size(*(v))
+#define list_uu_max(v) kv_max(*(v))
+#define list_uu_destroy(v) kv_destroy(*(v))
+#define list_uu_reset(v) ((v)->n = 0)
 
-/*@abstract   Pool that stores csp_list_uu_t structures. The real elements in the pool are pointers to the csp_list_uu_t structures.
-              The pool is aimed to save the overhead of reallocating memories for csp_list_uu_t structures.
-@example      Refer to the example of SZ_POOL in general_util.h.
+/*@abstract   Pool that stores list_uu_t structures. The real elements in the pool are pointers to the list_uu_t structures.
+              The pool is aimed to save the overhead of reallocating memories for list_uu_t structures.
+@example      Refer to the example of JMEMPOOL in general_util.h.
  */
-SZ_POOL_INIT(ul, csp_list_uu_t, csp_list_uu_destroy, csp_list_uu_reset)
-typedef sz_pool_t(ul) csp_pool_ul_t;
-#define csp_pool_ul_init() sz_pool_init(ul)
-#define csp_pool_ul_destroy(p) sz_pool_destroy(ul, p)
-#define csp_pool_ul_get(p) sz_pool_get(ul, p)
-#define csp_pool_ul_reset(p) sz_pool_reset(ul, p)
+JMEMPOOL_INIT(ul, list_uu_t, list_uu_destroy, list_uu_reset)
+typedef jmempool_t(ul) pool_ul_t;
+#define pool_ul_init() jmempool_init(ul)
+#define pool_ul_destroy(p) jmempool_destroy(ul, p)
+#define pool_ul_get(p) jmempool_get(ul, p)
+#define pool_ul_reset(p) jmempool_reset(ul, p)
 
-/*@abstract    The HashMap maps UMI-group-name (char*) to csp_list_uu_t (*).
+/*@abstract    The HashMap maps UMI-group-name (char*) to list_uu_t (*).
 
 @example (A simple example from khash.h)
 KHASH_MAP_INIT_INT(32, char)
@@ -153,46 +153,46 @@ int main() {
     return 0;
 }
  */
-KHASH_MAP_INIT_STR(ug, csp_list_uu_t*)
-typedef khash_t(ug) csp_map_ug_t;
-#define csp_map_ug_iter khiter_t
-#define csp_map_ug_init() kh_init(ug)
-#define csp_map_ug_resize(h, s) kh_resize(ug, h, s)
-#define csp_map_ug_put(h, k, r)  kh_put(ug, h, k, r)
-#define csp_map_ug_get(h, k) kh_get(ug, h, k)
-#define csp_map_ug_del(h, k) kh_del(ug, h, k)
-#define csp_map_ug_exist(h, x) kh_exist(h, x)
-#define csp_map_ug_key(h, x) kh_key(h, x)
-#define csp_map_ug_val(h, x) kh_val(h, x)
-#define csp_map_ug_begin(h) kh_begin(h)
-#define csp_map_ug_end(h) kh_end(h)
-#define csp_map_ug_size(h) kh_size(h)
-#define csp_map_ug_reset(h) kh_clear(ug, h)
-#define csp_map_ug_destroy(h) {								\
+KHASH_MAP_INIT_STR(ug, list_uu_t*)
+typedef khash_t(ug) map_ug_t;
+#define map_ug_iter khiter_t
+#define map_ug_init() kh_init(ug)
+#define map_ug_resize(h, s) kh_resize(ug, h, s)
+#define map_ug_put(h, k, r)  kh_put(ug, h, k, r)
+#define map_ug_get(h, k) kh_get(ug, h, k)
+#define map_ug_del(h, k) kh_del(ug, h, k)
+#define map_ug_exist(h, x) kh_exist(h, x)
+#define map_ug_key(h, x) kh_key(h, x)
+#define map_ug_val(h, x) kh_val(h, x)
+#define map_ug_begin(h) kh_begin(h)
+#define map_ug_end(h) kh_end(h)
+#define map_ug_size(h) kh_size(h)
+#define map_ug_reset(h) kh_clear(ug, h)
+#define map_ug_destroy(h) {								\
     if (h) {										\
-        csp_map_ug_iter __k;								\
-        for (__k = csp_map_ug_begin(h); __k != csp_map_ug_end(h); __k++) { 			\
-            if (csp_map_ug_exist(h, __k)) csp_list_uu_destroy(csp_map_ug_val(h, __k));		\
+        map_ug_iter __k;								\
+        for (__k = map_ug_begin(h); __k != map_ug_end(h); __k++) { 			\
+            if (map_ug_exist(h, __k)) list_uu_destroy(map_ug_val(h, __k));		\
         }											\
         kh_destroy(ug, h);									\
     }												\
 }
 
-/* Struct csp_list_qu_t APIs 
+/* Struct list_qu_t APIs 
 @abstract  The structure stores all qual value of one sample for certain query pos.
-@param v   The csp_list_qu_t structure [csp_list_qu_t].
+@param v   The list_qu_t structure [list_qu_t].
 
 @example   Refer to the example in kvec.h.
  */
-typedef kvec_t(int8_t) csp_list_qu_t;
-#define csp_list_qu_init(v) kv_init(v)
-#define csp_list_qu_resize(v, size) kv_resize(int8_t, v, size)
-#define csp_list_qu_push(v, x) kv_push(int8_t, v, x)
-#define csp_list_qu_A(v, i) kv_A(v, i)
-#define csp_list_qu_size(v) kv_size(v)
-#define csp_list_qu_max(v) kv_max(v)
-#define csp_list_qu_destroy(v) kv_destroy(v)
-#define csp_list_qu_reset(v) ((v).n = 0)
+typedef kvec_t(int8_t) list_qu_t;
+#define list_qu_init(v) kv_init(v)
+#define list_qu_resize(v, size) kv_resize(int8_t, v, size)
+#define list_qu_push(v, x) kv_push(int8_t, v, x)
+#define list_qu_A(v, i) kv_A(v, i)
+#define list_qu_size(v) kv_size(v)
+#define list_qu_max(v) kv_max(v)
+#define list_qu_destroy(v) kv_destroy(v)
+#define list_qu_reset(v) ((v).n = 0)
 
 /*@abstract    Internal function to convert the base call quality score to related values for different genotypes.
 @param qual    Qual value for the query pos in the read of the UMI gruop. The value is extracted by calling bam_get_qual() and 
@@ -233,7 +233,7 @@ int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_i
 
 @note           It's usually called when the input pos has no ref or alt.
  */
-inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
+inline void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
 
 /*@abstract  The structure that store pileup info of one cell/sample for certain query pos.
 @param bc    Total read count for each base in the order of 'ACGTN'.
@@ -252,11 +252,11 @@ inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
 typedef struct {
     size_t bc[5];
     size_t tc, ad, dp, oth;
-    csp_list_qu_t qu[5];
+    list_qu_t qu[5];
     double qmat[5][4];
     double gl[5];
     int ngl;
-    csp_map_ug_t *hug;
+    map_ug_t *hug;
 } csp_plp_t;
 
 /* note that the @p qu is also initialized after calling calloc(). */
@@ -286,34 +286,34 @@ int csp_plp_to_vcf(csp_plp_t *p, jfile_t *s);
 @example       Refer to a simple example in khash.h.
  */
 KHASH_MAP_INIT_STR(sg, csp_plp_t*)
-typedef khash_t(sg) csp_map_sg_t;
-#define csp_map_sg_iter khiter_t
-#define csp_map_sg_init() kh_init(sg)
-#define csp_map_sg_clear(h) kh_clear(sg, h)
-#define csp_map_sg_resize(h, s) kh_resize(sg, h, s)
-#define csp_map_sg_put(h, k, r)  kh_put(sg, h, k, r)
-#define csp_map_sg_get(h, k) kh_get(sg, h, k)
-#define csp_map_sg_del(h, k) kh_del(sg, h, k)
-#define csp_map_sg_exist(h, x) kh_exist(h, x)
-#define csp_map_sg_key(h, x) kh_key(h, x)
-#define csp_map_sg_val(h, x) kh_val(h, x)
-#define csp_map_sg_begin(h) kh_begin(h)
-#define csp_map_sg_end(h) kh_end(h)
-#define csp_map_sg_size(h) kh_size(h)
-#define csp_map_sg_destroy(h) {								\
+typedef khash_t(sg) map_sg_t;
+#define map_sg_iter khiter_t
+#define map_sg_init() kh_init(sg)
+#define map_sg_clear(h) kh_clear(sg, h)
+#define map_sg_resize(h, s) kh_resize(sg, h, s)
+#define map_sg_put(h, k, r)  kh_put(sg, h, k, r)
+#define map_sg_get(h, k) kh_get(sg, h, k)
+#define map_sg_del(h, k) kh_del(sg, h, k)
+#define map_sg_exist(h, x) kh_exist(h, x)
+#define map_sg_key(h, x) kh_key(h, x)
+#define map_sg_val(h, x) kh_val(h, x)
+#define map_sg_begin(h) kh_begin(h)
+#define map_sg_end(h) kh_end(h)
+#define map_sg_size(h) kh_size(h)
+#define map_sg_destroy(h) {								\
     if (h) {											\
-        csp_map_sg_iter __k;									\
-        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) { 			\
-            if (csp_map_sg_exist(h, __k)) csp_plp_destroy(csp_map_sg_val(h, __k)); 	\
+        map_sg_iter __k;									\
+        for (__k = map_sg_begin(h); __k != map_sg_end(h); __k++) { 			\
+            if (map_sg_exist(h, __k)) csp_plp_destroy(map_sg_val(h, __k)); 	\
         }										\
         kh_destroy(sg, h);									\
     }												\
 }
-#define csp_map_sg_reset_val(h) {								\
+#define map_sg_reset_val(h) {								\
     if (h) {											\
-        csp_map_sg_iter __k;									\
-        for (__k = csp_map_sg_begin(h); __k != csp_map_sg_end(h); __k++) {			\
-            if (csp_map_sg_exist(h, __k)) csp_plp_reset(csp_map_sg_val(h, __k)); 		\
+        map_sg_iter __k;									\
+        for (__k = map_sg_begin(h); __k != map_sg_end(h); __k++) {			\
+            if (map_sg_exist(h, __k)) csp_plp_reset(map_sg_val(h, __k)); 		\
         }											\
     }												\
 }
@@ -330,10 +330,10 @@ typedef khash_t(sg) csp_map_sg_t;
 @param oth   Read count of bases except alt and ref.
 @param nr_*  Num of records/lines outputed to mtx file for certain SNP/pos.
 @param hsg   HashMap that stores the stat info of all sample groups for the pos.
-@param hsg_iter Pointer of array of csp_map_sg_iter. The iter in the array is in the same order of sg names.
-@param nsg   Size of csp_map_sg_iter array hsg_iter.
-@param pu    Pool of csp_umi_unit_t structures.
-@param pl    Pool of csp_list_uu_t structures.
+@param hsg_iter Pointer of array of map_sg_iter. The iter in the array is in the same order of sg names.
+@param nsg   Size of map_sg_iter array hsg_iter.
+@param pu    Pool of umi_unit_t structures.
+@param pl    Pool of list_uu_t structures.
 @param su    Pool of UMI strings.
 @param qvec  A container for the qual vector returned by get_qual_vector().
  */
@@ -342,12 +342,12 @@ typedef struct {
     size_t bc[5];
     size_t tc, ad, dp, oth;
     size_t nr_ad, nr_dp, nr_oth;
-    csp_map_sg_t *hsg;
-    csp_map_sg_iter *hsg_iter;
+    map_sg_t *hsg;
+    map_sg_iter *hsg_iter;
     int nsg;
-    csp_pool_uu_t *pu;
-    csp_pool_ul_t *pl;
-    csp_pool_ps_t *su;
+    pool_uu_t *pu;
+    pool_ul_t *pl;
+    pool_ps_t *su;
     double qvec[4];
 } csp_mplp_t;
 
@@ -422,25 +422,25 @@ int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *f
 * Tags for sparse matrices
 * It's useful when the input tags are optional.
 */
-typedef size_t csp_mtx_value_t;
-typedef int csp_mtx_iter_t;
-typedef csp_mtx_value_t (*csp_mtx_value_func_t)(csp_mplp_t*, csp_plp_t*);
+typedef size_t mtx_value_t;
+typedef int mtx_iter_t;
+typedef mtx_value_t (*mtx_value_func_t)(csp_mplp_t*, csp_plp_t*);
 
-inline csp_mtx_value_t csp_mtx_value_AD(csp_mplp_t *mplp, csp_plp_t *plp) {
+inline mtx_value_t mtx_value_AD(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->ad;
 }
 
-inline csp_mtx_value_t csp_mtx_value_DP(csp_mplp_t *mplp, csp_plp_t *plp) {
+inline mtx_value_t mtx_value_DP(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->dp;
 }
 
-inline csp_mtx_value_t csp_mtx_value_OTH(csp_mplp_t *mplp, csp_plp_t *plp) {
+inline mtx_value_t mtx_value_OTH(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->oth;
 }
 
-static csp_mtx_iter_t csp_mtx_ntags = 3;
-static char *csp_mtx_tags[] = {"AD", "DP", "OTH"};
-static csp_mtx_value_func_t csp_mtx_value_funcs[] = { &csp_mtx_value_AD, &csp_mtx_value_DP, &csp_mtx_value_OTH };
+static mtx_iter_t mtx_ntags = 3;
+static char *mtx_tags[] = {"AD", "DP", "OTH"};
+static mtx_value_func_t mtx_value_funcs[] = { &mtx_value_AD, &mtx_value_DP, &mtx_value_OTH };
 
 inline char* csp_get_mtx_fn(char *tag) {
     kstring_t ks = KS_INITIALIZE;
@@ -450,26 +450,26 @@ inline char* csp_get_mtx_fn(char *tag) {
     return p;
 }
 
-inline csp_mtx_iter_t csp_get_mtx_idx(char *tag) {
-    csp_mtx_iter_t i;
-    for (i = 0; i < csp_mtx_ntags; i++) {
-        if (0 == strcmp(tag, csp_mtx_tags[i])) { return i; }
+inline mtx_iter_t csp_get_mtx_idx(char *tag) {
+    mtx_iter_t i;
+    for (i = 0; i < mtx_ntags; i++) {
+        if (0 == strcmp(tag, mtx_tags[i])) { return i; }
     } 
     return -1;
 }
 
-inline csp_mtx_value_func_t csp_get_mtx_value_func(csp_mtx_iter_t i) { return csp_mtx_value_funcs[i]; }
+inline mtx_value_func_t csp_get_mtx_value_func(mtx_iter_t i) { return mtx_value_funcs[i]; }
 
 typedef struct {
     char *out_fn;
-    csp_mtx_value_func_t vfunc;
-} csp_mtx_tag_fs;
+    mtx_value_func_t vfunc;
+} mtx_tag_fs;
 
-inline csp_mtx_tag_fs* csp_mtx_tag_fs_init(void) {
-    return (csp_mtx_tag_fs*) calloc(1, sizeof(csp_mtx_tag_fs));
+inline mtx_tag_fs* mtx_tag_fs_init(void) {
+    return (mtx_tag_fs*) calloc(1, sizeof(mtx_tag_fs));
 }
 
-inline void sp_mtx_tag_fs_destroy(csp_mtx_tag_fs *p) {
+inline void mtx_tag_fs_destroy(mtx_tag_fs *p) {
     if (p) { free(p->out_fn); free(p); }
 }
 #endif

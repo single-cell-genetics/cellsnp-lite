@@ -3,8 +3,10 @@
  */
 
 /* TODO: 
-- add -T option (use qsort & linear search instead of regidx_t of htslib, note the bug of qsort in lower version of glibc,
-  refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
+- add -T option (use qsort & linear search instead of regidx_t of htslib:
+  * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
+  * as the linear searching assume that the bam has been sortted by start pos, then how to deal with the partly aligned reads
+    and one reads in paired reads aligned to query chrom.
 - simplify variant names (eg. remove the prefix csp_)
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
@@ -15,7 +17,7 @@
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
 - More filters could be applied when extracting/fetching reads.
 - Improve the jfile_t structure, for example, adding @p is_error.
-- Improve the SZ_POOL structure, for example, adding @p base_init_f.
+- Improve the JPOOL structure, for example, adding @p base_init_f.
 - Use optional sparse matrices tags with the help of function pointers.
 - Output optionally qual values/letters to mtx file.
 - Deal with the problem that some UMIs have the letter 'N'.
@@ -54,7 +56,7 @@ static void gll_set_default(global_settings *gs) {
         gs->out_vcf_base = NULL; gs->out_vcf_cells = NULL; gs->out_samples = NULL;
         gs->out_mtx_ad = NULL; gs->out_mtx_dp = NULL; gs->out_mtx_oth = NULL;
         gs->is_genotype = 0; gs->is_out_zip = 0;
-        gs->snp_list_file = NULL; csp_snplist_init(gs->pl); gs->is_target = 0; gs->targets = NULL;
+        gs->snp_list_file = NULL; snplist_init(gs->pl); gs->is_target = 0; gs->targets = NULL;
         gs->barcode_file = NULL; gs->nbarcode = 0; gs->barcodes = NULL; 
         gs->sid_list_file = NULL; gs->sample_ids = NULL; gs->nsid = 0;
         char *chrom_tmp[] = CSP_CHROM_ALL;
@@ -506,55 +508,53 @@ int main(int argc, char **argv) {
             char **tmp; 
             int ntmp;
             size_t i, n;
-            csp_snp_t *snp = NULL;
+            snp_t *snp = NULL;
             biallele_t **ale = NULL;
             if (NULL == (ale = (biallele_t**) calloc(1, sizeof(biallele_t*)))) {
                 fprintf(stderr, "[E::%s] out of space for biallele_t**!\n", __func__);
-                print_time = 1; goto fail0;
+                print_time = 1; goto fail;
             }
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail0;
+                print_time = 1; goto fail;
             } else { 
-                n = csp_snplist_size(gs.pl);
+                n = snplist_size(gs.pl);
                 fprintf(stderr, "[I::%s] pileuping %ld candidate variants ...\n", __func__, n); 
             }
             if (NULL == (gs.targets = regidx_init(NULL, NULL, regidx_payload_free, sizeof(biallele_t*), NULL))) {
                 fprintf(stderr, "[E::%s] failed to init regidx for '%s'.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail0;
+                print_time = 1; goto fail;
             } 
             for (i = 0; i < n; i++) {
-                snp = csp_snplist_A(gs.pl, i);
+                snp = snplist_A(gs.pl, i);
                 if (NULL == (*ale = biallele_init())) { 
                    fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
-                   print_time = 1; goto fail0;
+                   print_time = 1; goto fail;
                 } else { (*ale)->ref = snp->ref; (*ale)->alt = snp->alt; }
                 if (regidx_push(gs.targets, snp->chr, snp->chr + strlen(snp->chr) - 1, snp->pos, snp->pos, ale) < 0) {
                    fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
-                   print_time = 1; goto fail0;
+                   free(ale); ale = NULL;    // FIXME!! *ale should be safely freed.
+                   print_time = 1; goto fail;
                 } 
             } free(ale); ale = NULL;
-            csp_snplist_destroy(gs.pl);
+            snplist_destroy(gs.pl);
             tmp = regidx_seq_names(gs.targets, &ntmp);
             if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
             if (NULL == (gs.chroms = (char**) calloc(ntmp, sizeof(char*)))) {
                 fprintf(stderr, "[E::%s] failed to allocate space for gs.chroms\n", __func__);
-                print_time = 1; goto fail0;
+                print_time = 1; goto fail;
             }
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
             }
             if (gs.barcodes) { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
             else { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
-            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail0; }
-          fail0:
-            if (ale) { free(ale); }
-            goto fail;
+            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail; }
         } else {
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
                 print_time = 1; goto fail;
-            } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, csp_snplist_size(gs.pl)); }
+            } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, snplist_size(gs.pl)); }
             if (gs.barcodes) { 
                 fprintf(stderr, "[I::%s] mode 1: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
                 if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); print_time = 1; goto fail; } 
