@@ -566,6 +566,8 @@ int csp_pileup(global_settings *gs) {
         }
         td[ntd] = d;
     } d = NULL;
+    // clean hdr
+    for (i = 0; i < nfs; i++) { sam_hdr_destroy(bam_fs[i]->hdr); bam_fs[i]->hdr = NULL; }
     // clean idx
     for (i = 0; i < nfs; i++) { hts_idx_destroy(bam_fs[i]->idx); bam_fs[i]->idx = NULL; }
     // run threads
