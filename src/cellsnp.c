@@ -3,11 +3,10 @@
  */
 
 /* TODO: 
-- add -T option (use qsort & linear search instead of regidx_t of htslib:
+- ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
   * as the linear searching assume that the bam has been sortted by start pos, then how to deal with the partly aligned reads
-    and one reads in paired reads aligned to query chrom.
-- simplify variant names (eg. remove the prefix csp_)
+    and one read in paired reads aligned to query chrom.
 - Try multi-process (process pool) for multi input samples
 - Output vcf header according to input bam header
 - separate htsFile from csp_bam_fs as it cannot be shared among threads
@@ -17,7 +16,7 @@
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
 - More filters could be applied when extracting/fetching reads.
 - Improve the jfile_t structure, for example, adding @p is_error.
-- Improve the JPOOL structure, for example, adding @p base_init_f.
+- Improve the JMEMPOOL structure, for example, adding @p base_init_f.
 - Use optional sparse matrices tags with the help of function pointers.
 - Output optionally qual values/letters to mtx file.
 - Deal with the problem that some UMIs have the letter 'N'.

@@ -33,16 +33,27 @@ cellSNP, cellsnp-lite is basically more efficient with higher speed and less mem
 
 News
 ----
-Mode 2 is now avaliable in cellsnp-lite. cellsnp-lite mode 2 is aimed to pileup 
+
+The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly 
+caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed 
+to be opened by system for single process), which is typically 1024. Specifically, in the 
+case of `M` input files and `N` threads, cellsnp-lite would open in total about `M*N` files. 
+So the issue would more likely happen when large M or N is given. In order to fix it, cellsnp-lite 
+would firstly try to increase the limit to the max possible value (which is typically 4096) and 
+then use a fail-retry strategy to auto detect the most suitable number of threads (which could 
+be smaller than the original nthreads specified by user).
+
+Mode 2 is now avaliable in cellsnp-lite (since v1.0.0). cellsnp-lite mode 2 is aimed to pileup 
 whole chromosome(s) for a single BAM/SAM file.
 
-The command line option ``--maxFLAG`` is now deprecated, please use ``--inclFLAG`` and 
+The command line option ``--maxFLAG`` is now deprecated (since v1.0.0), please use ``--inclFLAG`` and 
 ``--exclFLAG`` instead, which are more flexible for reads filtering.
 
 All release notes can be found in `doc/release.rst`_.
 
 For computational efficiency, we initialised comments on this: `doc/speed.rst`_
 
+.. _RLIMIT_NOFILE: https://man7.org/linux/man-pages/man2/getrlimit.2.html
 .. _issue13: https://github.com/single-cell-genetics/cellSNP/issues/13
 .. _doc/release.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/release.rst
 .. _doc/speed.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/speed.rst

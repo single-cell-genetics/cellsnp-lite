@@ -2,6 +2,14 @@
 History
 =======
 
+Release v1.2.0 (04/12/2020)
+===========================
+* add -T cmdline option, which is similar with samtools/bcftools mpileup -T for
+  the next position is accessed by streaming rather than index-jumping, which is
+  different from -R. Similar with -R, cellsnp-lite -T would use REF & ALT of 
+  the input vcf.
+* fix a bug of not reseting thpool for too many open files issue.
+
 Release v1.1.2 (02/12/2020)
 ===========================
 * fix the issue of too many open files by 1) increase the soft limit of
