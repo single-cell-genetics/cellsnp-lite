@@ -20,24 +20,24 @@ typedef struct {
     char *chr;   
     hts_pos_t pos; 
     int8_t ref, alt;
-} csp_snp_t;
+} snp_t;
 
-/*@abstract  Initilize the csp_snp_t structure.
-@return      Pointer to the csp_snp_t structure if success, NULL if failure.
-@note        The pointer returned successfully by csp_snp_init() should be freed
-             by csp_snp_destroy() when no longer used.
+/*@abstract  Initilize the snp_t structure.
+@return      Pointer to the snp_t structure if success, NULL if failure.
+@note        The pointer returned successfully by snp_init() should be freed
+             by snp_destroy() when no longer used.
  */
-inline csp_snp_t* csp_snp_init(void);
-inline void csp_snp_destroy(csp_snp_t *p); 
-inline void csp_snp_reset(csp_snp_t *p); 
+inline snp_t* snp_init(void);
+inline void snp_destroy(snp_t *p); 
+inline void snp_reset(snp_t *p); 
 
-/*@abstract  A list containing of several pointers to the csp_snp_t structure.
-@param a     Array of csp_snp_t* pointers.
+/*@abstract  A list containing of several pointers to the snp_t structure.
+@param a     Array of snp_t* pointers.
 @param n     The next pos of the unused element of the array.
 @param m     Size of the whole array.
 
-@note        The csp_snplist_t structure should be freed by csp_snplist_destroy() when no longer used.
-             csp_snplist_init() function should be called immediately after the structure was created.
+@note        The snplist_t structure should be freed by snplist_destroy() when no longer used.
+             snplist_init() function should be called immediately after the structure was created.
 
 @example (A simple example from kvec.h)
     kvec_t(int) array;
@@ -46,17 +46,18 @@ inline void csp_snp_reset(csp_snp_t *p);
     kv_A(array, 20) = 4;
     kv_destroy(array);
  */
-typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
-#define csp_snplist_init(v) kv_init(v)
-#define csp_snplist_resize(v, size) kv_resize(csp_snp_t*, v, size)
-#define csp_snplist_push(v, x) kv_push(csp_snp_t*, v, x)
-#define csp_snplist_A(v, i) kv_A(v, i)
-#define csp_snplist_size(v) kv_size(v)
-#define csp_snplist_max(v) kv_max(v)
-#define csp_snplist_destroy(v) {								\
+typedef kvec_t(snp_t*) snplist_t;   /* kvec_t from kvec.h */
+#define snplist_init(v) kv_init(v)
+#define snplist_resize(v, size) kv_resize(snp_t*, v, size)
+#define snplist_push(v, x) kv_push(snp_t*, v, x)
+#define snplist_A(v, i) kv_A(v, i)
+#define snplist_size(v) kv_size(v)
+#define snplist_max(v) kv_max(v)
+#define snplist_destroy(v) {								\
     size_t __j;											\
-    for (__j = 0; __j < csp_snplist_size(v); __j++) csp_snp_destroy(csp_snplist_A(v, __j));	\
+    for (__j = 0; __j < snplist_size(v); __j++) snp_destroy(snplist_A(v, __j));	\
     kv_destroy(v);										\
+    (v).a = NULL; (v).m = (v).n = 0;                                                            \
 }
 
 /*@abstract    Extract SNP info from bcf/vcf file.
@@ -69,7 +70,18 @@ typedef kvec_t(csp_snp_t*) csp_snplist_t;   /* kvec_t from kvec.h */
 @note          If length of Ref or Alt is larger than 1, then the SNP would be skipped.
                If length of Ref or Alt is 0, then their values would be infered during pileup.
  */
-size_t get_snplist_from_vcf(const char *fn, csp_snplist_t *pl, int *ret, int print_skip);
+size_t get_snplist_from_vcf(const char *fn, snplist_t *pl, int *ret, int print_skip);
 #define get_snplist(fn, pl, ret, print_skip) get_snplist_from_vcf(fn, pl, ret, print_skip)
+
+/*
+ * Bi-Allele API
+ */
+typedef struct {
+    int8_t ref, alt;
+} biallele_t;
+
+inline biallele_t* biallele_init(void);
+inline void biallele_destroy(biallele_t *p);
+inline void biallele_reset(biallele_t *p);
 
 #endif

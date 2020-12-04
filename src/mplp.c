@@ -12,7 +12,7 @@
 #include "kvec.h"
 #include "jnumeric.h"
 #include "jfile.h"
-#include "jmemory.h"
+#include "jmempool.h"
 #include "config.h"
 #include "mplp.h"
 
@@ -62,20 +62,20 @@ inline void csp_pileup_print(FILE *fp, csp_pileup_t *p) {
     fprintf(fp, "len_aln = %d\n", p->laln);
 }
 
-inline csp_umi_unit_t* csp_umi_unit_init(void) {
-    csp_umi_unit_t *p = (csp_umi_unit_t*) calloc(1, sizeof(csp_umi_unit_t));
+inline umi_unit_t* umi_unit_init(void) {
+    umi_unit_t *p = (umi_unit_t*) calloc(1, sizeof(umi_unit_t));
     return p;   /* will set values just after this function is called so no need to set init values here. */
 }
-inline void csp_umi_unit_destroy(csp_umi_unit_t *p) { free(p); }
+inline void umi_unit_destroy(umi_unit_t *p) { free(p); }
 
-inline csp_list_uu_t* csp_list_uu_init(void) {
-    csp_list_uu_t *v = (csp_list_uu_t*) malloc(sizeof(csp_list_uu_t));
+inline list_uu_t* list_uu_init(void) {
+    list_uu_t *v = (list_uu_t*) malloc(sizeof(list_uu_t));
     if (v) { kv_init(*v); }
     return v;
 }
 
-SZ_NUMERIC_OP_INIT(cu_d, double)
-SZ_NUMERIC_OP_INIT(cu_s, size_t)
+JNUMERIC_INIT(cu_d, double)
+JNUMERIC_INIT(cu_s, size_t)
 
 inline int get_qual_vector(double qual, double cap_bq, double min_bq, double *rv) {
     double bq = max2(min2(cap_bq, qual), min_bq);
@@ -117,7 +117,7 @@ int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_i
 
 /*@note           It's usually called when the input pos has no ref or alt.
  */
-inline void csp_infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx) {
+inline void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx) {
     int8_t i, k1, k2;
     size_t m1, m2;
     if (bc[0] < bc[1]) { m1 = bc[1]; m2 = bc[0]; k1 = 1; k2 = 0; }
@@ -135,8 +135,8 @@ inline csp_plp_t* csp_plp_init(void) { return (csp_plp_t*) calloc(1, sizeof(csp_
 inline void csp_plp_destroy(csp_plp_t *p) { 
     if (p) { 
         int i;
-        for (i = 0; i < 5; i++) { csp_list_qu_destroy(p->qu[i]); }
-        if (p->hug) { csp_map_ug_destroy(p->hug); }
+        for (i = 0; i < 5; i++) { list_qu_destroy(p->qu[i]); }
+        if (p->hug) { map_ug_destroy(p->hug); }
         free(p); 
     }
 }
@@ -146,16 +146,16 @@ inline void csp_plp_reset(csp_plp_t *p) {
         int i;
         memset(p->bc, 0, sizeof(p->bc));
         p->tc = p->ad = p->dp = p->oth = 0;
-        for (i = 0; i < 5; i++) { csp_list_qu_reset(p->qu[i]); }
+        for (i = 0; i < 5; i++) { list_qu_reset(p->qu[i]); }
         memset(p->qmat, 0, sizeof(p->qmat));
         p->ngl = 0;
-        if (p->hug) { csp_map_ug_reset(p->hug); }
+        if (p->hug) { map_ug_reset(p->hug); }
     }
 }
 
 void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
     int i, j;
-    csp_map_ug_iter u;
+    map_ug_iter u;
     fprintf(fp, "%stotal read count = %ld\n", prefix, p->tc);
     fprintf(fp, "%sbase count (A/C/G/T/N):", prefix);
     for (i = 0; i < 5; i++) fprintf(fp, " %ld", p->bc[i]);
@@ -173,12 +173,12 @@ void csp_plp_print(FILE *fp, csp_plp_t *p, char *prefix) {
         fputc('\n', fp);
     }
     if (p->hug) {
-        int size = csp_map_ug_size(p->hug);
-        fprintf(fp, "%ssize of the csp_map_ug = %d\n", prefix, size);
+        int size = map_ug_size(p->hug);
+        fprintf(fp, "%ssize of the map_ug = %d\n", prefix, size);
         if (size) {
             fprintf(fp, "%s", prefix);
-            for (u = csp_map_ug_begin(p->hug); u != csp_map_ug_end(p->hug); u++) {
-                if (csp_map_ug_exist(p->hug, u)) { fprintf(fp, " %s", csp_map_ug_key(p->hug, u)); }
+            for (u = map_ug_begin(p->hug); u != map_ug_end(p->hug); u++) {
+                if (map_ug_exist(p->hug, u)) { fprintf(fp, " %s", map_ug_key(p->hug, u)); }
             } fputc('\n', fp);
         }
     }
@@ -227,11 +227,11 @@ inline csp_mplp_t* csp_mplp_init(void) {
 
 inline void csp_mplp_destroy(csp_mplp_t *p) { 
     if (p) {
-        if (p->hsg) { csp_map_sg_destroy(p->hsg); }
+        if (p->hsg) { map_sg_destroy(p->hsg); }
         if (p->hsg_iter) { free(p->hsg_iter); }
-        if (p->pu) { csp_pool_uu_destroy(p->pu); }
-        if (p->pl) { csp_pool_ul_destroy(p->pl); }
-        if (p->su) { csp_pool_ps_destroy(p->su); }
+        if (p->pu) { pool_uu_destroy(p->pu); }
+        if (p->pl) { pool_ul_destroy(p->pl); }
+        if (p->su) { pool_ps_destroy(p->su); }
         free(p); 
     }
 }
@@ -241,10 +241,10 @@ inline void csp_mplp_reset(csp_mplp_t *p) {
         memset(p->bc, 0, sizeof(p->bc));
         p->tc = p->ad = p->dp = p->oth = 0;
         p->nr_ad = p->nr_dp = p->nr_oth = 0;
-        if (p->hsg) { csp_map_sg_reset_val(p->hsg); }
-        if (p->pu) { csp_pool_uu_reset(p->pu); }
-        if (p->pl) { csp_pool_ul_reset(p->pl); }
-        if (p->su) { csp_pool_ps_reset(p->su); }
+        if (p->hsg) { map_sg_reset_val(p->hsg); }
+        if (p->pu) { pool_uu_reset(p->pu); }
+        if (p->pl) { pool_ul_reset(p->pl); }
+        if (p->su) { pool_ps_reset(p->su); }
         memset(p->qvec, 0, sizeof(p->qvec));
     }
 }
@@ -263,8 +263,8 @@ void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix) {
     if (p->nsg) {
         kputs(prefix, s); kputc('\t', s);
         for (i = 0; i < p->nsg; i++) {
-            fprintf(fp, "%sSG-%d = %s:\n", prefix, i, csp_map_sg_key(p->hsg, p->hsg_iter[i]));
-            plp = csp_map_sg_val(p->hsg, p->hsg_iter[i]);
+            fprintf(fp, "%sSG-%d = %s:\n", prefix, i, map_sg_key(p->hsg, p->hsg_iter[i]));
+            plp = map_sg_val(p->hsg, p->hsg_iter[i]);
             csp_plp_print(fp, plp, ks_str(s));
         }
     }
@@ -290,21 +290,21 @@ inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix) {
 int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     if (NULL == p || NULL == s || 0 == n) { return -1; }
     int i, r;
-    csp_map_sg_iter k;
-    if (NULL == p->hsg && NULL == (p->hsg = csp_map_sg_init())) { return -1; }
-    if (NULL == p->hsg_iter && NULL == (p->hsg_iter = (csp_map_sg_iter*) malloc(sizeof(csp_map_sg_iter) * n))) { return -1; }
+    map_sg_iter k;
+    if (NULL == p->hsg && NULL == (p->hsg = map_sg_init())) { return -1; }
+    if (NULL == p->hsg_iter && NULL == (p->hsg_iter = (map_sg_iter*) malloc(sizeof(map_sg_iter) * n))) { return -1; }
     for (i = 0; i < n; i++) {
         if (s[i]) { 
-            k = csp_map_sg_put(p->hsg, s[i], &r); 
+            k = map_sg_put(p->hsg, s[i], &r); 
             if (r <= 0) { csp_mplp_destroy(p); return -1; } /* r = 0 means repeatd sgnames. */
-            else { csp_map_sg_val(p->hsg, k) = NULL; }
+            else { map_sg_val(p->hsg, k) = NULL; }
         } else { return -1; }
     }
     /* Storing iter index for each sg (sample group) name must be done after all sg names have been pushed into 
        the HashMap in case that the internal arrays of HashMap autoly shrink or some else modifications. */
     for (i = 0; i < n; i++) {
-        k = csp_map_sg_get(p->hsg, s[i]);
-        if (k == csp_map_sg_end(p->hsg)) { return -1; }
+        k = map_sg_get(p->hsg, s[i]);
+        if (k == map_sg_end(p->hsg)) { return -1; }
         else { p->hsg_iter[i] = k; }
     }
     p->nsg = n;
@@ -315,7 +315,7 @@ inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s) {
     int i;
     for (i = 0; i < mplp->nsg; i++) {
         kputc_('\t', s);
-        if (csp_plp_str_vcf(csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
+        if (csp_plp_str_vcf(map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
     } //s->s[--(s->l)] = '\0';    /* s->l could not be negative unless no csp_plp_t(s) are printed to s->s. */
     return 0;
 }
@@ -324,7 +324,7 @@ inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s) {
     int i;
     for (i = 0; i < mplp->nsg; i++) {
         jf_putc_('\t', s);
-        if (csp_plp_to_vcf(csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
+        if (csp_plp_to_vcf(map_sg_val(mplp->hsg, mplp->hsg_iter[i]), s) < 0) { return -1; }
     } //s->s[--(s->l)] = '\0';    /* s->l could not be negative unless no csp_plp_t(s) are printed to s->s. */
     return 0;
 }
@@ -333,7 +333,7 @@ inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
         if (plp->ad) ksprintf(ks_ad, "%ld\t%d\t%ld\n", idx, i, plp->ad);
         if (plp->dp) ksprintf(ks_dp, "%ld\t%d\t%ld\n", idx, i, plp->dp);
         if (plp->oth) ksprintf(ks_oth, "%ld\t%d\t%ld\n", idx, i, plp->oth);        
@@ -347,7 +347,7 @@ inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *k
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
         if (plp->ad) ksprintf(ks_ad, "%d\t%ld\n", i, plp->ad);
         if (plp->dp) ksprintf(ks_dp, "%d\t%ld\n", i, plp->dp);
         if (plp->oth) ksprintf(ks_oth, "%d\t%ld\n", i, plp->oth);        
@@ -360,7 +360,7 @@ int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *f
     csp_plp_t *plp;
     int i;
     for (i = 1; i <= mplp->nsg; i++) {
-        plp = csp_map_sg_val(mplp->hsg, mplp->hsg_iter[i - 1]);
+        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i - 1]);
         if (plp->ad) fs_ad->is_tmp ? jf_printf(fs_ad, "%d\t%ld\n", i, plp->ad) : jf_printf(fs_ad, "%ld\t%d\t%ld\n", idx, i, plp->ad);
         if (plp->dp) fs_dp->is_tmp ? jf_printf(fs_dp, "%d\t%ld\n", i, plp->dp) : jf_printf(fs_dp, "%ld\t%d\t%ld\n", idx, i, plp->dp);
         if (plp->oth) fs_oth->is_tmp ? jf_printf(fs_oth, "%d\t%ld\n", i, plp->oth) : jf_printf(fs_oth, "%ld\t%d\t%ld\n", idx, i, plp->oth);      

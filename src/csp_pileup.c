@@ -24,6 +24,7 @@ typedef struct {
     htsFile *fp;
     //sam_hdr_t *hdr;
     hts_itr_t *itr;
+    const char *chrom;
     global_settings *gs;
 } mp_aux_t;
 
@@ -44,7 +45,7 @@ static inline void mp_aux_reset(mp_aux_t *p) { }
 @param b     Pointer to bam1_t structure.
 @return      0 on success, -1 on end, < -1 on non-recoverable errors. refer to htslib/sam.h @func bam_plp_init.
 
-@note        This function refers to @func mplp_func in samtools/bam_plcmd.c.   
+@note        This function refers to @func mplp_func in bcftools/mpileup.c.   
 */
 static int mp_func(void *data, bam1_t *b) {
     int ret;
@@ -60,6 +61,11 @@ static int mp_func(void *data, bam1_t *b) {
         if (gs->rflag_filter && gs->rflag_filter & c->flag ) { continue; }
         if (gs->rflag_require && ! (gs->rflag_require & c->flag)) { continue; }
         if (gs->no_orphan && c->flag & BAM_FPAIRED && ! (c->flag & BAM_FPROPER_PAIR)) { continue; }
+        if (use_target(gs)) {
+            int beg = c->pos, end = bam_endpos(b) - 1;
+            int overlap = regidx_overlap(gs->targets, dat->chrom, beg, end, NULL);
+            if (! overlap) { continue; }
+        }
         break;
     } while (1);
     return ret;
@@ -131,8 +137,6 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
   #if DEBUG
     size_t npileup = 0;
   #endif
-    mplp->ref_idx = -1;
-    mplp->alt_idx = -1;
     for (i = 0; i < nfs; i++) {
         for (j = 0; j < mp_n[i]; j++) {
             bp = mp_plp[i] + j;
@@ -202,6 +206,7 @@ static int csp_pileup_core(void *args) {
     int pos;
     int i, r, ret;
     size_t msnp, nsnp, unit = 200000;
+    regitr_t *itr = NULL;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
   #if CSP_FIT_MULTI_SMP
     if (gs->tp_errno) { d->ret = 1; goto fail; }
@@ -285,6 +290,11 @@ static int csp_pileup_core(void *args) {
         fprintf(stderr, "[E::%s] failed to allocate space for mp_nplp.\n", __func__);
         goto fail;
     }
+    // init reg itr
+    if (use_target(gs) && NULL == (itr = regitr_init(gs->targets))) {
+        fprintf(stderr, "[E::%s] failed to init regitr.\n", __func__);
+        goto fail;
+    }
     /* pileup each SNP. 
     */
     // init mpileup 
@@ -305,7 +315,7 @@ static int csp_pileup_core(void *args) {
         fprintf(stderr, "[I::%s][Thread-%d] processing chrom %s ...\n", __func__, d->i, a[n]);
       #endif
         /* create bam_mplp_* mpileup structure from htslib */
-        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; }
+        for (i = 0; i < ndat; i++) { data[i]->itr = d->iter[n][i]; data[i]->chrom = a[n]; }
         if (NULL == (mp_iter = bam_mplp_init(nfs, mp_func, (void**) data))) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto fail;
@@ -318,6 +328,17 @@ static int csp_pileup_core(void *args) {
             if (gs->tp_errno) { d->ret = 1; goto fail; }
           #endif
             if (tid < 0) { break; }
+            if (use_target(gs)) {
+                int overlap = regidx_overlap(gs->targets, a[n], pos, pos, itr);
+                biallele_t *ale = NULL;
+                if (! overlap) { continue; }   // no need to reset mplp_t here
+                while (regitr_overlap(itr)) {
+                    ale = regitr_payload(itr, biallele_t*);
+                    break;
+                }
+                mplp->ref_idx = ale->ref ? seq_nt16_char2int(ale->ref) : -1;
+                mplp->alt_idx = ale->alt ? seq_nt16_char2int(ale->alt) : -1;                
+            } else { mplp->ref_idx = -1; mplp->alt_idx = -1; }
             if ((r = pileup_snp(pos, mp_n, mp_plp, nfs, pileup, mplp, gs)) != 0) {
                 if (r < 0) {
                     fprintf(stderr, "[E::%s] failed to pileup snp for %s:%d\n", __func__, a[n], pos);
@@ -367,6 +388,7 @@ static int csp_pileup_core(void *args) {
     //bam_mplp_destroy(mp_iter);   
     csp_pileup_destroy(pileup);
     csp_mplp_destroy(mplp);
+    if (itr) { regitr_destroy(itr); }
     d->ret = 0;
     return n;
   fail:
@@ -393,6 +415,7 @@ static int csp_pileup_core(void *args) {
     if (mp_n) free(mp_n);
     if (pileup) csp_pileup_destroy(pileup);
     if (mplp) { csp_mplp_destroy(mplp); }
+    if (itr) { regitr_destroy(itr); }
     return n;
 }
 
@@ -543,6 +566,8 @@ int csp_pileup(global_settings *gs) {
         }
         td[ntd] = d;
     } d = NULL;
+    // clean hdr
+    for (i = 0; i < nfs; i++) { sam_hdr_destroy(bam_fs[i]->hdr); bam_fs[i]->hdr = NULL; }
     // clean idx
     for (i = 0; i < nfs; i++) { hts_idx_destroy(bam_fs[i]->idx); bam_fs[i]->idx = NULL; }
     // run threads
@@ -693,6 +718,8 @@ int csp_pileup(global_settings *gs) {
         fprintf(stderr, "================================================================================\n");
         fprintf(stderr, "[W::%s] Last try (nthreads = %d) failed due to the issue of too many open files.\n",
                          __func__, gs->nthread);
+        // reset gs, especially items related to thpool
+        if (gs->tp) { thpool_destroy(gs->tp); gs->tp = NULL; }
         gs->tp_ntry++;
         gs->nthread = infer_nthread(gs);
         gs->tp_errno = 0;

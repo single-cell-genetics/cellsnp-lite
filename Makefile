@@ -11,7 +11,7 @@ BIN_NAME=cellsnp-lite
 
 src_dir=src
 scripts=$(src_dir)/cellsnp.c $(src_dir)/csp_fetch.c $(src_dir)/csp_pileup.c $(src_dir)/csp.c $(src_dir)/jfile.c $(src_dir)/jsam.c $(src_dir)/jstring.c $(src_dir)/mplp.c $(src_dir)/snp.c $(src_dir)/thpool.c
-headers=$(src_dir)/config.h $(src_dir)/csp.h $(src_dir)/jfile.h $(src_dir)/jmemory.h $(src_dir)/jnumeric.h $(src_dir)/jsam.h $(src_dir)/jstring.h $(src_dir)/kvec.h $(src_dir)/mplp.h $(src_dir)/snp.h $(src_dir)/thpool.h
+headers=$(src_dir)/config.h $(src_dir)/csp.h $(src_dir)/jfile.h $(src_dir)/jmempool.h $(src_dir)/jnumeric.h $(src_dir)/jsam.h $(src_dir)/jstring.h $(src_dir)/kvec.h $(src_dir)/mplp.h $(src_dir)/snp.h $(src_dir)/thpool.h
 
 all: $(BIN_NAME)
 

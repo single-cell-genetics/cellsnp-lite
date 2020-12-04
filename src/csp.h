@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
+#include "htslib/regidx.h"
 #include "config.h"
 #include "mplp.h"
 #include "jfile.h"
@@ -37,7 +38,9 @@ struct _gll_settings {
     int is_out_zip;        // If output files need to be zipped.
     int is_genotype;       // If need to do genotyping in addition to counting.
     char *snp_list_file;   // Name of file containing a list of SNPs, usually a vcf file.
-    csp_snplist_t pl;      // List of the input SNPs. TODO: local variable.
+    snplist_t pl;      // List of the input SNPs. TODO: local variable.
+    int is_target;         // If the provided snp list should be used as target (like -T in samtools/bcftools mpileup). 1, yes; 0, no
+    regidx_t *targets;     // Target regions.
     char *barcode_file;    // Name of the file containing a list of barcodes, one barcode per line.
     char **barcodes;       // Pointer to the array of barcodes.
     int nbarcode;          // Num of the barcodes.
@@ -86,6 +89,12 @@ struct _gll_settings {
 */
 #define use_umi(gs) ((gs)->umi_tag)
 
+/*@abstract  Whether to use target regions (-T).
+@param gs    Pointer of global settings structure [global_settings*]
+@return      1, yes; 0, no.
+*/
+#define use_target(gs) ((gs)->is_target)
+
 void gll_setting_free(global_settings *gs); 
 void gll_setting_print(FILE *fp, global_settings *gs, char *prefix);
 
@@ -116,7 +125,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs);
            a) the parameters are valid, i.e. mplp and gs must not be NULL. In fact, this function is supposed to be 
               called after csp_mplp_t is created and set names of sample-groups, so mplp, mplp->hsg could not be NULL.
            b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
-           c) each key (sample group name) in csp_map_sg_t already has a valid, not NULL, value (csp_plp_t*);
+           c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
               This usually can be done by calling csp_mplp_prepare().
         2. This function is expected to be used by Mode1 & Mode2 & Mode3.
 
