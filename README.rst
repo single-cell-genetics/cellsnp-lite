@@ -209,7 +209,7 @@ common variants (AF>5%) with this bash script_ and stored in this folder_.
 In case you want to lift over SNP positions in vcf file from one genome build 
 to another, see our `LiftOver_vcf`_ wrap function.
 
-.. _script: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/SNPlist_1Kgenome.sh
+.. _script: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/scripts/SNPlist_1Kgenome.sh
 .. _folder: https://sourceforge.net/projects/cellsnp/files/SNPlist/
 
 FAQ and releases
