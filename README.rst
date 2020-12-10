@@ -224,6 +224,6 @@ any issue_.
 .. _snapshot: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/manual.rst
 .. _gnomAD: http://gnomad.broadinstitute.org
 .. _1000_Genome_Project: http://www.internationalgenome.org
-.. _LiftOver_vcf: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/liftOver/liftOver_vcf.py
+.. _LiftOver_vcf: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/scripts/liftOver/liftOver_vcf.py
 .. _FAQ.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/FAQ.rst
 .. _issue: https://github.com/single-cell-genetics/cellsnp-lite/issues
