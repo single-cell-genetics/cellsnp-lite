@@ -1,3 +1,113 @@
+Manual
+======
+
+Quick usage
+-----------
+
+Once installed, check all arguments by type ``cellsnp-lite -h``. 
+There are three modes of cellsnp-lite:
+
+* **Mode 1: pileup with given SNPs**
+
+**Mode 1a: pileup droplet-based dataset (e.g., 10x Genomics) with given SNPs**
+
+Use both ``-R`` and ``-b``.
+
+Require: a single BAM/SAM/CRAM file, e.g., from cellranger, a list of cell barcodes,
+a VCF file for common SNPs. This mode is recommended comparing to mode 2, if a
+list of common SNP is known, e.g., human (see `Candidate_SNPs`_)
+
+.. _Candidate_SNPs: https://cellsnp-lite.readthedocs.io/en/latest/snp_list.html
+
+.. code-block:: bash
+
+  cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -R $REGION_VCF -p 20 --minMAF 0.1 --minCOUNT 20 --gzip
+
+As shown in the above command line, we recommend filtering SNPs with <20UMIs
+or <10% minor alleles for downstream donor deconvolution, by adding
+``--minMAF 0.1 --minCOUNT 20``
+
+Besides, special care needs to be taken when filtering PCR duplicates for scRNA-seq data by
+setting maxFLAG to a small value, for the upstream pipeline may mark each extra read sharing
+the same CB/UMI pair as PCR duplicate, which will result in most variant data being lost.
+Due to the reason above, cellsnp-lite by default uses a non-DUP exclFLAG value to include PCR
+duplicates for scRNA-seq data when UMItag is turned on.
+
+**Mode 1b: pileup well-based dataset (e.g., SMART-seq2) with given SNPs**
+
+Use ``-R`` but not ``-b``.
+
+Require: one or multiple BAM/SAM/CRAM files (bulk or smart-seq), their according
+sample ids (optional), and a VCF file for a list of common SNPs. BAM/SAM/CRAM files
+can be input in comma separated way (``-s``) or in a list file (``-S``).
+
+.. code-block:: bash
+
+  cellsnp-lite -s $BAM1,$BAM2 -I sample_id1,sample_id2 -O $OUT_DIR -R $REGION_VCF -p 20 --cellTAG None --UMItag None --gzip
+
+  cellsnp-lite -S $BAM_list_file -i sample_list_file -O $OUT_DIR -R $REGION_VCF -p 20 --cellTAG None --UMItag None --gzip
+
+Set filtering thresholds according to the downstream analysis. Please add
+``--UMItag None`` if your bam file does not have UMIs, e.g., smart-seq and bulk
+RNA-seq.
+
+* **Mode 2: pileup whole chromosome(s) without given SNPs**
+
+Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space and speed up inference
+when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
+
+Note, this mode may output false positive SNPs, for example somatic variants or falses caussed by
+RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence
+confounding the demultiplexing. Nevertheless, for species, e.g., zebrafish, without a good list of
+common SNPs, this strategy is still worth a good try.
+
+**Mode 2a: pileup whole chromosome(s) without given SNPs for droplet-based dataset (e.g., 10x Genomics)**
+
+Don't use ``-R`` but use ``-b``.
+
+This mode requires inputting a single BAM/SAM/CRAM file with cell barcoded (add ``-b``):
+
+.. code-block:: bash
+
+  # 10x sample with cell barcodes
+  cellsnp-lite -s $BAM -b $BARCODE -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --gzip
+
+Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
+
+**Mode 2b: pileup whole chromosome(s) without given SNPs for well-based dataset (e.g., SMART-seq2)**
+
+Don't use ``-R`` and ``-b``.
+
+This mode requires inputting one or multiple BAM/SAM/CRAM file(s) of bulk or smart-seq.
+
+.. code-block:: bash
+
+  # a bulk sample without cell barcodes and UMI tag
+  cellsnp-lite -s $bulkBAM -I Sample0 -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --cellTAG None --UMItag None --gzip
+
+Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
+
+Notes
+-----
+
+The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly
+caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed
+to be opened by system for single process), which is typically 1024. Specifically, in the
+case of ``M`` input files and ``N`` threads, cellsnp-lite would open in total about ``M*N`` files.
+So the issue would more likely happen when large M or N is given. In order to fix it, cellsnp-lite
+would firstly try to increase the limit to the max possible value (which is typically 4096) and
+then use a fail-retry strategy to auto detect the most suitable number of threads (which could
+be smaller than the original nthreads specified by user).
+
+The command line option ``--maxFLAG`` is now deprecated (since v1.0.0), please use ``--inclFLAG`` and
+``--exclFLAG`` instead, which are more flexible for reads filtering. You could refer to
+the explain_flags_ page to easily aggregate and convert all flag bits into one integer.
+One example is that the default exclFLAG value (without using UMIs) is 1796, which is
+calculated by adding four flag bits: UNMAP (4), SECONDARY (256), QCFAIL (512) and DUP (1024).
+
+.. _RLIMIT_NOFILE: https://man7.org/linux/man-pages/man2/getrlimit.2.html
+.. _explain_flags: https://broadinstitute.github.io/picard/explain-flags.html
+
 Full parameters
 ---------------
 Here is a list of full parameters for setting (``cellsnp-lite -V`` always give the 
@@ -46,3 +156,4 @@ version you are using):
   Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG" instead.
   You can easily aggregate and convert the flag mask bits to an integer by refering to:
   https://broadinstitute.github.io/picard/explain-flags.html
+

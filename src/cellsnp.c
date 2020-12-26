@@ -3,6 +3,8 @@
  */
 
 /* TODO: 
+- Fix the inline issue (error when compiled by gcc/clang and fixed by adding -fgnu89-inline CFLAG)
+- add -f option to use fasta
 - ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
   * as the linear searching assume that the bam has been sortted by start pos, then how to deal with the partly aligned reads
