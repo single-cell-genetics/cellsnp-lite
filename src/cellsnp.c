@@ -4,6 +4,7 @@
 
 /* TODO: 
 - Fix the inline issue (error when compiled by gcc/clang and fixed by adding -fgnu89-inline CFLAG)
+- support calling germline SNPs for multiple bam files?
 - add --max-depth for mode 2?
 - add -f option to use fasta?
 - add fetch  and pileup  sub-commands?
@@ -25,6 +26,15 @@
 - Output optionally qual values/letters to mtx file.
 - Deal with the problem that some UMIs have the letter 'N'.
  */
+
+/* Reference
+- htslib header files: https://github.com/samtools/htslib/tree/develop/htslib
+  mainly the sam.{h,c}, regidx.{h,c}, vcf.{h,c}, kstring.h, hts.{h,c} files
+- mpileup.c in bcftools: https://github.com/samtools/bcftools/blob/develop/mpileup.c
+- bam_plcmd.c in samtools: https://github.com/samtools/samtools/blob/develop/bam_plcmd.c
+  refer to the cmdline options in this file too.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
