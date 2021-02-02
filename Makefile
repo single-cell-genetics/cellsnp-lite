@@ -3,7 +3,7 @@ htslib_include_dir=$(htslib_dir)
 htslib_lib_dir=$(htslib_dir)
 
 CC=gcc
-CFLAGS=-g -Wall -O2 -Wno-unused-function -I$(htslib_include_dir)
+CFLAGS=-g -Wall -O2 -Wno-unused-function -fgnu89-inline -I$(htslib_include_dir)
 LDFLAGS=-L$(htslib_lib_dir)
 
 BIN_DIR=/usr/local/bin

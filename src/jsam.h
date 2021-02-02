@@ -54,7 +54,7 @@ inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t 
   */
 #define seq_nt16_char2int(c) (seq_nt16_idx2int(seq_nt16_char2idx(c)))
 
-const char csp_nt5_str[5];
+extern const char csp_nt5_str[5];
 
 /*@abstract  Convert index in "ACGTN" to a letter.
 @param i     Index in "ACGTN"

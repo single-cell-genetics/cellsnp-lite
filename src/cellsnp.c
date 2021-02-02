@@ -4,7 +4,10 @@
 
 /* TODO: 
 - Fix the inline issue (error when compiled by gcc/clang and fixed by adding -fgnu89-inline CFLAG)
-- add -f option to use fasta
+- support calling germline SNPs for multiple bam files?
+- add --max-depth for mode 2?
+- add -f option to use fasta?
+- add fetch  and pileup  sub-commands?
 - ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
   * as the linear searching assume that the bam has been sortted by start pos, then how to deal with the partly aligned reads
@@ -23,6 +26,15 @@
 - Output optionally qual values/letters to mtx file.
 - Deal with the problem that some UMIs have the letter 'N'.
  */
+
+/* Reference
+- htslib header files: https://github.com/samtools/htslib/tree/develop/htslib
+  mainly the sam.{h,c}, regidx.{h,c}, vcf.{h,c}, kstring.h, hts.{h,c} files
+- mpileup.c in bcftools: https://github.com/samtools/bcftools/blob/develop/mpileup.c
+- bam_plcmd.c in samtools: https://github.com/samtools/samtools/blob/develop/bam_plcmd.c
+  refer to the cmdline options in this file too.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
