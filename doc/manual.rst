@@ -126,6 +126,8 @@ version you are using):
     -O, --outDir DIR         Output directory for VCF and sparse matrices.
     -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.
                              If None, pileup the genome. Needed for bulk samples.
+    -T, --targetsVCF FILE    Similar as -R, but the next position is accessed by streaming rather
+                             than indexing/jumping (like -T in samtools/bcftools mpileup).
     -b, --barcodeFile FILE   A plain file listing all effective cell barcode.
     -i, --sampleList FILE    A list file containing sample IDs, each per line.
     -I, --sampleIDs STR      Comma separated sample ids.
