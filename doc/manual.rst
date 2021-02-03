@@ -74,6 +74,8 @@ This mode requires inputting a single BAM/SAM/CRAM file with cell barcoded (add 
 
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
 
+**Note**, besides Mode2a for joint calling and genotyping, it is substantially more efficient to call first in a bulk manner followed by genotyping in mode 1a. On the other hand, it is still handy for small chromosomes, e.g., mitochondrial.
+
 **Mode 2b: pileup whole chromosome(s) without given SNPs for well-based dataset (e.g., SMART-seq2)**
 
 Don't use ``-R`` and ``-b``.

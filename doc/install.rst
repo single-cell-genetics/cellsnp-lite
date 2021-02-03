@@ -39,8 +39,8 @@ Install from this Github Repo (latest stable/dev version)
 We recommend installing cellsnp-lite via conda, as described above. The method of compiling
 from source code (ie., installing from this repo) is described below:
 
-For better demonstration, the whole installation is assumed to be performed in a root dir
-``~/tools/`` (you could change this dir based on your demands)
+For better demonstration, the whole installation process is assumed to be performed under 
+a root dir ``~/tools/`` (you could change this dir based on your demands)
 
 Step 0: install dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,6 +62,7 @@ Following the `htslib_instruction`_, you could easily install htslib by
   autoconf       # ...and configure script (or use autoreconf to do both)
   ./configure    # Optional but recommended, for choosing extra functionality
   make
+  
   sudo make install   # Optional
 
 If htslib is successfully installed, there should be some executable files (e.g., bgzip) 
@@ -78,6 +79,7 @@ Once zlib and htslib have been installed, it's ready to compile cellsnp-lite,
   git clone https://github.com/single-cell-genetics/cellsnp-lite.git;
   cd cellsnp-lite;
   make;
+  
   sudo make install;   # Optional
 
 Step 2: one more step config
