@@ -54,6 +54,7 @@ install it with package management tools (eg., yum for CentOS).
 Following the `htslib_instruction`_, you could easily install htslib by
 
 .. code-block:: bash
+
   cd ~/tools     # The root dir
   git clone https://github.com/samtools/htslib.git
   cd htslib
@@ -72,6 +73,7 @@ Step 1: compiling cellsnp-lite
 Once zlib and htslib have been installed, it's ready to compile cellsnp-lite,
 
 .. code-block:: bash
+
   cd ~/tools           # The root dir
   git clone https://github.com/single-cell-genetics/cellsnp-lite.git;
   cd cellsnp-lite;
@@ -85,6 +87,7 @@ After compling cellsnp-lite, if you met the error ``error while loading shared l
 to proper value,
 
 .. code-block:: bash
+
   # in this example, abspath_to_htslib_dir is ~/tools/htslib
   echo 'export LD_LIBRARY_PATH=<abspath_to_htslib_dir>:$LD_LIBRARY_PATH' >> ~/.bashrc;
   source ~/.bashrc;

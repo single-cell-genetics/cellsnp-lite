@@ -83,7 +83,7 @@ Install from this Github Repo (latest stable/dev version)
 We recommend installing cellsnp-lite via conda, as described above. To compile from source code,
 you could refer to `install_from_repo`_.
 
-.. _install_from_repo: https://cellsnp-lite.readthedocs.io/en/latest/install.html
+.. _install_from_repo: https://cellsnp-lite.readthedocs.io/en/latest/install.html#install-from-this-github-repo-latest-stable-dev-version
   
 Manual
 ------
