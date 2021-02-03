@@ -82,6 +82,10 @@ Once zlib and htslib have been installed, it's ready to compile cellsnp-lite,
   
   sudo make install;   # Optional
 
+By default, this will build against an HTSlib source tree in ``../htslib``. You can alter this 
+to a source tree elsewhere or to a previously-installed HTSlib by running 
+``make htslib_dir=<path_to_htslib_dir>``.
+
 Step 2: one more step config
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
