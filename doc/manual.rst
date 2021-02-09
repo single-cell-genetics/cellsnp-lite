@@ -7,11 +7,19 @@ Quick usage
 Once installed, check all arguments by type ``cellsnp-lite -h``. 
 There are three modes of cellsnp-lite:
 
-* **Mode 1: pileup with given SNPs**
+Mode 1: pileup with given SNPs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This mode genotypes single cells or bulk sample at a list of given SNPs, which 
+could be common SNPs in human population (see `compiled candidate SNPs`_), or
+called heterouzygous variants from ``Mode 2b`` on it own.
 
-**Mode 1a: pileup droplet-based dataset (e.g., 10x Genomics) with given SNPs**
+.. _compiled candidate SNPs: snp_list.html
 
-Use both ``-R`` and ``-b``.
+
+Mode 1a: droplet-based single cells
++++++++++++++++++++++++++++++++++++
+
+Use both ``-R`` and ``-b`` to pileup droplet-based dataset (e.g., 10x Genomics) with given SNPs.
 
 Require: a single BAM/SAM/CRAM file, e.g., from cellranger, a list of cell barcodes,
 a VCF file for common SNPs. This mode is recommended comparing to mode 2, if a
@@ -33,9 +41,11 @@ the same CB/UMI pair as PCR duplicate, which will result in most variant data be
 Due to the reason above, cellsnp-lite by default uses a non-DUP exclFLAG value to include PCR
 duplicates for scRNA-seq data when UMItag is turned on.
 
-**Mode 1b: pileup well-based dataset (e.g., SMART-seq2) with given SNPs**
 
-Use ``-R`` but not ``-b``.
+Mode 1b: well-based single cells or bulk
+++++++++++++++++++++++++++++++++++++++++
+
+Use ``-R`` but not ``-b`` to pileup well-based dataset (e.g., SMART-seq2) with given SNPs.
 
 Require: one or multiple BAM/SAM/CRAM files (bulk or smart-seq), their according
 sample ids (optional), and a VCF file for a list of common SNPs. BAM/SAM/CRAM files
@@ -51,19 +61,26 @@ Set filtering thresholds according to the downstream analysis. Please add
 ``--UMItag None`` if your bam file does not have UMIs, e.g., smart-seq and bulk
 RNA-seq.
 
-* **Mode 2: pileup whole chromosome(s) without given SNPs**
+
+
+Mode 2: pileup whole chromosome(s) without given SNPs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space and speed up inference
 when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
 
-Note, this mode may output false positive SNPs, for example somatic variants or falses caussed by
-RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence
-confounding the demultiplexing. Nevertheless, for species, e.g., zebrafish, without a good list of
-common SNPs, this strategy is still worth a good try.
+.. note::
+   This mode may output false positive SNPs, for example somatic variants or falses caussed by
+   RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence
+   confounding the demultiplexing. Nevertheless, for species, e.g., zebrafish, without a good list of
+   common SNPs, this strategy is still worth a good try.
 
-**Mode 2a: pileup whole chromosome(s) without given SNPs for droplet-based dataset (e.g., 10x Genomics)**
 
-Don't use ``-R`` but use ``-b``.
+Mode 2a: droplet based single cells without given SNPs
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Don't use ``-R`` but use ``-b`` to pileup whole chromosome(s) without given SNPs 
+for droplet-based dataset (e.g., 10x Genomics).
 
 This mode requires inputting a single BAM/SAM/CRAM file with cell barcoded (add ``-b``):
 
@@ -74,11 +91,17 @@ This mode requires inputting a single BAM/SAM/CRAM file with cell barcoded (add 
 
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
 
-**Note**, besides Mode2a for joint calling and genotyping, it is substantially more efficient to call first in a bulk manner followed by genotyping in mode 1a. On the other hand, it is still handy for small chromosomes, e.g., mitochondrial.
+.. note::
+   ``Mode 2a`` does joint calling and genotyping, but it is substantially slower than 
+   calling first in a bulk manner by ``Mode 2b`` followed by genotyping in ``Mode 1a``. 
+   Otherwise, it is handy for small chromosomes, e.g., mitochondrial.
 
-**Mode 2b: pileup whole chromosome(s) without given SNPs for well-based dataset (e.g., SMART-seq2)**
 
-Don't use ``-R`` and ``-b``.
+Mode 2b: well-based single cells or bulk without SNPs
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Don't use ``-R`` and ``-b`` to pileup whole chromosome(s) without given SNPs 
+for well-based dataset (e.g., SMART-seq2).
 
 This mode requires inputting one or multiple BAM/SAM/CRAM file(s) of bulk or smart-seq.
 
@@ -88,6 +111,8 @@ This mode requires inputting one or multiple BAM/SAM/CRAM file(s) of bulk or sma
   cellsnp-lite -s $bulkBAM -I Sample0 -O $OUT_DIR -p 22 --minMAF 0.1 --minCOUNT 100 --cellTAG None --UMItag None --gzip
 
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
+
+
 
 Notes
 -----
