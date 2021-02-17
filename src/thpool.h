@@ -1,4 +1,6 @@
-/* Forked from github:Pithikos/C-Thread-Pool */
+/* this file is copied from github:Pithikos/C-Thread-Pool 
+ * Link: https://github.com/Pithikos/C-Thread-Pool/blob/master/thpool.h
+ */
 
 /**********************************
  * @author      Johan Hanssen Seferidis

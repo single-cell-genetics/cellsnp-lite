@@ -27,6 +27,7 @@
 @return      0 if success, -1 if error, 1 if the reads extracted are not in proper format, 2 if not passing filters.
 
 @note        1. This function is modified from cigar_resolve2() function in sam.c of htslib.
+                Link: https://github.com/samtools/htslib/blob/develop/sam.c#L4526
              2. Reads filtering is also applied inside this function, including:
                    UMI and cell tags, read mapping quality, mapping flag and length of bases within alignment.
              3. To speed up, parameters will not be checked, so the caller should guarantee the parameters are valid, i.e.
