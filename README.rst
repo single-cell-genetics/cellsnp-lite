@@ -11,10 +11,13 @@ cellsnp-lite
 .. |license| image:: https://anaconda.org/bioconda/cellsnp-lite/badges/license.svg
    :target: https://bioconda.github.io/recipes/cellsnp-lite/README.html
 
-cellsnp-lite aims to pileup the expressed alleles in single-cell or bulk RNA-seq 
+cellsnp-lite was initially designed to pileup the expressed alleles in 
+single-cell or bulk RNA-seq 
 data, which can be directly used for donor deconvolution in multiplexed 
 single-cell RNA-seq data, particularly with vireo_, which assigns cells to 
-donors and detects doublets, even without genotyping reference.
+donors and detects doublets, even without genotyping reference. Now besides
+RNA-seq data, cellsnp-lite could also be applied on DNA-seq and ATAC-seq 
+data, either in bulk or single-cell.
 
 cellsnp-lite heavily depends on htslib_. 
 This program should give very similar results as samtools/bcftools mpileup. 
@@ -29,7 +32,8 @@ Also, there are two major differences comparing to bcftools mpileup:
    SNPs and the downstream statistical model can take the full use of it.
 
 cellsnp-lite is the C version of cellSNP_, which is implemented in Python. Compared to 
-cellSNP, cellsnp-lite is basically more efficient with higher speed and less memory usage. 
+cellSNP, cellsnp-lite is basically more efficient with higher speed and less memory usage.
+Benchmarking results could be found in the `bench_paper`_.
 
 News
 ----
@@ -52,7 +56,8 @@ cellsnp-lite is implemented in C. You can install it via conda_ or from this git
 Install via conda (latest stable version)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This is the recommended way to install cellsnp-lite.
+This is the recommended way to install cellsnp-lite. Lacking the potential issues of 
+dependency, it's simple and fast if conda is available on the machine.
 
 Step 1: add config
 
@@ -99,8 +104,14 @@ FAQ and releases
 For troubleshooting, please have a look of `FAQ.rst`_, and we welcome reporting 
 any issue_.
 
+Citation
+--------
+Huang, X., & Huang, Y. (2021). Cellsnp-lite: an efficient tool for genotyping single cells. *bioRxiv*, 2020-12.
+
 .. _cellSNP: https://github.com/single-cell-genetics/cellSNP
 .. _vireo: https://github.com/huangyh09/vireo
 .. _htslib: https://github.com/samtools/htslib
 .. _FAQ.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/FAQ.rst
 .. _issue: https://github.com/single-cell-genetics/cellsnp-lite/issues
+.. _bench_paper: https://www.biorxiv.org/content/10.1101/2020.12.31.424913v1.full
+

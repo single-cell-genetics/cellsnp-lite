@@ -5,13 +5,13 @@ Quick usage
 -----------
 
 Once installed, check all arguments by type ``cellsnp-lite -h``. 
-There are three modes of cellsnp-lite:
+There are two modes of cellsnp-lite:
 
 Mode 1: pileup with given SNPs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 This mode genotypes single cells or bulk sample at a list of given SNPs, which 
 could be common SNPs in human population (see `compiled candidate SNPs`_), or
-called heterouzygous variants from ``Mode 2b`` on it own.
+called heterouzygous variants from ``Mode 2b`` on its own.
 
 .. _compiled candidate SNPs: snp_list.html
 
@@ -36,7 +36,7 @@ or <10% minor alleles for downstream donor deconvolution, by adding
 ``--minMAF 0.1 --minCOUNT 20``
 
 Besides, special care needs to be taken when filtering PCR duplicates for scRNA-seq data by
-setting maxFLAG to a small value, for the upstream pipeline may mark each extra read sharing
+including DUP bit in exclFLAG, for the upstream pipeline may mark each extra read sharing
 the same CB/UMI pair as PCR duplicate, which will result in most variant data being lost.
 Due to the reason above, cellsnp-lite by default uses a non-DUP exclFLAG value to include PCR
 duplicates for scRNA-seq data when UMItag is turned on.
@@ -70,7 +70,7 @@ Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space an
 when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
 
 .. note::
-   This mode may output false positive SNPs, for example somatic variants or falses caussed by
+   This mode may output false positive SNPs, for example somatic variants or falses caused by
    RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence
    confounding the demultiplexing. Nevertheless, for species, e.g., zebrafish, without a good list of
    common SNPs, this strategy is still worth a good try.

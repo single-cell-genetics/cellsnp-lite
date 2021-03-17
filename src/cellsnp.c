@@ -3,6 +3,7 @@
  */
 
 /* TODO: 
+- Update manual, cmd option and some source codes: we have two modes now instead of the original three modes
 - Fix the inline issue (error when compiled by gcc/clang and fixed by adding -fgnu89-inline CFLAG)
 - support calling germline SNPs for multiple bam files?
 - add --max-depth for mode 2?
