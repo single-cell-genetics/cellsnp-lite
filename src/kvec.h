@@ -1,4 +1,6 @@
-/* Forked from github:attractivechaos/klib */
+/* this file is copied from github:attractivechaos/klib 
+ * Link: https://github.com/attractivechaos/klib/blob/master/kvec.h
+ */
 
 /* The MIT License
 
