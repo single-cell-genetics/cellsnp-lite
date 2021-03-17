@@ -6,7 +6,8 @@ cellsnp-lite is implemented in C. You can install it via conda_ or from this git
 Install via conda (latest stable version)
 -----------------------------------------
 
-This is the recommended way to install cellsnp-lite.
+This is the recommended way to install cellsnp-lite. Lacking the potential issues of 
+dependency, it's simple and fast if conda is available on the machine.
 
 Step 1: add config
 ^^^^^^^^^^^^^^^^^^
@@ -39,66 +40,68 @@ Install from this Github Repo (latest stable/dev version)
 We recommend installing cellsnp-lite via conda, as described above. The method of compiling
 from source code (ie., installing from this repo) is described below:
 
-For better demonstration, the whole installation process is assumed to be performed under 
-a root dir ``~/tools/`` (you could change this dir based on your demands)
-
 Step 0: install dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-cellsnp-lite depends on `zlib`_ and `htslib`_. The two libs should have been installed into
-the system before installing cellsnp-lite. 
+cellsnp-lite mainly depends on `zlib`_ and `HTSlib`_ (v1.10.2+). Note that HTSlib 
+has some extra dependencies: ``liblzma``, ``libbz2``, ``libcurl``, and 
+``libcrypto``. The whole list of dependencies of building cellsnp-lite is:
 
-You could often find that zlib has already been installed in your system. If not, it's easy to 
-install it with package management tools (eg., yum for CentOS). 
+- gcc (have tested v4.8.5 on CentOS 7)
+- autoreconf
+- zlib
+- HTSlib >= 1.10.2
+- liblzma
+- libbz2
+- libcurl
+- libcrypto
 
-Following the `htslib_instruction`_, you could easily install htslib by
+All dependencies should have been installed into the system before installing cellsnp-lite.
 
-.. code-block:: bash
-
-  cd ~/tools     # The root dir
-  git clone https://github.com/samtools/htslib.git
-  cd htslib
-  autoheader     # If using configure, generate the header template...
-  autoconf       # ...and configure script (or use autoreconf to do both)
-  ./configure    # Optional but recommended, for choosing extra functionality
-  make
-  
-  sudo make install   # Optional
-
-If htslib is successfully installed, there should be some executable files (e.g., bgzip) 
-and library files (eg., libhts.so) in htslib dir.
+If you already have a pre-installed HTSlib then go to next step. Otherwise, a common way 
+to install HTSlib is building from its Github repo following this `HTSlib_instruction`_.
+When HTSlib is successfully installed, there should be some executable files (e.g., bgzip) 
+and library files (eg., libhts.a and libhts.so) in htslib dir.
 
 Step 1: compiling cellsnp-lite
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once zlib and htslib have been installed, it's ready to compile cellsnp-lite,
+Once all dependencies have been installed, it's ready to compile cellsnp-lite,
 
 .. code-block:: bash
 
-  cd ~/tools           # The root dir
-  git clone https://github.com/single-cell-genetics/cellsnp-lite.git;
-  cd cellsnp-lite;
-  make;
+  git clone https://github.com/single-cell-genetics/cellsnp-lite.git
+  cd cellsnp-lite
+  autoreconf -iv
+  ./configure     # Needed for choosing optional functionality
+  make
   
-  sudo make install;   # Optional
+  make install    # Optional, may need sudo privilege
 
-By default, this will build against an HTSlib source tree in ``../htslib``. You can alter this 
-to a source tree elsewhere or to a previously-installed HTSlib by running 
-``make htslib_dir=<path_to_htslib_dir>``.
+By default, this will either build against a pre-installed HTSlib in ``../htslib`` 
+or build with a HTSlib in a system library path (eg., ``/usr/lib``). You can alter 
+this to a pre-installed HTSlib elsewhere by configuring with ``--with-htslib=DIR``.
+The ``DIR`` should be either a dir containing a source tree with libhts.a/libhts.so
+being in ``DIR``, or a dir containing ``include`` and ``lib`` subdirs with 
+libhts.a/libhts.so being in ``DIR/lib``.
 
-Step 2: one more step config
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Possible issue
+**************
 
-After compling cellsnp-lite, if you met the error ``error while loading shared libraries: libhts.so.3`` when running cellsnp-lite, you could fix this by setting environment variable ``LD_LIBRARY_PATH``
-to proper value,
+Compilation in Step 1 prefers ``libhts.a`` than ``libhts.so`` for linking HTSlib. In rare
+cases that the libhts.a does not exist and libhts.so has to be used for linking, the 
+issue ``error while loading shared libraries: libhts.so.3`` could happen when running 
+cellsnp-lite, if HTSlib is not in system library path (eg., /usr/lib).
+
+The issue, if happed, could be fixed by adding abspath to the dir containing libhts.so
+to the environment variable ``LD_LIBRARY_PATH``,
 
 .. code-block:: bash
 
-  # in this example, abspath_to_htslib_dir is ~/tools/htslib
-  echo 'export LD_LIBRARY_PATH=<abspath_to_htslib_dir>:$LD_LIBRARY_PATH' >> ~/.bashrc;
-  source ~/.bashrc;
+  echo 'export LD_LIBRARY_PATH=<abspath_to_htslib_dir>:$LD_LIBRARY_PATH' >> ~/.bashrc
+  source ~/.bashrc
 
 .. _zlib: http://zlib.net/
-.. _htslib: https://github.com/samtools/htslib
-.. _htslib_instruction: https://github.com/samtools/htslib#building-htslib
+.. _HTSlib: https://github.com/samtools/htslib
+.. _HTSlib_instruction: https://github.com/samtools/htslib#building-htslib
 
