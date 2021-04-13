@@ -83,7 +83,8 @@ or build with a HTSlib in a system library path (eg., ``/usr/lib``). You can alt
 this to a pre-installed HTSlib elsewhere by configuring with ``--with-htslib=DIR``.
 The ``DIR`` should be either a dir containing a source tree with libhts.a/libhts.so
 being in ``DIR``, or a dir containing ``include`` and ``lib`` subdirs with 
-libhts.a/libhts.so being in ``DIR/lib``.
+libhts.a/libhts.so being in ``DIR/lib``. Note that ``DIR`` must be absolute path and
+please use ``/home/<user>`` instead of ``~`` if needed.
 
 Possible issue
 **************
