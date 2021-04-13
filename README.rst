@@ -33,7 +33,11 @@ Also, there are two major differences comparing to bcftools mpileup:
 
 cellsnp-lite is the C version of cellSNP_, which is implemented in Python. Compared to 
 cellSNP, cellsnp-lite is basically more efficient with higher speed and less memory usage.
-Benchmarking results could be found in the `preprint`_.
+Benchmarking results could be found in the `preprint`_. Note, the old version, together
+with the latest version, of benchmarking scripts are now both in a new repo 
+`csp_benchmark`_.
+
+.. _csp_benchmark: https://github.com/hxj5/csp-benchmark
 
 News
 ----
