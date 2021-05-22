@@ -52,6 +52,15 @@ A pre-compiled candidate SNP list for human is at `Candidate_SNPs`_.
 .. _doc/speed.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/doc/speed.rst
 .. _Candidate_SNPs: https://cellsnp-lite.readthedocs.io/en/latest/snp_list.html
 
+Citation
+--------
+
+If you find cellsnp-lite is useful for your research, please cite:
+
+Xianjie Huang, Yuanhua Huang, Cellsnp-lite: an efficient tool for genotyping single cells, Bioinformatics, 2021;, btab358, https://doi.org/10.1093/bioinformatics/btab358
+
+(previously cellsnp-lite has a `preprint`_ on bioRxiv)
+
 Installation
 ------------
 
@@ -107,12 +116,6 @@ FAQ and releases
 ----------------
 For troubleshooting, please have a look of `FAQ.rst`_, and we welcome reporting 
 any issue_.
-
-Citation
---------
-
-| Now a `preprint`_:
-Huang, X., & Huang, Y. (2021). Cellsnp-lite: an efficient tool for genotyping single cells. *bioRxiv*, 2020-12.
 
 .. _cellSNP: https://github.com/single-cell-genetics/cellSNP
 .. _vireo: https://github.com/huangyh09/vireo
