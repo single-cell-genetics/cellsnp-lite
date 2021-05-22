@@ -8,5 +8,7 @@ Home
    install
    manual
    snp_list
+   citation
    release
    FAQ
+

@@ -72,7 +72,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
  */
 int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
     char **sgnames;
-    int i, nsg;
+    int i, nsg, r;
     csp_plp_t *plp;
     /* init HashMap, pool of ul, pool of uu for mplp. */
     mplp->hsg = map_sg_init();
@@ -91,7 +91,11 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
     if (use_barcodes(gs)) { sgnames = gs->barcodes; nsg = gs->nbarcode; }
     else if (use_sid(gs)) { sgnames = gs->sample_ids; nsg = gs->nsid; }
     else { fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); return -1; }  // should not come here!
-    if (csp_mplp_set_sg(mplp, sgnames, nsg) < 0) { fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); return -1; }
+    if ((r = csp_mplp_set_sg(mplp, sgnames, nsg)) < 0) { 
+        if (r == -2) { fprintf(stderr, "[W::%s] duplicate barcodes or sample IDs.\n", __func__); }
+        fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); 
+        return -1; 
+    }
     /* init plp for each sample group in mplp->hsg and init HashMap plp->hug for UMI grouping. */
     for (i = 0; i < nsg; i++) {
         if (NULL == (plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]))) { 

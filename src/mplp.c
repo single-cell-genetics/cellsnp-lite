@@ -296,8 +296,9 @@ int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     for (i = 0; i < n; i++) {
         if (s[i]) { 
             k = map_sg_put(p->hsg, s[i], &r); 
-            if (r <= 0) { csp_mplp_destroy(p); return -1; } /* r = 0 means repeatd sgnames. */
-            else { map_sg_val(p->hsg, k) = NULL; }
+            if (r > 0) { map_sg_val(p->hsg, k) = NULL; }
+            else if (r < 0) { return -1; } 
+            else { return -2; } /* r = 0 means repeatd sgnames. */
         } else { return -1; }
     }
     /* Storing iter index for each sg (sample group) name must be done after all sg names have been pushed into 

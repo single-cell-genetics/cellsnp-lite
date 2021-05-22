@@ -8,6 +8,7 @@
 - support calling germline SNPs for multiple bam files?
 - add --max-depth for mode 2?
 - add -f option to use fasta?
+  * add fixref and fix-mtx?
 - add fetch  and pileup  sub-commands?
 - ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
