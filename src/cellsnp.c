@@ -9,6 +9,10 @@
 - add --max-depth for mode 2?
 - add -f option to use fasta?
   * add fixref and fix-mtx?
+  * !! WARNING !! in mode 1, the output could contain Homozygous SNV even with --minMAF 0.3. e.g., assuming one input SNV has
+    REF/ALT - A/C, while the two real alleles are C/G with AF 0.6/0.4, then this SNV would pass --minMAF 0.3
+    and the genotype is 1/1 (as REF is A, ALT is C), while the real genotype should be 1/2 (as two alt alleles C,G).
+    (SNVs of this kind are not so many in practice? - in a recent case, only 158 out of 133k SNVs)
 - add fetch  and pileup  sub-commands?
 - ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
