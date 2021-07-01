@@ -153,6 +153,11 @@ int main() {
     return 0;
 }
  */
+
+// TODO: use umi:array(list_uu_t*) pair to save memory
+// specifically, the array is a[5] with each element being
+// a list_uu_t* and the umi_unit_t could be changed to
+// struct { int8_t qual; }.
 KHASH_MAP_INIT_STR(ug, list_uu_t*)
 typedef khash_t(ug) map_ug_t;
 #define map_ug_iter khiter_t

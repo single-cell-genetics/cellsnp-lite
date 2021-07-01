@@ -535,6 +535,11 @@ int csp_pileup(global_settings *gs) {
         // construct csp_bam_fs
         d->bfs = bam_fs; d->nfs = nfs;
         // construct hts_itr_t
+        // we choose to create all hts_itrs here instead of creating several required hts_itrs in each thread
+        // because in this way we could destroy all idx & hdr before running each thread to save memory as
+        // idx & hdr are not needed for bam_mplp_auto() in each thread.
+        // But in csp_fetch, the idx & hdr cannot be removed before running each thread as they are required
+        // by sam_itr_queryi() in each thread.
         iter = (hts_itr_t***) calloc(d->m, sizeof(hts_itr_t**));
         if (NULL == iter) { fprintf(stderr, "[E::%s] failed to allocate space for hts_itr_t***\n", __func__); goto fail; }
         for (niter = 0; niter < d->m; niter++) {
