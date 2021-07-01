@@ -6,6 +6,7 @@
 - Update manual, cmd option and some source codes: we have two modes now instead of the original three modes
 - Fix the inline issue (error when compiled by gcc/clang and fixed by adding -fgnu89-inline CFLAG)
 - support calling germline SNPs for multiple bam files?
+  * in bulk mode
 - add --max-depth for mode 2?
 - add -f option to use fasta?
   * add fixref and fix-mtx?
@@ -25,7 +26,7 @@
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
 - Write test scripts for some key functions.
 - Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
-  * update map_ut_t first!
+  * update map_ug_t first!
 - More filters could be applied when extracting/fetching reads.
 - Improve the jfile_t structure, for example, adding @p is_error.
 - Improve the JMEMPOOL structure, for example, adding @p base_init_f.
