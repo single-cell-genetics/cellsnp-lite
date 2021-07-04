@@ -323,6 +323,13 @@ typedef khash_t(sg) map_sg_t;
     }												\
 }
 
+//TODO: use kstring_t instead of char* in mplp_t::su as its base element type.
+//Previously, we use a pool (actually as a array) to store all UMI strings (char*)
+//pushed to plp_t::hug for easy management (mainly for easier free of the 
+//UMI strings after each round of pileup). The overhead of frequent create (with @func 
+//strdup and free (with @func free()) may be high. Using kstring_t is expected to
+//largely reduce this overhead
+
 /*@abstract  The structure stores the stat info of all sample groups for certain query pos.
 @param ref_idx  Index of ref in "ACGTN". Negative number means not valid value.
 @param alt_idx  Index of alt in "ACGTN". Negative number means not valid value.

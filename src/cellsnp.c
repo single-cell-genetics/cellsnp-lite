@@ -14,19 +14,20 @@
     REF/ALT - A/C, while the two real alleles are C/G with AF 0.6/0.4, then this SNV would pass --minMAF 0.3
     and the genotype is 1/1 (as REF is A, ALT is C), while the real genotype should be 1/2 (as two alt alleles C,G).
     (SNVs of this kind are not so many in practice? - in a recent case, only 158 out of 133k SNVs)
+- Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
+  * update map_ug_t first!
+- update mplp_t::su and plp_t::hug
+- Output vcf header according to input bam header
+- Write test scripts for some key functions.
 - add fetch  and pileup  sub-commands?
 - ?change -T method, use qsort & linear search instead of regidx_t of htslib:
   * note the bug of qsort in lower version of glibc, refer to https://sourceware.org/bugzilla/show_bug.cgi?id=11655)
   * as the linear searching assume that the bam has been sortted by start pos, then how to deal with the partly aligned reads
     and one read in paired reads aligned to query chrom.
 - Try multi-process (process pool) for multi input samples
-- Output vcf header according to input bam header
 - separate htsFile from csp_bam_fs as it cannot be shared among threads
 - merge csp_fetch() and csp_pileup() for the two functions share most codes?
 - Try using multi_iter fetching method of bam/sam/cram for multi regions (SNPs) if it can in theory speed cellsnp up.
-- Write test scripts for some key functions.
-- Consistency correction could be done in UMI groups with the help of @p pu & @p pl inside mplp structure.
-  * update map_ug_t first!
 - More filters could be applied when extracting/fetching reads.
 - Improve the jfile_t structure, for example, adding @p is_error.
 - Improve the JMEMPOOL structure, for example, adding @p base_init_f.
