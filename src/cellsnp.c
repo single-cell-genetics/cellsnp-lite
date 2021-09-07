@@ -3,7 +3,6 @@
  */
 
 /* TODO: 
-- Update manual, cmd option and some source codes: we have two modes now instead of the original three modes
 - support calling germline SNPs for multiple bam files?
   * in bulk mode
 - add --max-depth for mode 2?
@@ -95,68 +94,63 @@ static void gll_set_default(global_settings *gs) {
     }
 }
 
-static inline int run_mode1(global_settings *gs) { return csp_fetch(gs); }
-static inline int run_mode2(global_settings *gs) { return csp_pileup(gs); }
-static inline int run_mode3(global_settings *gs) { return csp_fetch(gs); }
+static inline int run_mode1a(global_settings *gs)   { return csp_fetch(gs); }
+static inline int run_mode1a_T(global_settings *gs) { return csp_pileup(gs); }
+static inline int run_mode1b(global_settings *gs)   { return csp_fetch(gs); }
+static inline int run_mode1b_T(global_settings *gs) { return csp_pileup(gs); }
+static inline int run_mode2a(global_settings *gs)   { return csp_pileup(gs); }
+static inline int run_mode2b(global_settings *gs)   { return csp_pileup(gs); }
 
 static void print_usage(FILE *fp) {
     char *tmp_require = bam_flag2str(CSP_INCL_FMASK);
     char *tmp_filter_umi  = bam_flag2str(CSP_EXCL_FMASK_UMI);
     char *tmp_filter_noumi = bam_flag2str(CSP_EXCL_FMASK_NOUMI);
 
-    fprintf(fp, 
-        "\n"
-        "Usage: %s [options]\n", CSP_NAME);
-    fprintf(fp,
-        "\n"
-        "Options:\n"
-        "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n"
-        "                       Mode 1&2: one sam/bam file with single cell.\n"
-        "                       Mode 3: one or multiple bulk sam/bam files,\n"
-        "                       no barcodes needed, but sample ids and regionsVCF.\n"
-        "  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.\n"
-        "  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n"
-        "  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n" 
-        "                           If None, pileup the genome. Needed for bulk samples.\n"
-        "  -T, --targetsVCF FILE    Similar as -R, but the next position is accessed by streaming rather\n"
-        "                           than indexing/jumping (like -T in samtools/bcftools mpileup).\n"
-        "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n"
-        "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n"
-        "  -I, --sampleIDs STR      Comma separated sample ids.\n"
-        "  -V, --version            Print software version and exit.\n"
-        "  -h, --help               Show this help message and exit.\n"
-        "\n"
-        "Optional arguments:\n"
-        "  --genotype           If use, do genotyping in addition to counting.\n"
-        "  --gzip               If use, the output files will be zipped into BGZF format.\n"
-        "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Usage: %s [options]\n", CSP_NAME);
+    fprintf(fp, "\n");
+    fprintf(fp, "Options:\n");
+    fprintf(fp, "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n");
+    fprintf(fp, "                       Mode 1a & 2a: one sam/bam file with single cell.\n");
+    fprintf(fp, "                       Mode 1b & 2b: one or multiple bulk sam/bam files,\n");
+    fprintf(fp, "                       no barcodes needed, but sample ids and regionsVCF.\n");
+    fprintf(fp, "  -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 1b & 2b.\n");
+    fprintf(fp, "  -O, --outDir DIR         Output directory for VCF and sparse matrices.\n");
+    fprintf(fp, "  -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.\n");
+    fprintf(fp, "                           If None, pileup the genome. Needed for bulk samples.\n");
+    fprintf(fp, "  -T, --targetsVCF FILE    Similar as -R, but the next position is accessed by streaming rather\n");
+    fprintf(fp, "                           than indexing/jumping (like -T in samtools/bcftools mpileup).\n");
+    fprintf(fp, "  -b, --barcodeFile FILE   A plain file listing all effective cell barcode.\n");
+    fprintf(fp, "  -i, --sampleList FILE    A list file containing sample IDs, each per line.\n");
+    fprintf(fp, "  -I, --sampleIDs STR      Comma separated sample ids.\n");
+    fprintf(fp, "  -V, --version            Print software version and exit.\n");
+    fprintf(fp, "  -h, --help               Show this help message and exit.\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Optional arguments:\n");
+    fprintf(fp, "  --genotype           If use, do genotyping in addition to counting.\n");
+    fprintf(fp, "  --gzip               If use, the output files will be zipped into BGZF format.\n");
+    fprintf(fp, "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
     fprintf(fp, "  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
     fprintf(fp, "  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
     fprintf(fp, "  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
-    fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n"
-                "                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
+    fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n");
+    fprintf(fp, "                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
     fprintf(fp, "  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
     fprintf(fp, "  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
     fprintf(fp, "  --doubletGL          If use, keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5.\n");
     fprintf(fp, "\n");
     fprintf(fp, "Read filtering:\n");
     fprintf(fp, "  --inclFLAG STR|INT   Required flags: skip reads with all mask bits unset [%s]\n", tmp_require);
-    fprintf(fp, "  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n"
-                "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_umi, tmp_filter_noumi);
+    fprintf(fp, "  --exclFLAG STR|INT   Filter flags: skip reads with any mask bits set [%s\n", tmp_filter_umi);
+    fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
-/*
-    fprintf(fp,
-"  --maxFLAG INT        Maximum FLAG for read filtering [%d (when use UMI) or %d (otherwise)]\n", \
-                        CSP_MAX_FLAG_WITH_UMI, CSP_MAX_FLAG_WITHOUT_UMI);
-*/
-    fputs(
-        "\n"
-        "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\" instead.\n"
-        "You can easily aggregate and convert the flag mask bits to an integer by refering to:\n"
-        "https://broadinstitute.github.io/picard/explain-flags.html\n", fp);
-    fputc('\n', fp);
+    fprintf(fp, "\n");
+    fprintf(fp, "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\"\n");
+    fprintf(fp, "instead. You can easily aggregate and convert the flag mask bits to an integer by refering to:\n");
+    fprintf(fp, "https://broadinstitute.github.io/picard/explain-flags.html\n");
+    fprintf(fp, "\n");
 
     free(tmp_require); 
     free(tmp_filter_umi); 
@@ -519,9 +513,12 @@ int main(int argc, char **argv) {
     gs.out_vcf_base->fm = "ab";
     if (gs.is_genotype) { gs.out_vcf_cells->fm = "ab"; }
     /* run based on the mode of input. 
-        Mode1: pileup a list of SNPs for a single BAM/SAM file with barcodes.
-        Mode2: pileup whole chromosome(s) for one or multiple BAM/SAM files
-        Mode3: pileup a list of SNPs for one or multiple BAM/SAM files with sample IDs.
+        Mode 1a: fetch a list of SNPs for a single BAM/SAM file with barcodes.
+        Mode 1a(-T): pileup a list of SNPs for a single BAM/SAM file with barcodes.
+        Mode 1b: fetch a list of SNPs for one or multiple BAM/SAM files with sample IDs.
+        Mode 1b(-T): pileup a list of SNPs for one or multiple BAM/SAM files with sample IDs.
+        Mode 2a: pileup whole chromosome(s) for a single BAM/SAM file with barcodes.
+        Mode 2b: pileup whole chromosome(s) for one or multiple BAM/SAM files with sample IDs.
     */
     if (gs.snp_list_file) {
         fprintf(stderr, "[I::%s] loading the VCF file for given SNPs ...\n", __func__);
@@ -568,26 +565,34 @@ int main(int argc, char **argv) {
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
             }
-            if (gs.barcodes) { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
-            else { fprintf(stderr, "[I::%s] modeT: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
-            if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode T failed.\n", __func__); print_time = 1; goto fail; }
+            if (gs.barcodes) { 
+                fprintf(stderr, "[I::%s] mode 1a(-T): pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
+                if (run_mode1a_T(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1a(-T) failed.\n", __func__); print_time = 1; goto fail; }
+            } else { 
+                fprintf(stderr, "[I::%s] mode 1b(-T): pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
+                if (run_mode1b_T(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1b(-T) failed.\n", __func__); print_time = 1; goto fail; }
+            }
         } else {
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
                 print_time = 1; goto fail;
             } else { fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, snplist_size(gs.pl)); }
             if (gs.barcodes) { 
-                fprintf(stderr, "[I::%s] mode 1: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
-                if (run_mode1(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1 failed.\n", __func__); print_time = 1; goto fail; } 
+                fprintf(stderr, "[I::%s] mode 1a: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
+                if (run_mode1a(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1a failed.\n", __func__); print_time = 1; goto fail; } 
             } else { 
-                fprintf(stderr, "[I::%s] mode 3: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
-                if (run_mode3(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 3 failed.\n", __func__); print_time = 1; goto fail; } 
+                fprintf(stderr, "[I::%s] mode 1b: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
+                if (run_mode1b(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 1b failed.\n", __func__); print_time = 1; goto fail; } 
             }
         }
     } else if (gs.chroms) { 
-        if (gs.barcodes) { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode); }
-        else { fprintf(stderr, "[I::%s] mode2: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin); }
-        if (run_mode2(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2 failed.\n", __func__); print_time = 1; goto fail; }
+        if (gs.barcodes) { 
+            fprintf(stderr, "[I::%s] mode 2a: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
+            if (run_mode2a(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2a failed.\n", __func__); print_time = 1; goto fail; }
+        } else {
+            fprintf(stderr, "[I::%s] mode 2b: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
+            if (run_mode2b(&gs) < 0) { fprintf(stderr, "[E::%s] running mode 2b failed.\n", __func__); print_time = 1; goto fail; }
+        }
     } else {
         fprintf(stderr, "[E::%s] no proper mode to run, check input options.\n", __func__);
         print_usage(stderr);

@@ -118,7 +118,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
            b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
            c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
               This usually can be done by calling csp_mplp_prepare().
-        2. This function is expected to be used by Mode1 & Mode2 & Mode3.
+        2. This function is expected to be used by Mode1 & Mode2.
 
 @discuss  In current version, only the result (base and qual) of the first read in one UMI group will be used for mplp statistics.
           TODO: store results of all reads in one UMI group (maybe could do consistency correction in each UMI group) and then 

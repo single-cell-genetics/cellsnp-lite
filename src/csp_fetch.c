@@ -164,7 +164,7 @@ static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pil
                   0 if success, 1 if error of other threads.
                   -1, undefined errno in this thread.
                   -2, open error in this thread.
-             3. This function could be used by Mode1 and Mode3.		 
+             3. This function could be used by Mode1a and Mode1b.		 
  */
 static size_t csp_fetch_core(void *args) {
     thread_data *d = (thread_data*) args;

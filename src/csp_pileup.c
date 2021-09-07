@@ -176,7 +176,7 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
                   0 if success, 1 if error of other threads.
                   -1, undefined errno in this thread.
                   -2, open error in this thread.
-             2. This function could be used by Mode2.
+             2. This function could be used by Mode2 & Mode1a(-T) & Mode1b(-T).
              3. Refering to @func mpileup from bam_plcmd.c in @repo samtools, the @p mp_iter, @p mp_plp and
                 @p mp_n do not need to be reset every time calling bam_mplp_auto(). Guess that there may be 
                 memory pools inside bam_mplp_* for these structures.
