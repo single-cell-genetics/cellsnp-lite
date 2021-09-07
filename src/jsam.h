@@ -21,13 +21,13 @@
 @note        If the translation failed, this function will try "<name> - chr" if name starts with "chr", try
              "chr + <name>" otherwise. 
  */
-inline int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s);
+int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s);
 
 /*@abstract  Convert chrom name to be the same with the one in sam header. 
 @return      Pointer to ref/chrom name if success, NULL otherwise.
 @note        No need to free the returned char* pointer when success.
 */
-inline const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s);
+const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s);
 
 /*@abstract   The two functions below convert raw cigar op/len value to real value.
 @param c      Raw cigar op/len value stored in bam1_t, can be an element of cigar array obtained by bam_get_cigar(b) [uint32_t].
@@ -82,6 +82,6 @@ extern const char csp_nt5_str[5];
 @note   1. To speed up, the caller should guarantee parameters b and tag are valid. 
         2. The data of the pointer returned by this function is part of bam1_t, so do not double free!
  */
-inline char* get_bam_aux_str(bam1_t *b, const char tag[2]);
+char* get_bam_aux_str(bam1_t *b, const char tag[2]);
 
 #endif

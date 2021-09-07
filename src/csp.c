@@ -213,9 +213,9 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
 * BAM/SAM/CRAM File API
  */
 
-inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
+csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
 
-inline void csp_bam_fs_destroy(csp_bam_fs* p) {
+void csp_bam_fs_destroy(csp_bam_fs* p) {
     if (p) {
         if (p->idx) { hts_idx_destroy(p->idx); }
         if (p->hdr) { sam_hdr_destroy(p->hdr); }
@@ -231,11 +231,11 @@ inline void csp_bam_fs_destroy(csp_bam_fs* p) {
 /*@note      The pointer returned successfully by thdata_init() should be freed
              by thdata_destroy() when no longer used.
  */
-inline thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
+thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
 
-inline void thdata_destroy(thread_data *p) { free(p); }
+void thdata_destroy(thread_data *p) { free(p); }
 
-inline void thdata_print(FILE *fp, thread_data *p) {
+void thdata_print(FILE *fp, thread_data *p) {
     fprintf(fp, "\tm = %ld, n = %ld\n", p->m, p->n);
     fprintf(fp, "\ti = %d, ret = %d\n", p->i, p->ret);
 }
@@ -243,7 +243,7 @@ inline void thdata_print(FILE *fp, thread_data *p) {
 /*
  * File Routine
  */
-inline jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
+jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
     jfile_t *t;
     if (NULL == (t = jf_init())) { return NULL; }
     ksprintf(s, "%s.%d", fs->fn, idx); 
@@ -270,7 +270,7 @@ jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip) {
     return NULL; 
 }
 
-inline int destroy_tmp_files(jfile_t **fs, const int n) {
+int destroy_tmp_files(jfile_t **fs, const int n) {
     int i, m;
     m = jf_remove_all(fs, n);
     for (i = 0; i < n; i++) { jf_destroy(fs[i]); }

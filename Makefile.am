@@ -24,9 +24,7 @@ cellsnp_lite_SOURCES = src/cellsnp.c src/csp.c \
 ##   with configure options
 cellsnp_lite_CPPFLAGS = -Isrc @HTSLIB_CPPFLAGS@
 
-## The -fgnu89-inline option is set because of the `inline` issue
-## TODO: delete the `inline` modifier in header files and corresponding source files
-cellsnp_lite_CFLAGS = -g -Wall -O2 -Wno-unused-function -fgnu89-inline
+cellsnp_lite_CFLAGS = -g -Wall -O2 -Wno-unused-function
 
 ## The -pthread option is forced to be added to _LDFLAGS by autoreconf
 cellsnp_lite_LDFLAGS = @HTSLIB_LDFLAGS@ -pthread
