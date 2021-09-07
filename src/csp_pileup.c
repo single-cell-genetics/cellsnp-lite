@@ -176,7 +176,7 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
                   0 if success, 1 if error of other threads.
                   -1, undefined errno in this thread.
                   -2, open error in this thread.
-             2. This function could be used by Mode2.
+             2. This function could be used by Mode2 & Mode1a(-T) & Mode1b(-T).
              3. Refering to @func mpileup from bam_plcmd.c in @repo samtools, the @p mp_iter, @p mp_plp and
                 @p mp_n do not need to be reset every time calling bam_mplp_auto(). Guess that there may be 
                 memory pools inside bam_mplp_* for these structures.
@@ -535,6 +535,11 @@ int csp_pileup(global_settings *gs) {
         // construct csp_bam_fs
         d->bfs = bam_fs; d->nfs = nfs;
         // construct hts_itr_t
+        // we choose to create all hts_itrs here instead of creating several required hts_itrs in each thread
+        // because in this way we could destroy all idx & hdr before running each thread to save memory as
+        // idx & hdr are not needed for bam_mplp_auto() in each thread.
+        // But in csp_fetch, the idx & hdr cannot be removed before running each thread as they are required
+        // by sam_itr_queryi() in each thread.
         iter = (hts_itr_t***) calloc(d->m, sizeof(hts_itr_t**));
         if (NULL == iter) { fprintf(stderr, "[E::%s] failed to allocate space for hts_itr_t***\n", __func__); goto fail; }
         for (niter = 0; niter < d->m; niter++) {

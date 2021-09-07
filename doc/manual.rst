@@ -141,15 +141,15 @@ Here is a list of full parameters for setting (``cellsnp-lite -V`` always give t
 version you are using):
 
 .. code-block:: html
-
+  
   Usage: cellsnp-lite [options]
   
   Options:
     -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.
-                         Mode 1&2: one sam/bam file with single cell.
-                         Mode 3: one or multiple bulk sam/bam files,
+                         Mode 1a & 2a: one sam/bam file with single cell.
+                         Mode 1b & 2b: one or multiple bulk sam/bam files,
                          no barcodes needed, but sample ids and regionsVCF.
-    -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 3.
+    -S, --samFileList FILE   A list file containing bam files, each per line, for Mode 1b & 2b.
     -O, --outDir DIR         Output directory for VCF and sparse matrices.
     -R, --regionsVCF FILE    A vcf file listing all candidate SNPs, for fetch each variants.
                              If None, pileup the genome. Needed for bulk samples.
@@ -182,7 +182,7 @@ version you are using):
     --minMAPQ INT        Minimum MAPQ for read filtering [20]
     --countORPHAN        If use, do not skip anomalous read pairs.
   
-  Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG" instead.
-  You can easily aggregate and convert the flag mask bits to an integer by refering to:
+  Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG"
+  instead. You can easily aggregate and convert the flag mask bits to an integer by refering to:
   https://broadinstitute.github.io/picard/explain-flags.html
 

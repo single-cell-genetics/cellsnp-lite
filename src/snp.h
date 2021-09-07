@@ -27,9 +27,9 @@ typedef struct {
 @note        The pointer returned successfully by snp_init() should be freed
              by snp_destroy() when no longer used.
  */
-inline snp_t* snp_init(void);
-inline void snp_destroy(snp_t *p); 
-inline void snp_reset(snp_t *p); 
+snp_t* snp_init(void);
+void snp_destroy(snp_t *p); 
+void snp_reset(snp_t *p); 
 
 /*@abstract  A list containing of several pointers to the snp_t structure.
 @param a     Array of snp_t* pointers.
@@ -80,8 +80,8 @@ typedef struct {
     int8_t ref, alt;
 } biallele_t;
 
-inline biallele_t* biallele_init(void);
-inline void biallele_destroy(biallele_t *p);
-inline void biallele_reset(biallele_t *p);
+biallele_t* biallele_init(void);
+void biallele_destroy(biallele_t *p);
+void biallele_reset(biallele_t *p);
 
 #endif

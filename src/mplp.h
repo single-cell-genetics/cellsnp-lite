@@ -47,19 +47,19 @@ typedef struct {
               2. The pointer returned successfully by csp_pileup_init() should be freed
                  by csp_pileup_destroy() when no longer used.
  */
-inline csp_pileup_t* csp_pileup_init(void); 
+csp_pileup_t* csp_pileup_init(void); 
 
-inline void csp_pileup_destroy(csp_pileup_t *p); 
+void csp_pileup_destroy(csp_pileup_t *p); 
 
 /* reset the csp_pileup_t structure without reallocating memory.
    return 0 if success, -1 otherwise. */
-inline int csp_pileup_reset(csp_pileup_t *p);
+int csp_pileup_reset(csp_pileup_t *p);
 
 /* only reset part of the csp_pileup_t as values of parameters in other parts will be immediately overwritten after
    calling this function. It's often called by pileup_read_with_fetch(). */
-inline void csp_pileup_reset_(csp_pileup_t *p); 
+void csp_pileup_reset_(csp_pileup_t *p); 
 
-inline void csp_pileup_print(FILE *fp, csp_pileup_t *p);
+void csp_pileup_print(FILE *fp, csp_pileup_t *p);
 
 /*@abstract   Pool that stores char*. The real elements in the pool are char**.
 @example      Refer to the example of JMEMPOOL in general_util.h.
@@ -84,9 +84,9 @@ typedef struct {
     int8_t base, qual;
 } umi_unit_t;
 
-inline umi_unit_t* umi_unit_init(void);
+umi_unit_t* umi_unit_init(void);
 #define umi_unit_reset(p)
-inline void umi_unit_destroy(umi_unit_t *p);
+void umi_unit_destroy(umi_unit_t *p);
 
 /*@abstract   Pool that stores umi_unit_t structures. The real elements in the pool are pointers to the umi_unit_t structures.
               The pool is aimed to save the overhead of reallocating memories for umi_unit_t structures.
@@ -113,7 +113,7 @@ typedef jmempool_t(uu) pool_uu_t;
            which is different from kv_xxx functions.
  */
 typedef kvec_t(umi_unit_t*) list_uu_t;
-inline list_uu_t* list_uu_init(void);
+list_uu_t* list_uu_init(void);
 #define list_uu_resize(v, size) kv_resize(umi_unit_t*, *(v), size)
 #define list_uu_push(v, x) kv_push(umi_unit_t*, *(v), x)
 #define list_uu_A(v, i) kv_A(*(v), i)
@@ -153,6 +153,11 @@ int main() {
     return 0;
 }
  */
+
+// TODO: use umi:array(list_uu_t*) pair to save memory
+// specifically, the array is a[5] with each element being
+// a list_uu_t* and the umi_unit_t could be changed to
+// struct { int8_t qual; }.
 KHASH_MAP_INIT_STR(ug, list_uu_t*)
 typedef khash_t(ug) map_ug_t;
 #define map_ug_iter khiter_t
@@ -205,7 +210,7 @@ typedef kvec_t(int8_t) list_qu_t;
 @reference     1. http://emea.support.illumina.com/bulletins/2016/04/fastq-files-explained.html
                2. https://linkinghub.elsevier.com/retrieve/pii/S0002-9297(12)00478-8 
 */
-inline int get_qual_vector(double qual, double cap_bq, double min_bq, double *rv);
+int get_qual_vector(double qual, double cap_bq, double min_bq, double *rv);
 
 /*@abstract     Internal function to translate qual matrix to vector of GL.
 @param qm       Qual matrix: 5-by-4, columns are [1-Q, 3/4-2/3Q, 1/2-1/3Q, Q]. See csp_plp_t::qmat
@@ -233,7 +238,10 @@ int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_i
 
 @note           It's usually called when the input pos has no ref or alt.
  */
-inline void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
+void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
+
+// infer alt index when the ref is known.
+void infer_alt(size_t *bc, int8_t ref_idx, int8_t *alt_idx);
 
 /*@abstract  The structure that store pileup info of one cell/sample for certain query pos.
 @param bc    Total read count for each base in the order of 'ACGTN'.
@@ -260,9 +268,9 @@ typedef struct {
 } csp_plp_t;
 
 /* note that the @p qu is also initialized after calling calloc(). */
-inline csp_plp_t* csp_plp_init(void); 
-inline void csp_plp_destroy(csp_plp_t *p); 
-inline void csp_plp_reset(csp_plp_t *p);
+csp_plp_t* csp_plp_init(void); 
+void csp_plp_destroy(csp_plp_t *p); 
+void csp_plp_reset(csp_plp_t *p);
 
 /*@abstract    Print the content to csp_plp_t to stream.
 @param fp      Pointer of stream.
@@ -318,6 +326,13 @@ typedef khash_t(sg) map_sg_t;
     }												\
 }
 
+//TODO: use kstring_t instead of char* in mplp_t::su as its base element type.
+//Previously, we use a pool (actually as a array) to store all UMI strings (char*)
+//pushed to plp_t::hug for easy management (mainly for easier free of the 
+//UMI strings after each round of pileup). The overhead of frequent create (with @func 
+//strdup and free (with @func free()) may be high. Using kstring_t is expected to
+//largely reduce this overhead
+
 /*@abstract  The structure stores the stat info of all sample groups for certain query pos.
 @param ref_idx  Index of ref in "ACGTN". Negative number means not valid value.
 @param alt_idx  Index of alt in "ACGTN". Negative number means not valid value.
@@ -358,9 +373,9 @@ typedef struct {
              2. The valid pointer returned by this function should be freed by csp_mplp_destroy() function
                    when no longer used.
  */
-inline csp_mplp_t* csp_mplp_init(void); 
-inline void csp_mplp_destroy(csp_mplp_t *p); 
-inline void csp_mplp_reset(csp_mplp_t *p);
+csp_mplp_t* csp_mplp_init(void); 
+void csp_mplp_destroy(csp_mplp_t *p); 
+void csp_mplp_reset(csp_mplp_t *p);
 
 /*@abstract    Print the content to csp_mplp_t to stream.
 @param fp      Pointer of stream.
@@ -370,7 +385,7 @@ inline void csp_mplp_reset(csp_mplp_t *p);
  */
 void csp_mplp_print(FILE *fp, csp_mplp_t *p, char *prefix);
 
-inline void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix);
+void csp_mplp_print_(FILE *fp, csp_mplp_t *p, char *prefix);
 
 /*@abstract  Set sample group names for the csp_mplp_t structure.
 @param p     Pointer to the csp_mplp_t structure.
@@ -390,9 +405,9 @@ int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n);
 @param s     Pointer of kstring_t which stores the formatted string.
 @return      0 if success, -1 otherwise.
  */
-inline int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s);
+int csp_mplp_str_vcf(csp_mplp_t *mplp, kstring_t *s);
 
-inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s);
+int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s);
 
 /*@abstract    Format the content of csp_mplp_t of certain query pos to string in the output sparse matrices file.
 @param mplp    Pointer of the csp_mplp_t structure corresponding to the pos.
@@ -402,7 +417,7 @@ inline int csp_mplp_to_vcf(csp_mplp_t *mplp, jfile_t *s);
 @param idx     Index of the SNP/mplp (1-based).
 @return        0 if success, -1 otherwise.
  */
-inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth, size_t idx);
+int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth, size_t idx);
 
 /*@abstract    Format the content of csp_mplp_t of certain query pos to string in the tmp output sparse matrices file.
 @param mplp    Pointer of the csp_mplp_t structure corresponding to the pos.
@@ -413,7 +428,7 @@ inline int csp_mplp_str_mtx(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp
 
 @note          This function is used for tmp files.
  */
-inline int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth);
+int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, kstring_t *ks_oth);
 
 int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *fs_oth, size_t idx); 
 
@@ -426,15 +441,15 @@ typedef size_t mtx_value_t;
 typedef int mtx_iter_t;
 typedef mtx_value_t (*mtx_value_func_t)(csp_mplp_t*, csp_plp_t*);
 
-inline mtx_value_t mtx_value_AD(csp_mplp_t *mplp, csp_plp_t *plp) {
+mtx_value_t mtx_value_AD(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->ad;
 }
 
-inline mtx_value_t mtx_value_DP(csp_mplp_t *mplp, csp_plp_t *plp) {
+mtx_value_t mtx_value_DP(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->dp;
 }
 
-inline mtx_value_t mtx_value_OTH(csp_mplp_t *mplp, csp_plp_t *plp) {
+mtx_value_t mtx_value_OTH(csp_mplp_t *mplp, csp_plp_t *plp) {
     return plp->oth;
 }
 
@@ -442,7 +457,7 @@ static mtx_iter_t mtx_ntags = 3;
 static char *mtx_tags[] = {"AD", "DP", "OTH"};
 static mtx_value_func_t mtx_value_funcs[] = { &mtx_value_AD, &mtx_value_DP, &mtx_value_OTH };
 
-inline char* csp_get_mtx_fn(char *tag) {
+char* csp_get_mtx_fn(char *tag) {
     kstring_t ks = KS_INITIALIZE;
     ksprintf(&ks, "cellSNP.tag.%s.mtx", tag);
     char *p = strdup(ks_str(&ks));
@@ -450,7 +465,7 @@ inline char* csp_get_mtx_fn(char *tag) {
     return p;
 }
 
-inline mtx_iter_t csp_get_mtx_idx(char *tag) {
+mtx_iter_t csp_get_mtx_idx(char *tag) {
     mtx_iter_t i;
     for (i = 0; i < mtx_ntags; i++) {
         if (0 == strcmp(tag, mtx_tags[i])) { return i; }
@@ -458,18 +473,18 @@ inline mtx_iter_t csp_get_mtx_idx(char *tag) {
     return -1;
 }
 
-inline mtx_value_func_t csp_get_mtx_value_func(mtx_iter_t i) { return mtx_value_funcs[i]; }
+mtx_value_func_t csp_get_mtx_value_func(mtx_iter_t i) { return mtx_value_funcs[i]; }
 
 typedef struct {
     char *out_fn;
     mtx_value_func_t vfunc;
 } mtx_tag_fs;
 
-inline mtx_tag_fs* mtx_tag_fs_init(void) {
+mtx_tag_fs* mtx_tag_fs_init(void) {
     return (mtx_tag_fs*) calloc(1, sizeof(mtx_tag_fs));
 }
 
-inline void mtx_tag_fs_destroy(mtx_tag_fs *p) {
+void mtx_tag_fs_destroy(mtx_tag_fs *p) {
     if (p) { free(p->out_fn); free(p); }
 }
 #endif

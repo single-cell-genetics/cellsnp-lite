@@ -118,7 +118,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
            b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
            c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
               This usually can be done by calling csp_mplp_prepare().
-        2. This function is expected to be used by Mode1 & Mode2 & Mode3.
+        2. This function is expected to be used by Mode1 & Mode2.
 
 @discuss  In current version, only the result (base and qual) of the first read in one UMI group will be used for mplp statistics.
           TODO: store results of all reads in one UMI group (maybe could do consistency correction in each UMI group) and then 
@@ -184,9 +184,11 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     if (mplp->tc < gs->min_count) { return 1; }
     infer_allele(mplp->bc, &mplp->inf_rid, &mplp->inf_aid);   // must be called after mplp->bc are completely calculated.
     if (mplp->bc[mplp->inf_aid] < mplp->tc * gs->min_maf) { return 1; }
-    if (mplp->ref_idx < 0 || mplp->alt_idx < 0) {  // ref or alt is not valid. Refer to csp_mplp_t.
+    if (mplp->ref_idx < 0) {  // ref is not valid. Refer to csp_mplp_t.
         mplp->ref_idx = mplp->inf_rid;
         mplp->alt_idx = mplp->inf_aid;
+    } else if (mplp->alt_idx < 0) {  // alt is not valid
+        infer_alt(mplp->bc, mplp->ref_idx, &mplp->alt_idx);
     }
     mplp->ad = mplp->bc[mplp->alt_idx]; mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad; mplp->oth = mplp->tc - mplp->dp;
     for (i = 0; i < mplp->nsg; i++) {
@@ -211,9 +213,9 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
 * BAM/SAM/CRAM File API
  */
 
-inline csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
+csp_bam_fs* csp_bam_fs_init(void) { return (csp_bam_fs*) calloc(1, sizeof(csp_bam_fs)); }
 
-inline void csp_bam_fs_destroy(csp_bam_fs* p) {
+void csp_bam_fs_destroy(csp_bam_fs* p) {
     if (p) {
         if (p->idx) { hts_idx_destroy(p->idx); }
         if (p->hdr) { sam_hdr_destroy(p->hdr); }
@@ -229,11 +231,11 @@ inline void csp_bam_fs_destroy(csp_bam_fs* p) {
 /*@note      The pointer returned successfully by thdata_init() should be freed
              by thdata_destroy() when no longer used.
  */
-inline thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
+thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
 
-inline void thdata_destroy(thread_data *p) { free(p); }
+void thdata_destroy(thread_data *p) { free(p); }
 
-inline void thdata_print(FILE *fp, thread_data *p) {
+void thdata_print(FILE *fp, thread_data *p) {
     fprintf(fp, "\tm = %ld, n = %ld\n", p->m, p->n);
     fprintf(fp, "\ti = %d, ret = %d\n", p->i, p->ret);
 }
@@ -241,7 +243,7 @@ inline void thdata_print(FILE *fp, thread_data *p) {
 /*
  * File Routine
  */
-inline jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
+jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s) {
     jfile_t *t;
     if (NULL == (t = jf_init())) { return NULL; }
     ksprintf(s, "%s.%d", fs->fn, idx); 
@@ -268,7 +270,7 @@ jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip) {
     return NULL; 
 }
 
-inline int destroy_tmp_files(jfile_t **fs, const int n) {
+int destroy_tmp_files(jfile_t **fs, const int n) {
     int i, m;
     m = jf_remove_all(fs, n);
     for (i = 0; i < n; i++) { jf_destroy(fs[i]); }

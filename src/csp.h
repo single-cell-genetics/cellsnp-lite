@@ -127,7 +127,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs);
            b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
            c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
               This usually can be done by calling csp_mplp_prepare().
-        2. This function is expected to be used by Mode1 & Mode2 & Mode3.
+        2. This function is expected to be used by Mode1 & Mode2.
 
 @discuss  In current version, only the result (base and qual) of the first read in one UMI group will be used for mplp statistics.
           TODO: store results of all reads in one UMI group (maybe could do consistency correction in each UMI group) and then 
@@ -163,8 +163,8 @@ typedef struct {
 @note    The pointer returned successfully by csp_bam_fs_init() should be freed
          by csp_bam_fs_destroy() when no longer used.
  */
-inline csp_bam_fs* csp_bam_fs_init(void);
-inline void csp_bam_fs_destroy(csp_bam_fs* p);
+csp_bam_fs* csp_bam_fs_init(void);
+void csp_bam_fs_destroy(csp_bam_fs* p);
 
 /* 
  * Thread operatoins API/routine
@@ -206,9 +206,9 @@ typedef struct {
 @note        The pointer returned successfully by thdata_init() should be freed
              by thdata_destroy() when no longer used.
  */
-inline thread_data* thdata_init(void);
-inline void thdata_destroy(thread_data *p);
-inline void thdata_print(FILE *fp, thread_data *p);
+thread_data* thdata_init(void);
+void thdata_destroy(thread_data *p);
+void thdata_print(FILE *fp, thread_data *p);
 
 /*
  * File Routine
@@ -221,7 +221,7 @@ inline void thdata_print(FILE *fp, thread_data *p);
 @param s       Pointer of kstring_t.
 @return        Pointer to jfile_t for tmp file if success, NULL otherwise.
  */
-inline jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s);
+jfile_t* create_tmp_fs(jfile_t *fs, int idx, int is_zip, kstring_t *s);
 
 /*@abstract    Create array of tmp filen structures based on the given file structure.
 @param fs      The file struct that the tmp file structs are based on.
@@ -236,7 +236,7 @@ jfile_t** create_tmp_files(jfile_t *fs, int n, int is_zip);
 @param n     Size of array.
 @return      Num of tmp files that are removed if no error, -1 otherwise.
  */
-inline int destroy_tmp_files(jfile_t **fs, const int n);
+int destroy_tmp_files(jfile_t **fs, const int n);
 
 /*@abstract   Merge several tmp sparse matrices files.
 @param out    Pointer of file structure merged into.

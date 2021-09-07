@@ -2,6 +2,18 @@
 History
 =======
 
+Release v1.2.1 (07/09/2021)
+===========================
+* implement infering ALT when REF is provided in vcf, which could avoid wrong 
+  genotypes (e.g., 1/1 -> 0/0; or 1/2 -> 0/1) caused by a lack of input REF.
+* fix a bug of double free csp_mplp_t in csp_mplp_prepare()
+* update with 2 modes instead of initial 3 modes.
+* compile: fix the inline issue without the -fgnu89-inline option.
+* compile: linking libhts.a has higher priority than linking libhts.so
+* compile: add configure using autotools.
+* add readthedoc.
+* add benchmark directory and scripts.
+
 Release v1.2.0 (04/12/2020)
 ===========================
 * add -T cmdline option, which is similar with samtools/bcftools mpileup -T for

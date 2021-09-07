@@ -18,13 +18,13 @@
 /*@note      The pointer returned successfully by snp_init() should be freed
              by snp_destroy() when no longer used.
  */
-inline snp_t* snp_init(void) { return (snp_t*) calloc(1, sizeof(snp_t)); }
+snp_t* snp_init(void) { return (snp_t*) calloc(1, sizeof(snp_t)); }
 
-inline void snp_destroy(snp_t *p) { 
+void snp_destroy(snp_t *p) { 
     if (p) { free(p->chr); free(p); } 
 }
 
-inline void snp_reset(snp_t *p) {
+void snp_reset(snp_t *p) {
     if (p) { free(p->chr); memset(p, 0, sizeof(snp_t)); }
 }
 
@@ -99,6 +99,6 @@ size_t get_snplist_from_vcf(const char *fn, snplist_t *pl, int *ret, int print_s
 /*
  * Bi-Allele API
  */
-inline biallele_t* biallele_init(void) { return (biallele_t*) calloc(1, sizeof(biallele_t)); }
-inline void biallele_destroy(biallele_t *p) { if (p) { free(p); } }
-inline void biallele_reset(biallele_t *p) {}
+biallele_t* biallele_init(void) { return (biallele_t*) calloc(1, sizeof(biallele_t)); }
+void biallele_destroy(biallele_t *p) { if (p) { free(p); } }
+void biallele_reset(biallele_t *p) {}
