@@ -184,9 +184,11 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     if (mplp->tc < gs->min_count) { return 1; }
     infer_allele(mplp->bc, &mplp->inf_rid, &mplp->inf_aid);   // must be called after mplp->bc are completely calculated.
     if (mplp->bc[mplp->inf_aid] < mplp->tc * gs->min_maf) { return 1; }
-    if (mplp->ref_idx < 0 || mplp->alt_idx < 0) {  // ref or alt is not valid. Refer to csp_mplp_t.
+    if (mplp->ref_idx < 0) {  // ref is not valid. Refer to csp_mplp_t.
         mplp->ref_idx = mplp->inf_rid;
         mplp->alt_idx = mplp->inf_aid;
+    } else if (mplp->alt_idx < 0) {  // alt is not valid
+        infer_alt(mplp->bc, mplp->ref_idx, &mplp->alt_idx);
     }
     mplp->ad = mplp->bc[mplp->alt_idx]; mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad; mplp->oth = mplp->tc - mplp->dp;
     for (i = 0; i < mplp->nsg; i++) {

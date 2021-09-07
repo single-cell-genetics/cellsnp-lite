@@ -240,6 +240,9 @@ int qual_matrix_to_geno(double qm[][4], size_t *bc, int8_t ref_idx, int8_t alt_i
  */
 inline void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx);
 
+// infer alt index when the ref is known.
+inline void infer_alt(size_t *bc, int8_t ref_idx, int8_t *alt_idx);
+
 /*@abstract  The structure that store pileup info of one cell/sample for certain query pos.
 @param bc    Total read count for each base in the order of 'ACGTN'.
 @param tc    Total read count for all bases.

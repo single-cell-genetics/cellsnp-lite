@@ -129,6 +129,17 @@ inline void infer_allele(size_t *bc, int8_t *ref_idx, int8_t *alt_idx) {
     *ref_idx = k1; *alt_idx = k2;
 }
 
+inline void infer_alt(size_t *bc, int8_t ref_idx, int8_t *alt_idx) {
+    int8_t i, k;
+    size_t m = 0;   
+    for (i = 0, k = -1; i < 5; i++) {
+        if (ref_idx == i) { continue; }
+        if (bc[i] > m) { k = i; m = bc[i]; }
+    }
+    if (-1 == k) { *alt_idx = ref_idx == 0 ? 1 : 0; }
+    else { *alt_idx = k; }
+}
+
 /* note that the @p qu is also initialized after calling calloc(). */
 inline csp_plp_t* csp_plp_init(void) { return (csp_plp_t*) calloc(1, sizeof(csp_plp_t)); }
 
