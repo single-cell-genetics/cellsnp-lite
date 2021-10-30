@@ -135,30 +135,30 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
 {
     const bam_pileup1_t *bp = NULL;
     int i, j, r, ret, st, state = -1;
-    size_t npushed = 0;
+    size_t npush1;
   #if DEBUG
     size_t npileup = 0;
   #endif
-    for (i = 0; i < nfs; i++) {
+    for (i = 0, npush1 = 0; i < nfs; i++, npush1 = 0) {
         for (j = 0; j < mp_n[i]; j++) {
             bp = mp_plp[i] + j;
           #if DEBUG
             npileup++;
           #endif
+            if (npush1 >= gs->max_depth) { npush1 = 0; break; }
             if (0 == (st = pileup_read(pos, bp, pileup, gs))) { // no need to reset pileup as the values in it will be immediately overwritten.
                 if (use_barcodes(gs)) { r = csp_mplp_push(pileup, mplp, -1, gs); }
                 else if (use_sid(gs)) { r = csp_mplp_push(pileup, mplp, i, gs); }
                 else { state = -1; goto fail; }
-                if (r < 0) { state = -1; goto fail; }  // else if r == 1: pileuped barcode is not in the input barcode list.
-                else if (r == 0) { npushed++; }
+                if (r < 0) { state = -1; goto fail; }  
+                else if (r == 0) { npush1++; }   // else if r > 0: do nothing
             } else if (st < 0) { state = -1; goto fail; }
         }
     }
   #if DEBUG
-    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
+    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; the mplp is:\n", __func__, npileup);
     csp_mplp_print_(stderr, mplp, "\t");
   #endif
-    if (npushed < gs->min_count) { state = 1; goto fail; }
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) { state = (ret > 0) ? 1 : -1; goto fail; }
   #if DEBUG
     fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);
@@ -300,14 +300,9 @@ static int csp_pileup_core(void *args) {
     /* pileup each SNP. 
     */
     // init mpileup 
-    if (gs->max_depth <= 0) {
-        max_depth = INT_MAX;
-        fprintf(stderr, "[W::%s] Max depth set to maximum value (%d)\n", __func__, INT_MAX);
-    } else {
-        max_depth = gs->max_depth;
-        if (max_depth > (1 << 20) / (float) nfs) {
-            fprintf(stderr, "[W::%s] Combined max depth is above 1M. Potential memory hog!\n", __func__);
-        }
+    max_depth = INT_MAX;
+    if (gs->max_depth > (1 << 20) / (float) nfs) {
+        fprintf(stderr, "[W::%s] Combined max depth is above 1M. Potential memory hog!\n", __func__);
     }
     for (msnp = nsnp = 0; n < d->m; n++, msnp = nsnp = 0) {
       #if CSP_FIT_MULTI_SMP

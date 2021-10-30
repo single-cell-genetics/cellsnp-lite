@@ -8,7 +8,6 @@
   * get_qual_vector() in mplp.c.
 - support calling germline SNPs for multiple bam files?
   * in bulk mode
-- add --max-depth for mode 2?
 - add -f option to use fasta?
   * add fixref and fix-mtx?
   * !! WARNING !! in mode 1, the output could contain Homozygous SNV even with --minMAF 0.3. e.g., assuming one input SNV has
@@ -50,6 +49,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/resource.h>
@@ -148,7 +148,7 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    //fprintf(fp, "  --maxDepth INT       Maximum depth for read filtering [%s]\n",
+    fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file; 0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
     fprintf(fp, "\n");
     fprintf(fp, "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\"\n");
@@ -272,6 +272,11 @@ static int check_args(global_settings *gs) {
         if (getrlimit(RLIMIT_NOFILE, &r) < 0) { fprintf(stderr, "[E::%s] getrlimit error.\n", __func__); return -2; }
         gs->tp_max_open = (int) r.rlim_cur;
     }
+    // check max-depth
+    if (gs->max_depth <= 0) {
+        gs->max_depth = INT_MAX;
+        fprintf(stderr, "[W::%s] Max depth set to maximum value (%d)\n", __func__, INT_MAX);
+    }
     return 0;
 }
 
@@ -359,7 +364,10 @@ int main(int argc, char **argv) {
         {"printSkipSNPs", no_argument, NULL, 13},
         {"inclFLAG", required_argument, NULL, 14},
         {"exclFLAG", required_argument, NULL, 15},
-        {"countORPHAN", no_argument, NULL, 16}
+        {"countORPHAN", no_argument, NULL, 16},
+        {"maxDEPTH", required_argument, NULL, 17},
+        {"maxDepth", required_argument, NULL, 17},
+        {"maxdepth", required_argument, NULL, 17}
     };
     if (1 == argc) { print_usage(stderr); goto fail; }
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:", lopts, NULL)) != -1) {
@@ -429,6 +437,7 @@ int main(int argc, char **argv) {
                         goto fail;
                     } else { break; }
             case 16: gs.no_orphan = 0; break;
+            case 17: gs.max_depth = atoi(optarg); break;
             default:  fprintf(stderr,"Invalid option: '%c'\n", c); goto fail;													
         }
     }
@@ -626,3 +635,4 @@ int main(int argc, char **argv) {
     }
     return 1;
 }
+

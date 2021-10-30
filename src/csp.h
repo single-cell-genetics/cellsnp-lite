@@ -5,7 +5,6 @@
 #define CSP_CSP_H
 
 #include <stdio.h>
-#include <limits.h>
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
 #include "htslib/regidx.h"
@@ -181,12 +180,13 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs);
 @param mplp    Pointer of csp_mplp_t structure pushing into.
 @param sid     Index of Sample ID in the input Sample IDs.
 @param gs      Pointer of global_settings structure.
-@return        0 if success;
+@return        0 if successfully pushed one new record;
                Negative numbers for error:
                  -1, neither barcodes or Sample IDs are used.
                  -2, khash_put error.
                Positive numbers for warning:
                  1, cell-barcode is not in input barcode-list;
+                 2, umi has already been pushed before;
 
 @note   1. To speed up, the caller should guarantee that:
            a) the parameters are valid, i.e. mplp and gs must not be NULL. In fact, this function is supposed to be 

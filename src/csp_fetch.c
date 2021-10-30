@@ -108,14 +108,14 @@ static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pil
     csp_bam_fs *bs = NULL;
     hts_itr_t *iter = NULL;
     int i, tid, r, ret, st, state = -1;
-    size_t npushed = 0;
+    size_t npush1;
     kstring_t ks = KS_INITIALIZE, *s = &ks;
   #if DEBUG
     size_t npileup = 0;
   #endif
     mplp->ref_idx = snp->ref ? seq_nt16_char2int(snp->ref) : -1;
     mplp->alt_idx = snp->alt ? seq_nt16_char2int(snp->alt) : -1;
-    for (i = 0; i < nfs; i++) {
+    for (i = 0, npush1 = 0; i < nfs; i++, npush1 = 0) {
         bs = fs[i];
         tid = csp_sam_hdr_name2id(bs->hdr, snp->chr, s);
         ks_clear(s);
@@ -125,22 +125,22 @@ static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pil
           #if DEBUG
             npileup++;
           #endif
+            if (npush1 >= gs->max_depth) { npush1 = 0; break; }
             if (0 == (st = fetch_read(snp->pos, pileup, gs))) { // no need to reset pileup as the values in it will be immediately overwritten.
                 if (use_barcodes(gs)) { r = csp_mplp_push(pileup, mplp, -1, gs); }
                 else if (use_sid(gs)) { r = csp_mplp_push(pileup, mplp, i, gs); }
                 else { state = -1; goto fail; }
-                if (r < 0) { state = -1; goto fail; }  // else if r == 1: pileuped barcode is not in the input barcode list.
-                else if (r == 0) { npushed++; }
+                if (r < 0) { state = -1; goto fail; }  
+                else if (r == 0) { npush1++; }  // else if r > 0: do nothing
             } else if (st < 0) { state = -1; goto fail; }
         }
         if (ret < -1) { state = -1; goto fail; } 
         else { hts_itr_destroy(iter); iter = NULL; }  // TODO: check if could reset iter?
     }
   #if DEBUG
-    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; npushed = %ld; the mplp is:\n", __func__, npileup, npushed);
+    fprintf(stderr, "[D::%s] before mplp statistics: npileup = %ld; the mplp is:\n", __func__, npileup);
     csp_mplp_print_(stderr, mplp, "\t");
   #endif
-    if (npushed < gs->min_count) { state = 1; goto fail; }
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) { state = (ret > 0) ? 1 : -1; goto fail; }
   #if DEBUG
     fprintf(stderr, "[D::%s] after mplp statistics: the mplp is:\n", __func__);

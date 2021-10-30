@@ -156,7 +156,7 @@ int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settin
             idx = seq_nt16_idx2int(pileup->base);
             plp->bc[idx]++;
             list_qu_push(plp->qu[idx], pileup->qual);
-        } // else: do nothing.
+        } else { return 2; } // umi has already been pushed before
     } else {
         idx = seq_nt16_idx2int(pileup->base);
         plp->bc[idx]++;
