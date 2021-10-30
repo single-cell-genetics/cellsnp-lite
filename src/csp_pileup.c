@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 #include "thpool.h"
 #include "htslib/sam.h"
 #include "config.h"
@@ -299,11 +300,11 @@ static int csp_pileup_core(void *args) {
     /* pileup each SNP. 
     */
     // init mpileup 
-    if (gs->plp_max_depth <= 0) {
+    if (gs->max_depth <= 0) {
         max_depth = INT_MAX;
         fprintf(stderr, "[W::%s] Max depth set to maximum value (%d)\n", __func__, INT_MAX);
     } else {
-        max_depth = gs->plp_max_depth;
+        max_depth = gs->max_depth;
         if (max_depth > (1 << 20) / (float) nfs) {
             fprintf(stderr, "[W::%s] Combined max depth is above 1M. Potential memory hog!\n", __func__);
         }

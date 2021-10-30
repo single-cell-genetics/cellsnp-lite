@@ -3,6 +3,9 @@
  */
 
 /* TODO: 
+- add --max-base-qual option to set max per base quality for genotyping
+  * in htslib, per base qualities are stored in the Phred scale with no +33 offset.
+  * get_qual_vector() in mplp.c.
 - support calling germline SNPs for multiple bam files?
   * in bulk mode
 - add --max-depth for mode 2?
@@ -90,7 +93,7 @@ static void gll_set_default(global_settings *gs) {
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
         //gs->max_flag = -1;
         gs->rflag_filter = -1; gs->rflag_require = CSP_INCL_FMASK;
-        gs->plp_max_depth = CSP_PLP_MAX_DEPTH; gs->no_orphan = CSP_NO_ORPHAN;
+        gs->max_depth = CSP_MAX_DEPTH; gs->no_orphan = CSP_NO_ORPHAN;
     }
 }
 
@@ -145,6 +148,7 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
+    //fprintf(fp, "  --maxDepth INT       Maximum depth for read filtering [%s]\n",
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
     fprintf(fp, "\n");
     fprintf(fp, "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\"\n");
