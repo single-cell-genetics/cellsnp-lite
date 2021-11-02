@@ -1,4 +1,4 @@
-/* Global configure
+/* config.h - Global configure
  * Author: Xianjie Huang <hxj5@hku.hk>
  */
 #ifndef CSP_CONFIG_H

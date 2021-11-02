@@ -1,4 +1,4 @@
-/* File operatoins API/routine
+/* jfile.c - File operatoins API/routine
  * Author: Xianjie Huang <hxj5@hku.hk>
  */
 
@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <zlib.h>
-#include "htslib/kstring.h"        // do not use "kstring.h" as it's different from "htslib/kstring.h"
+#include "htslib/kstring.h"  // do not use "kstring.h" as it's different from "htslib/kstring.h"
 #include "htslib/bgzf.h"
 #include "config.h"
 #include "jfile.h"
@@ -25,15 +25,23 @@ int jf_bgzf_gets(BGZF *fp, kstring_t *s) {
 
 jfile_t* jf_init(void) { 
     jfile_t *p = (jfile_t*) calloc(1, sizeof(jfile_t));
-    if (p) { p->buf = &p->ks; p->bufsize = 1048576; }   // p->ks has been initialized after calling calloc(). Double initializing will cause error.
+    if (p) {  // p->ks has been initialized after calling calloc(). Double initializing will cause error.
+        p->buf = &p->ks;
+        p->bufsize = 1048576;
+    } 
     return p;
 }
 
 void jf_destroy(jfile_t* p) {
     if (p) {
         if (p->is_open) {
-            if (p->is_zip) { jf_zclose(p->zfp); p->zfp = NULL; }
-            else { fclose(p->fp); p->fp = NULL; }
+            if (p->is_zip) {
+                jf_zclose(p->zfp);
+                p->zfp = NULL;
+            } else {
+                fclose(p->fp);
+                p->fp = NULL;
+            }
         }
         ks_free(p->buf);
         free(p->fn); free(p);
@@ -46,21 +54,29 @@ void jf_set_bufsize(jfile_t *p, size_t bufsize) { p->bufsize = bufsize; }
 int jf_isopen(jfile_t *p) { return p->is_open; }
 
 int jf_open(jfile_t *p, char *mode) {
-    if (p->is_open) { return 0; }
+    if (p->is_open) 
+        return 0;
     char *fm = mode ? mode : p->fm;
     if (p->is_zip) {
-        if (NULL == (p->zfp = jf_zopen(p->fn, fm))) { return -1; }
-        else { p->is_open = 1; return 1; }
+        if (NULL == (p->zfp = jf_zopen(p->fn, fm))) {
+            return -1;
+        } else {
+            p->is_open = 1;
+            return 1;
+        }
     } else if (NULL == (p->fp = fopen(p->fn, fm))) {
         return -1;
-    } else { p->is_open = 1; return 1; }
+    } else {
+        p->is_open = 1;
+        return 1;
+    }
 }
 
 ssize_t jf_read(jfile_t *p, char *buf, size_t len) {
     return p->is_zip ? jf_zread(p->zfp, buf, len) : fread(buf, 1, len, p->fp);
 }
 
-//@note        kgetline() is defined in htslib/kstring.h 
+//@note kgetline() is defined in htslib/kstring.h 
 int jf_getln(jfile_t *p, kstring_t *s) {
     return p->is_zip ? jf_zgetln(p->zfp, s) : kgetline(s, (kgets_func*) fgets, p->fp);
 }
@@ -82,45 +98,56 @@ int jf_printf(jfile_t *p, const char *fmt, ...) {
     va_start(ap, fmt);
     l = kvsprintf(p->buf, fmt, ap);
     va_end(ap);
-    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) { return EOF; }
+    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) 
+        return EOF;
     return l;
 }
 
 int jf_putc(int c, jfile_t *p) { 
     int l;
     l = kputc(c, p->buf);
-    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) { return EOF; }
+    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) 
+        return EOF;
     return l;
 }
 
 int jf_putc_(int c, jfile_t *p) { 
     int l;
     l = kputc_(c, p->buf);
-    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) { return EOF; }
+    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) 
+        return EOF;
     return l;
 }
 
 int jf_puts(const char *s, jfile_t *p) { 
     int l;
     l = kputs(s, p->buf); 
-    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) { return EOF; }
+    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) 
+        return EOF;
     return l;
 }
 
 int jf_write(jfile_t *p, char *buf, size_t len) { 
     int l; 
     l = kputsn(buf, len, p->buf);
-    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) { return EOF; }
+    if (ks_len(p->buf) >= p->bufsize && jf_flush(p) < 0) 
+        return EOF;
     return l;
 }
 
-//@note        Even fail, the jfile_t will still be set to not open.
+//@note  Even fail, the jfile_t will still be set to not open.
 int jf_close(jfile_t *p) {
     int ret = 0;
     if (p->is_open) {
-        if (ks_len(p->buf) && jf_flush(p) < 0) { ret = EOF; } // only for write mode.
-        if (p->is_zip) { jf_zclose(p->zfp); p->zfp = NULL; }
-        else { fclose(p->fp); p->fp = NULL; }
+        if (ks_len(p->buf) && jf_flush(p) < 0)  // only for write mode.
+            ret = EOF; 
+        if (p->is_zip) {
+            jf_zclose(p->zfp);
+            p->zfp = NULL;
+        } else {
+            fclose(p->fp);
+            p->fp = NULL;
+        }
         p->is_open = 0;
     } 
     return ret;
@@ -135,8 +162,10 @@ int jf_remove(jfile_t *p) {
 int jf_remove_all(jfile_t **fs, const int n) {
     int i, j, ret;
     for (i = 0, j = 0; i < n; i++) {
-        if ((ret = jf_remove(fs[i])) < 0) { return -1; }
-        else { j += ret; }
+        if ((ret = jf_remove(fs[i])) < 0) 
+            return -1;
+        else
+            j += ret;
     }
     return j;
 }
@@ -145,14 +174,18 @@ int jf_remove_all(jfile_t **fs, const int n) {
 * File Functions
  */
 
-//@note         Only works for Unix system as the path seperator used in this function is '/'.
+//@note  Only works for Unix system as the path seperator used in this function is '/'.
 char* join_path(const char *p1, const char *p2) {
     kstring_t ks = KS_INITIALIZE, *s = &ks;
     char *p = NULL;
     int n1;
-    if (NULL == p1 || (n1 = strlen(p1)) <= 0 || NULL == p2) { ks_free(s); return NULL; }
+    if (NULL == p1 || (n1 = strlen(p1)) <= 0 || NULL == p2) {
+        ks_free(s);
+        return NULL;
+    }
     kputs(p1, s);
-    if (p1[n1 - 1] != '/') { kputc('/', s); }
+    if (p1[n1 - 1] != '/') 
+        kputc('/', s);
     kputs(p2, s); 
     p = strdup(ks_str(s));
     ks_free(s);
@@ -165,13 +198,25 @@ int merge_files(char **in_fn, const int n, const char *out_fn) {
     FILE *in = NULL, *out = NULL;
     int i = 0;
     size_t m;
-    if (NULL == in_fn || NULL == out_fn) { return 0; }
-    if (NULL == (out = fopen(out_fn, "w"))) { fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, out_fn); return 0; }
+    if (NULL == in_fn || NULL == out_fn) 
+        return 0;
+    if (NULL == (out = fopen(out_fn, "w"))) {
+        fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, out_fn);
+        return 0;
+    }
     for (i = 0; i < n; i++) {
-        if (NULL == (in = fopen(in_fn[i], "r"))) { fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, in_fn[i]); goto fail; }
-        while ((m = fread(buf, 1, TMP_BUFSIZE, in)) > 0) { fwrite(buf, 1, m, out); }
-        if (ferror(in)) { goto fail; }
-        else { fclose(in); in = NULL; }
+        if (NULL == (in = fopen(in_fn[i], "r"))) {
+            fprintf(stderr, "[E::%s] could not open '%s'\n", __func__, in_fn[i]);
+            goto fail;
+        }
+        while ((m = fread(buf, 1, TMP_BUFSIZE, in)) > 0)
+            fwrite(buf, 1, m, out);
+        if (ferror(in)) {
+            goto fail;
+        } else {
+            fclose(in);
+            in = NULL;
+        }
     }
     fclose(out);
     return i;
@@ -191,8 +236,10 @@ int remove_file(char *fn) {
 int remove_files(char **fn, const int n) {
     int i, j, ret;
     for (i = 0, j = 0; i < n; i++) {
-        if ((ret = remove_file(fn[i])) < 0) { return -1; }
-        else { j += ret; }
+        if ((ret = remove_file(fn[i])) < 0) 
+            return -1;
+        else 
+            j += ret;
     }
     return j;
 }

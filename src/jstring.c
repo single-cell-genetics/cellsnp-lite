@@ -1,4 +1,4 @@
-/* String operatoins API/routine
+/* jstring.c - String operatoins API/routine
  * Author: Xianjie Huang <hxj5@hku.hk>
  */
 #include <stdlib.h>

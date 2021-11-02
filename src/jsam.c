@@ -1,4 +1,4 @@
-/* BAM/SAM/CRAM file API/routine
+/* jsam.c - BAM/SAM/CRAM file API/routine
  * Author: Xianjie Huang <hxj5@hku.hk>
  */
 #include <stdio.h>
@@ -14,8 +14,8 @@
 */
 const char csp_nt5_str[] = "ACGTN";
 
-/*@note      If the translation failed, this function will try "<name> - chr" if name starts with "chr", try
-             "chr + <name>" otherwise. */
+/*@note If the translation failed, this function will try "<name> - chr" if name starts with "chr", try
+        "chr + <name>" otherwise. */
 int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s) {
     int tid;
     if ((tid = sam_hdr_name2tid(hdr, name)) < 0) {
@@ -28,7 +28,7 @@ int csp_sam_hdr_name2id(sam_hdr_t *hdr, const char *name, kstring_t *s) {
     } else { return tid; }
 }
 
-//@note        No need to free the returned char* pointer when success.
+//@note No need to free the returned char* pointer when success.
 const char* csp_fmt_chr_name(const char *name, sam_hdr_t *hdr, kstring_t *s) {
     int tid;
     if ((tid = csp_sam_hdr_name2id(hdr, name, s)) < 0) { return NULL; }

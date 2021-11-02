@@ -1,4 +1,4 @@
-/* Utils
+/* csp.c - Utils
  * Author: Xianjie Huang <hxj5@hku.hk>
  */
 
@@ -41,7 +41,6 @@ void gll_setting_free(global_settings *gs) {
     }
 }
 
-/* print global settings. */
 void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
     if (gs) {
         int i;
@@ -51,7 +50,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%sis_target = %d, num_of_pos = %ld\n", prefix, gs->is_target, 
                       gs->is_target ? 
                         (gs->targets ? (long) regidx_nregs(gs->targets) : 0) :
-                        (long) snplist_size(gs->pl));
+                        (long) kv_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
@@ -74,136 +73,161 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
     char **sgnames;
     int i, nsg, r;
     csp_plp_t *plp;
+
     /* init HashMap, pool of ul, pool of uu for mplp. */
-    mplp->hsg = map_sg_init();
-    if (NULL == mplp->hsg) { fprintf(stderr, "[E::%s] could not init map_sg_t structure.\n", __func__); return -1; }
+    mplp->hsg = kh_init(sample_group);
+    if (NULL == mplp->hsg) {
+        fprintf(stderr, "[E::%s] could not init map_sg_t structure.\n", __func__);
+        return -1;
+    }
     if (use_umi(gs)) {
         #if DEVELOP
-            mplp->pl = pool_ul_init();
-            if (NULL == mplp->pl) { fprintf(stderr, "[E::%s] could not init pool_ul_t structure.\n", __func__); return -1; }
-            mplp->pu = pool_uu_init();
-            if (NULL == mplp->pu) { fprintf(stderr, "[E::%s] could not init pool_uu_t structure.\n", __func__); return -1; }
+            mplp->pl = jmempool_init(list_umiunit);
+            if (NULL == mplp->pl) {
+                fprintf(stderr, "[E::%s] could not init pool_ul_t structure.\n", __func__);
+                return -1;
+            }
+            mplp->pu = jmempool_init(umi_unit);
+            if (NULL == mplp->pu) {
+                fprintf(stderr, "[E::%s] could not init pool_uu_t structure.\n", __func__);
+                return -1;
+            }
         #endif
-        mplp->su = pool_ps_init();
-        if (NULL == mplp->su) { fprintf(stderr, "[E::%s] could not init pool_su_t structure.\n", __func__); return -1; }
+        mplp->su = jmempool_init(str);
+        if (NULL == mplp->su) {
+            fprintf(stderr, "[E::%s] could not init pool_su_t structure.\n", __func__);
+            return -1;
+        }
     }
+
     /* set sample names for sample groups. */
-    if (use_barcodes(gs)) { sgnames = gs->barcodes; nsg = gs->nbarcode; }
-    else if (use_sid(gs)) { sgnames = gs->sample_ids; nsg = gs->nsid; }
-    else { fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); return -1; }  // should not come here!
+    if (use_barcodes(gs)) {
+        sgnames = gs->barcodes; nsg = gs->nbarcode; 
+    } else if (use_sid(gs)) {
+        sgnames = gs->sample_ids; nsg = gs->nsid;
+    } else {
+        fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__);
+        return -1;
+    } // should not come here!
     if ((r = csp_mplp_set_sg(mplp, sgnames, nsg)) < 0) { 
         if (r == -2) { fprintf(stderr, "[W::%s] duplicate barcodes or sample IDs.\n", __func__); }
         fprintf(stderr, "[E::%s] failed to set sample names.\n", __func__); 
         return -1; 
     }
+
     /* init plp for each sample group in mplp->hsg and init HashMap plp->hug for UMI grouping. */
     for (i = 0; i < nsg; i++) {
-        if (NULL == (plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]))) { 
-            if (NULL == (map_sg_val(mplp->hsg, mplp->hsg_iter[i]) = plp = csp_plp_init())) {
+        if (NULL == (plp = kh_val(mplp->hsg, mplp->hsg_iter[i]))) { 
+            if (NULL == (kh_val(mplp->hsg, mplp->hsg_iter[i]) = plp = csp_plp_init())) {
                 fprintf(stderr, "[E::%s] failed to init csp_plp_t for sg HashMap of csp_mplp_t.\n", __func__);
                 return -1;
             }
         }
         if (use_umi(gs)) {
-            plp->hug = map_ug_init();
-            if (NULL == plp->hug) { fprintf(stderr, "[E::%s] could not init map_ug_t structure.\n", __func__); return -1; }
+            plp->hug = kh_init(umi_group);
+            if (NULL == plp->hug) {
+                fprintf(stderr, "[E::%s] could not init map_ug_t structure.\n", __func__);
+                return -1;
+            }
         }
     }
     return 0;
 }
 
-/*@note 1. To speed up, the caller should guarantee that:
-           a) the parameters are valid, i.e. mplp and gs must not be NULL. In fact, this function is supposed to be 
-              called after csp_mplp_t is created and set names of sample-groups, so mplp, mplp->hsg could not be NULL.
-           b) the csp_pileup_t must have passed the read filtering, refer to pileup_read_with_fetch() for details.
-           c) each key (sample group name) in map_sg_t already has a valid, not NULL, value (csp_plp_t*);
-              This usually can be done by calling csp_mplp_prepare().
-        2. This function is expected to be used by Mode1 & Mode2.
-
-@discuss  In current version, only the result (base and qual) of the first read in one UMI group will be used for mplp statistics.
-          TODO: store results of all reads in one UMI group (maybe could do consistency correction in each UMI group) and then 
-          do mplp statistics.
- */
 int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settings *gs) {
-    map_sg_iter k;
-    map_ug_iter u;
+    khiter_t k;
+    khiter_t u;
     csp_plp_t *plp = NULL;
     char **s;
     int r, idx;
+
     /* Push one csp_pileup_t into csp_mplp_t.
     *  The pileup->cb, pileup->umi could not be NULL as the pileuped read has passed filtering.
     */
     if (use_barcodes(gs)) { 
-        if ((k = map_sg_get(mplp->hsg, pileup->cb)) == map_sg_end(mplp->hsg)) { return 1; }
-        plp = map_sg_val(mplp->hsg, k);
+        if ((k = kh_get(sample_group, mplp->hsg, pileup->cb)) == kh_end(mplp->hsg))
+            return 1;
+        plp = kh_val(mplp->hsg, k);
     } else if (use_sid(gs)) { 
-        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[sid]);
+        plp = kh_val(mplp->hsg, mplp->hsg_iter[sid]);
     } else { return -1; }  // should not come here!
     if (use_umi(gs)) {
-        u = map_ug_get(plp->hug, pileup->umi);
-        if (u == map_ug_end(plp->hug)) {
-            s = pool_ps_get(mplp->su);
+        u = kh_get(umi_group, plp->hug, pileup->umi);
+        if (u == kh_end(plp->hug)) {
+            s = jmempool_get(str, mplp->su);
             *s = strdup(pileup->umi);
-            u = map_ug_put(plp->hug, *s, &r);
-            if (r < 0) { return -2; }
+            u = kh_put(umi_group, plp->hug, *s, &r);
+            if (r < 0)
+                return -2;
             /* An example for pushing base & qual into HashMap of umi group.
-            list_uu_t *ul = pool_ul_get(mplp->pl);
-            umi_unit_t *uu = pool_uu_get(mplp->pu);
+            list_uu_t *ul = jmempool_get(list_umiunit, mplp->pl);
+            umi_unit_t *uu = jmempool_get(umi_unit, mplp->pu);
             uu->base = pileup->base; uu->qual = pileup->qual;
-            list_uu_push(ul, uu);
-            map_ug_val(plp->hug, u) = ul;
+            kvec_push(umi_unit_t*, *ul, uu);
+            kh_val(plp->hug, u) = ul;
              */
             idx = seq_nt16_idx2int(pileup->base);
             plp->bc[idx]++;
-            list_qu_push(plp->qu[idx], pileup->qual);
+            kv_push(qual_t, plp->qu[idx], pileup->qual);
         } else { return 2; } // umi has already been pushed before
     } else {
         idx = seq_nt16_idx2int(pileup->base);
         plp->bc[idx]++;
-        list_qu_push(plp->qu[idx], pileup->qual);
+        kv_push(qual_t, plp->qu[idx], pileup->qual);
     }
     return 0;
 }
 
-/*@discuss  In current version, only the result (base and qual) of the first read in one UMI group will be used for mplp statistics.
-            TODO: store results of all reads in one UMI group (maybe could do consistency correction in each UMI group) and then 
-            do mplp statistics.
- */
 int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     csp_plp_t *plp = NULL;
     int i, j, k;
     size_t l;
+
     for (i = 0; i < mplp->nsg; i++) {
-        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
+        plp = kh_val(mplp->hsg, mplp->hsg_iter[i]);
         for (j = 0; j < 5; j++) { 
             plp->tc += plp->bc[j]; 
             mplp->bc[j] += plp->bc[j];
         }
     }
-    for (i = 0; i < 5; i++) { mplp->tc += mplp->bc[i]; }
-    if (mplp->tc < gs->min_count) { return 1; }
+    for (i = 0; i < 5; i++) 
+        mplp->tc += mplp->bc[i];
+    if (mplp->tc < gs->min_count) 
+        return 1;
+
     infer_allele(mplp->bc, &mplp->inf_rid, &mplp->inf_aid);   // must be called after mplp->bc are completely calculated.
-    if (mplp->bc[mplp->inf_aid] < mplp->tc * gs->min_maf) { return 1; }
+    if (mplp->bc[mplp->inf_aid] < mplp->tc * gs->min_maf) 
+        return 1;
+
     if (mplp->ref_idx < 0) {  // ref is not valid. Refer to csp_mplp_t.
         mplp->ref_idx = mplp->inf_rid;
         mplp->alt_idx = mplp->inf_aid;
     } else if (mplp->alt_idx < 0) {  // alt is not valid
         infer_alt(mplp->bc, mplp->ref_idx, &mplp->alt_idx);
     }
-    mplp->ad = mplp->bc[mplp->alt_idx]; mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad; mplp->oth = mplp->tc - mplp->dp;
+    mplp->ad = mplp->bc[mplp->alt_idx]; 
+    mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad;
+    mplp->oth = mplp->tc - mplp->dp;
+
     for (i = 0; i < mplp->nsg; i++) {
-        plp = map_sg_val(mplp->hsg, mplp->hsg_iter[i]);
-        plp->ad = plp->bc[mplp->alt_idx]; if (plp->ad) mplp->nr_ad++;
-        plp->dp = plp->bc[mplp->ref_idx] + plp->ad; if (plp->dp) mplp->nr_dp++;
-        plp->oth = plp->tc - plp->dp; if (plp->oth) mplp->nr_oth++;
+        plp = kh_val(mplp->hsg, mplp->hsg_iter[i]);
+        if ((plp->ad = plp->bc[mplp->alt_idx]))
+            mplp->nr_ad++;
+        if ((plp->dp = plp->bc[mplp->ref_idx] + plp->ad))
+            mplp->nr_dp++;
+        if ((plp->oth = plp->tc - plp->dp))
+            mplp->nr_oth++;
         if (gs->is_genotype) {
             for (j = 0; j < 5; j++) {
-                for (l = 0; l < list_qu_size(plp->qu[j]); l++) {
-                    if (get_qual_vector(list_qu_A(plp->qu[j], l), 45, 0.25, mplp->qvec) < 0) { return -1; }
-                    for (k = 0; k < 4; k++) plp->qmat[j][k] += mplp->qvec[k];
+                for (l = 0; l < kv_size(plp->qu[j]); l++) {
+                    if (get_qual_vector(kv_A(plp->qu[j], l), 45, 0.25, mplp->qvec) < 0) 
+                        return -1;
+                    for (k = 0; k < 4; k++)
+                        plp->qmat[j][k] += mplp->qvec[k];
                 }
             }
-            if (qual_matrix_to_geno(plp->qmat, plp->bc, mplp->ref_idx, mplp->alt_idx, gs->double_gl, plp->gl, &plp->ngl) < 0) { return -1; }
+            if (qual_matrix_to_geno(plp->qmat, plp->bc, mplp->ref_idx, mplp->alt_idx, gs->double_gl, plp->gl, &plp->ngl) < 0)
+                return -1;
         }
     }
     return 0;
@@ -228,9 +252,6 @@ void csp_bam_fs_destroy(csp_bam_fs* p) {
 * Thread API
 */
 
-/*@note      The pointer returned successfully by thdata_init() should be freed
-             by thdata_destroy() when no longer used.
- */
 thread_data* thdata_init(void) { return (thread_data*) calloc(1, sizeof(thread_data)); }
 
 void thdata_destroy(thread_data *p) { free(p); }
@@ -329,11 +350,6 @@ int merge_vcf(jfile_t *out, jfile_t **in, const int n, int *ret) {
 #undef TMP_BUFSIZE
 }
 
-/*@note      1. When proc = 1, the origial outputed mtx file was not filled with stat info:
-                (totol SNPs, total samples, total records),
-                so use this function to fill and rewrite.
-             2. @p fs is not open when this function is just called and will keep not open when this function ends.
- */
 int rewrite_mtx(jfile_t *fs, size_t ns, int nsmp, size_t nr) {
 #define TMP_BUFSIZE 1048576
     kstring_t ks = KS_INITIALIZE, *s = &ks;
