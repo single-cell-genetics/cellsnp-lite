@@ -244,6 +244,7 @@ void csp_mplp_destroy(csp_mplp_t *p) {
         if (p->pu) { jmempool_destroy(umi_unit, p->pu); }
         if (p->pl) { jmempool_destroy(list_umiunit, p->pl); }
         if (p->su) { jmempool_destroy(str, p->su); }
+        if (p->fai) { fai_destroy(p->fai); }
         free(p); 
     }
 }

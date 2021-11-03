@@ -189,6 +189,7 @@ static int pileup_snp(hts_pos_t pos, int *mp_n, const bam_pileup1_t **mp_plp, in
     csp_mplp_print_(stderr, mplp, "\t");
   #endif
 
+    mplp->pos = pos;
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) {
         state = (ret > 0) ? 1 : -1;
         goto fail;
@@ -393,6 +394,7 @@ static int csp_pileup_core(void *args) {
 
         // As each query region is a chrom, so no need to call bam_mplp_init_overlaps() here?
         /* begin mpileup */
+        mplp->chrom = a[n];
         while ((ret = bam_mplp_auto(mp_iter, &tid, &pos, mp_n, mp_plp)) > 0) {
           #if CSP_FIT_MULTI_SMP
             if (gs->tp_errno) { d->ret = 1; goto clean; }
@@ -408,8 +410,8 @@ static int csp_pileup_core(void *args) {
                     ale = regitr_payload(itr, biallele_t*);
                     break;
                 }
-                mplp->ref_idx = ale->ref ? seq_nt16_char2int(ale->ref) : -1;
-                mplp->alt_idx = ale->alt ? seq_nt16_char2int(ale->alt) : -1;                
+                mplp->ref_idx = csp_mplp_base2int(ale->ref);
+                mplp->alt_idx = csp_mplp_base2int(ale->alt);
             } else {
                 mplp->ref_idx = -1;
                 mplp->alt_idx = -1;
@@ -507,7 +509,7 @@ static inline int infer_nthread(global_settings *gs) {
     if (gs->tp_ntry == 0) { return gs->mthread; }  // the first time to try, just use the value user specified
     if (gs->tp_ntry == 1) { 
         int n0 = 3;      // FIXME!!! the initial files opened by this program. eg. the program itself and lz, lhts etc.
-        int n = gs->nin + 4 + gs->is_genotype;      // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
+        int n = gs->nin + 4 + gs->is_genotype + (NULL != gs->refseq_file);      // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
         int m = (gs->tp_max_open - n0) / n;
         if (m >= gs->mthread) { m = gs->mthread - 1; }
         if (m < 1) { m = 1; }

@@ -62,7 +62,7 @@ size_t get_snplist_from_vcf(const char *fn, snplist_t *pl, int *ret, int print_s
         ip->pos = rec->pos;
         bcf_unpack(rec, BCF_UN_STR);
         if (rec->n_allele > 0) {
-            if (1 == (l = strlen(rec->d.allele[0]))) 
+            if (1 == (l = strlen(rec->d.allele[0])))
                 ip->ref = rec->d.allele[0][0];
             else if (l > 1) { 
                 if (print_skip) 

@@ -111,6 +111,7 @@ struct _gll_settings {
     char *sid_list_file;   // Name of the file containing a list of sample IDs, one sample-ID per line.
     char **sample_ids;     // Pointer to the array of sample IDs.
     int nsid;              // Num of sample IDs.
+    char *refseq_file;     // File name of the refseq (usually a fasta file).
     char **chroms;      // Pointer to the array of the chromosomes to use.
     int nchrom;            // Num of chromosomes.
     char *cell_tag;        // Tag for cell barcodes, NULL means no cell tags.
@@ -149,6 +150,13 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix);
 
 //@return  0 if success, -1 otherwise.
 int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs);
+
+//convert the base char to the index of 'ACGTN' if the base is one of them
+//otherwise convert to -1.
+int8_t csp_mplp_base2int(int8_t c);
+
+//@return Pointe to string r if success, NULL otherwise.
+char* csp_mplp_get_ref(csp_mplp_t *mplp, hts_pos_t *len, global_settings *gs);
 
 /*!@func
 @abstract Push content of one csp_pileup_t structure into the csp_mplp_t structure.

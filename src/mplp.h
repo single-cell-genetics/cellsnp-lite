@@ -9,6 +9,7 @@
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
 #include "htslib/khash.h"
+#include "htslib/faidx.h"
 #include "kvec.h"
 #include "jfile.h"
 #include "jmempool.h"
@@ -203,6 +204,8 @@ typedef pool_str_t pool_ps_t;
 
 //The structure stores the stat info of all sample groups for certain query pos.
 typedef struct {
+    char *chrom;               // Do not free it.
+    hts_pos_t pos;             // 0-based.
     int8_t ref_idx, alt_idx;   // Index of ref/alt in "ACGTN". Negative means invalid value.
     int8_t inf_rid, inf_aid;   // Infered index of ref/alt in "ACGTN". Negative means invalid value.
     size_t bc[5];              // Summarized read count across samples, in the order of 'ACGTN'.
@@ -215,6 +218,7 @@ typedef struct {
     pool_ul_t *pl;             // Pool of list_uu_t structures.
     pool_ps_t *su;             // Pool of UMI strings.
     double qvec[4];            // A container for the qual vector returned by get_qual_vector().
+    faidx_t *fai;              // Fasta index structure.
 } csp_mplp_t;
 
 csp_mplp_t* csp_mplp_init(void); 

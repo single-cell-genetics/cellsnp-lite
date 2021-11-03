@@ -82,6 +82,7 @@ static void gll_set_default(global_settings *gs) {
 
         // Options
         gs->is_genotype = 0; gs->is_out_zip = 0;
+        gs->refseq_file = NULL;
         char *chrom_tmp[] = CSP_CHROM_ALL;
         gs->chroms = (char**) calloc(CSP_NCHROM, sizeof(char*));
         for (gs->nchrom = 0; gs->nchrom < CSP_NCHROM; gs->nchrom++) {
@@ -138,6 +139,9 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "  --gzip               If use, the output files will be zipped into BGZF format.\n");
     fprintf(fp, "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
     fprintf(fp, "  -p, --nproc INT      Number of subprocesses [%d]\n", CSP_NTHREAD);
+    fprintf(fp, "  -f, --refseq FILE    Faidx indexed reference sequence file. If set, the real (genomic)\n");
+    fprintf(fp, "                       ref extracted from this file would be used for Mode 2 or for the\n");
+    fprintf(fp, "                       missing REFs in the input VCF for Mode 1.\n");
     fprintf(fp, "  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
     fprintf(fp, "  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
     fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n");
@@ -395,6 +399,7 @@ int main(int argc, char **argv) {
         {"sampleIDs", required_argument, NULL, 'I'},
         {"sampleids", required_argument, NULL, 'I'},
         {"nproc", required_argument, NULL, 'p'},
+        {"refseq", required_argument, NULL, 'f'},
         {"chrom", required_argument, NULL, 1},
         {"cellTAG", required_argument, NULL, 2},
         {"celltag", required_argument, NULL, 2},
@@ -423,7 +428,7 @@ int main(int argc, char **argv) {
         {"maxdepth", required_argument, NULL, 17}
     };
     if (1 == argc) { print_usage(stderr); goto fail; }
-    while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:", lopts, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:f:", lopts, NULL)) != -1) {
         switch (c) {
             case 'h': print_usage(stderr); goto fail;
             case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto fail;
@@ -458,6 +463,9 @@ int main(int argc, char **argv) {
                         goto fail;
                     } else { break; }
             case 'p': gs.mthread = gs.nthread = atoi(optarg); break;
+            case 'f':
+                    if (gs.refseq_file) free(gs.refseq_file);
+                    gs.refseq_file = strdup(optarg); break;
             case 1:  
                     if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
                     if (NULL == (gs.chroms = hts_readlist(optarg, 0, &gs.nchrom))) {

@@ -125,8 +125,8 @@ static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pil
     size_t npileup = 0;
   #endif
 
-    mplp->ref_idx = snp->ref ? seq_nt16_char2int(snp->ref) : -1;
-    mplp->alt_idx = snp->alt ? seq_nt16_char2int(snp->alt) : -1;
+    mplp->ref_idx = csp_mplp_base2int(snp->ref);
+    mplp->alt_idx = csp_mplp_base2int(snp->alt);
     for (i = 0, npush1 = 0; i < nfs; i++, npush1 = 0) {
         bs = fs[i];
         tid = csp_sam_hdr_name2id(bs->hdr, snp->chr, s);
@@ -173,6 +173,8 @@ static int fetch_snp(snp_t *snp, csp_bam_fs **fs, htsFile **fp, int nfs, csp_pil
     csp_mplp_print_(stderr, mplp, "\t");
   #endif
 
+    mplp->chrom = snp->chr;
+    mplp->pos = snp->pos;
     if ((ret = csp_mplp_stat(mplp, gs)) != 0) {
         state = (ret > 0) ? 1 : -1;
         goto fail;
@@ -391,7 +393,7 @@ static inline int infer_nthread(global_settings *gs) {
     if (gs->tp_ntry == 0) { return gs->mthread; }  // the first time to try, just use the value user specified
     if (gs->tp_ntry == 1) { 
         int n0 = 3;      // FIXME!!! the initial files opened by this program. eg. the program itself and lz, lhts etc.
-        int n = gs->nin + 4 + gs->is_genotype;    // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
+        int n = gs->nin + 4 + gs->is_genotype + (NULL != gs->refseq_file);    // 4 is the 4 output files: base.vcf, ad.mtx, dp.mtx and oth.mtx
         int m = (gs->tp_max_open - n0) / n;
         if (m >= gs->mthread) { m = gs->mthread - 1; }
         if (m < 1) { m = 1; }

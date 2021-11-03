@@ -4,8 +4,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "htslib/sam.h"
 #include "htslib/kstring.h"
+#include "htslib/faidx.h"
 #include "config.h"
 #include "mplp.h"
 #include "jfile.h"
@@ -34,6 +36,7 @@ void gll_setting_free(global_settings *gs) {
         if (gs->barcodes) { str_arr_destroy(gs->barcodes, gs->nbarcode); gs->barcodes = NULL; }
         if (gs->sid_list_file) { free(gs->sid_list_file); gs->sid_list_file = NULL; }
         if (gs->sample_ids) { str_arr_destroy(gs->sample_ids, gs->nsid); gs->sample_ids = NULL; }
+        if (gs->refseq_file) { free(gs->refseq_file); gs->refseq_file = NULL; }
         if (gs->chroms) { str_arr_destroy(gs->chroms, gs->nchrom); gs->chroms = NULL; }
         if (gs->cell_tag) { free(gs->cell_tag); gs->cell_tag = NULL; }
         if (gs->umi_tag) { free(gs->umi_tag); gs->umi_tag = NULL; }
@@ -52,6 +55,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
                         (gs->targets ? (long) regidx_nregs(gs->targets) : 0) :
                         (long) kv_size(gs->pl));
         fprintf(fp, "%snum_of_barcodes = %d, num_of_samples = %d\n", prefix, gs->nbarcode, gs->nsid);
+        fprintf(fp, "%srefseq file = %s\n", prefix, gs->refseq_file);
         fprintf(fp, "%s%d chroms: ", prefix, gs->nchrom);
         for (i = 0; i < gs->nchrom; i++) fprintf(fp, "%s ", gs->chroms[i]);
         fputc('\n', fp);
@@ -131,7 +135,45 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
             }
         }
     }
+
+    /* construct faidx if needed */
+    if (gs->refseq_file) {
+        if (NULL == (mplp->fai = fai_load(gs->refseq_file))) {
+            fprintf(stderr, "[E::%s] failed to open refseq file '%s'.\n", __func__, gs->refseq_file);
+            return -1;
+        }
+    }
+
     return 0;
+}
+
+int8_t csp_mplp_base2int(int8_t c) {
+    int8_t i = seq_nt16_char2int(c);
+    if (i < 0 || i > 4)
+        i = -1;
+    if (i == 4 && c != (int8_t)'N')
+        i = -1;
+    return i;
+}
+
+char* csp_mplp_get_ref(csp_mplp_t *mplp, hts_pos_t *len, global_settings *gs) {
+    faidx_t *fai = mplp->fai;
+    if (! mplp->chrom) {
+        *len = -1;
+        return NULL;
+    }
+    if (faidx_has_seq(fai, mplp->chrom)) {
+        return faidx_fetch_seq64(fai, mplp->chrom, mplp->pos, mplp->pos, len);
+    } else if (0 == strncmp(mplp->chrom, "chr", 3)) {
+        return faidx_fetch_seq64(fai, mplp->chrom + 3, mplp->pos, mplp->pos, len);
+    } else {      
+        kstring_t str = {0, 0, 0};
+        kputs("chr", &str); kputs(mplp->chrom, &str);
+        char *s;
+        s = faidx_fetch_seq64(fai, str.s, mplp->pos, mplp->pos, len);
+        ks_free(&str);
+        return s;
+    }
 }
 
 int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settings *gs) {
@@ -182,6 +224,8 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     csp_plp_t *plp = NULL;
     int i, j, k;
     size_t l;
+    char *ref = NULL;
+    hts_pos_t len;
 
     for (i = 0; i < mplp->nsg; i++) {
         plp = kh_val(mplp->hsg, mplp->hsg_iter[i]);
@@ -200,8 +244,17 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
         return 1;
 
     if (mplp->ref_idx < 0) {  // ref is not valid. Refer to csp_mplp_t.
-        mplp->ref_idx = mplp->inf_rid;
-        mplp->alt_idx = mplp->inf_aid;
+        if (mplp->fai) {
+            ref = csp_mplp_get_ref(mplp, &len, gs);
+            if (NULL == ref || len != 1)
+                return 1;
+            mplp->ref_idx = seq_nt16_char2int((int8_t)ref[0]);
+            infer_alt(mplp->bc, mplp->ref_idx, &mplp->alt_idx);
+            free(ref);
+        } else {
+            mplp->ref_idx = mplp->inf_rid;
+            mplp->alt_idx = mplp->inf_aid;
+        }
     } else if (mplp->alt_idx < 0) {  // alt is not valid
         infer_alt(mplp->bc, mplp->ref_idx, &mplp->alt_idx);
     }
