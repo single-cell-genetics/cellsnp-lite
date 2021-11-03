@@ -2,6 +2,16 @@
 History
 =======
 
+Release v1.2.2 (03/11/2021)
+===========================
+* add -f/--refseq so that the real (genomic) ref could be extracted from
+  the fasta file for Mode 2 or for the missing REFs in the input VCF for
+  Mode 1. Credit to issue 28.
+* add --maxDEPTH for read filtering.
+* version: add the version of htslib to the version string and output it
+  by default for usage().
+* remove redundant comments and re-format codes.
+
 Release v1.2.1 (07/09/2021)
 ===========================
 * implement infering ALT when REF is provided in vcf, which could avoid wrong 

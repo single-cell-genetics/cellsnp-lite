@@ -141,8 +141,9 @@ Here is a list of full parameters for setting (``cellsnp-lite -V`` always give t
 version you are using):
 
 .. code-block:: html
-  
-  Usage: cellsnp-lite [options]
+
+  Version: 1.2.2 (htslib 1.11-79-g53d7277)
+  Usage:   cellsnp-lite [options]
   
   Options:
     -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.
@@ -166,6 +167,9 @@ version you are using):
     --gzip               If use, the output files will be zipped into BGZF format.
     --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.
     -p, --nproc INT      Number of subprocesses [1]
+    -f, --refseq FILE    Faidx indexed reference sequence file. If set, the real (genomic)
+                         ref extracted from this file would be used for Mode 2 or for the
+                         missing REFs in the input VCF for Mode 1.
     --chrom STR          The chromosomes to use, comma separated [1 to 22]
     --cellTAG STR        Tag for cell barcodes, turn off with None [CB]
     --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,
@@ -180,9 +184,10 @@ version you are using):
                          (when use UMI) or UNMAP,SECONDARY,QCFAIL,DUP (otherwise)]
     --minLEN INT         Minimum mapped length for read filtering [30]
     --minMAPQ INT        Minimum MAPQ for read filtering [20]
+    --maxDEPTH INT       Maximum depth for one site of one file; 0 means highest possible value [0]
     --countORPHAN        If use, do not skip anomalous read pairs.
   
   Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG"
   instead. You can easily aggregate and convert the flag mask bits to an integer by refering to:
   https://broadinstitute.github.io/picard/explain-flags.html
-
+    
