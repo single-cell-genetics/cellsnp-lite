@@ -58,6 +58,7 @@
 #include "thpool.h"
 #include "htslib/sam.h"
 #include "htslib/regidx.h"
+#include "htslib/hts.h"
 #include "config.h"
 #include "csp.h"
 #include "jfile.h"
@@ -112,7 +113,8 @@ static void print_usage(FILE *fp) {
     char *tmp_filter_noumi = bam_flag2str(CSP_EXCL_FMASK_NOUMI);
 
     fprintf(fp, "\n");
-    fprintf(fp, "Usage: %s [options]\n", CSP_NAME);
+    fprintf(fp, "Version: %s (htslib %s)\n", CSP_VERSION, hts_version());
+    fprintf(fp, "Usage:   %s [options]\n", CSP_NAME);
     fprintf(fp, "\n");
     fprintf(fp, "Options:\n");
     fprintf(fp, "  -s, --samFile STR    Indexed sam/bam file(s), comma separated multiple samples.\n");
@@ -424,7 +426,7 @@ int main(int argc, char **argv) {
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:", lopts, NULL)) != -1) {
         switch (c) {
             case 'h': print_usage(stderr); goto fail;
-            case 'V': printf("%s\n", CSP_VERSION); goto fail;
+            case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto fail;
             case 's': 
                     if (gs.in_fns) { str_arr_destroy(gs.in_fns, gs.nin); }
                     if (NULL == (gs.in_fns = hts_readlist(optarg, 0, &gs.nin)) || gs.nin <= 0) {
