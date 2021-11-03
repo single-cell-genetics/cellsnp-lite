@@ -108,3 +108,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# autotools
+autom4te.cache
+
