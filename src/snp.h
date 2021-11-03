@@ -35,7 +35,7 @@ typedef kvec_t(snp_t*) snplist_t;
 @param pl   Pointer to client data used to store the extracted SNP info.
 @param ret  Pointer to store running state. 0 if success, -1 otherwise.
 @param print_skip  If print the skipped SNPs. 1, yes, 0, no.
-@return      Num of elements successfully added into the snplist.
+@return     Num of elements successfully added into the snplist.
 @note       If length of Ref or Alt is larger than 1, then the SNP would be skipped.
             If length of Ref or Alt is 0, then their values would be infered during pileup.
  */
