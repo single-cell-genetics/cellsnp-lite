@@ -524,10 +524,8 @@ int main(int argc, char **argv) {
         if (ret == -1) { print_usage(stderr); }
         goto fail;
     }
-  #if DEBUG
-    fprintf(stderr, "[D::%s] global settings after checking:\n", __func__);
+    fprintf(stderr, "[I::%s] global settings after checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
-  #endif
 
     /* prepare output files. */
     if (NULL == (gs.out_mtx_ad = jf_init()) || NULL == (gs.out_mtx_dp = jf_init()) || \
