@@ -105,7 +105,8 @@ static void gll_set_default(global_settings *gs) {
         // Read Filtering
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
         gs->rflag_filter = -1; gs->rflag_require = CSP_INCL_FMASK;
-        gs->max_depth = CSP_MAX_DEPTH; gs->no_orphan = CSP_NO_ORPHAN;
+        gs->max_depth = CSP_MAX_DEPTH; gs->max_pileup = CSP_MAX_PILEUP;
+        gs->no_orphan = CSP_NO_ORPHAN;
     }
 }
 
@@ -164,8 +165,10 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file, ie., max value for REF+ALT+OTH;\n");
-    fprintf(fp, "                       0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
+    fprintf(fp, "  --maxPILEUP INT      Maximum pileup for one site of one file (including those filtered reads),\n");
+    fprintf(fp, "                       avoids excessive memory usage; 0 means highest possible value [%d]\n", CSP_MAX_PILEUP);
+    fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file (excluding those filtered reads),\n");
+    fprintf(fp, "                       avoids excessive memory usage; 0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
     fprintf(fp, "\n");
     fprintf(fp, "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\"\n");
@@ -340,6 +343,13 @@ static int check_args(global_settings *gs) {
         gs->max_depth = INT_MAX;
         fprintf(stderr, "[W::%s] Max depth set to maximum value (%d)\n", __func__, INT_MAX);
     }
+
+    // check max-pileup
+    if (gs->max_pileup <= 0) {
+        gs->max_pileup = INT_MAX;
+        fprintf(stderr, "[W::%s] Max pileup set to maximum value (%d)\n", __func__, INT_MAX);
+    }
+
     return 0;
 }
 
@@ -376,6 +386,8 @@ static inline void regidx_payload_free(void *payload) {
 }
 
 int main(int argc, char **argv) {
+    int is_ok = 0;
+
     /* timing */
     time_t start_time, end_time;
     struct tm *time_info;
@@ -388,7 +400,7 @@ int main(int argc, char **argv) {
     global_settings gs;
     gll_set_default(&gs);
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-    int c, k, ret, print_time = 0, print_skip_snp = 0;
+    int i, c, k, ret, print_time = 0, print_skip_snp = 0;
 
     struct option lopts[] = {
         {"help", no_argument, NULL, 'h'},
@@ -434,18 +446,21 @@ int main(int argc, char **argv) {
         {"countORPHAN", no_argument, NULL, 16},
         {"maxDEPTH", required_argument, NULL, 17},
         {"maxDepth", required_argument, NULL, 17},
-        {"maxdepth", required_argument, NULL, 17}
+        {"maxdepth", required_argument, NULL, 17},
+        {"maxPILEUP", required_argument, NULL, 18},
+        {"maxPileup", required_argument, NULL, 18},
+        {"maxpileup", required_argument, NULL, 18}
     };
-    if (1 == argc) { print_usage(stderr); goto fail; }
+    if (1 == argc) { print_usage(stderr); goto clean; }
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:f:", lopts, NULL)) != -1) {
         switch (c) {
-            case 'h': print_usage(stderr); goto fail;
-            case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto fail;
+            case 'h': print_usage(stderr); goto clean;
+            case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto clean;
             case 's': 
                     if (gs.in_fns) { str_arr_destroy(gs.in_fns, gs.nin); }
                     if (NULL == (gs.in_fns = hts_readlist(optarg, 0, &gs.nin)) || gs.nin <= 0) {
                         fprintf(stderr, "[E::%s] could not read input-list '%s' or list empty.\n", __func__, optarg);
-                        goto fail;
+                        goto clean;
                     } else { break; }
             case 'S': 
                     if (gs.in_fn_file) free(gs.in_fn_file);
@@ -469,7 +484,7 @@ int main(int argc, char **argv) {
                     if (gs.sample_ids) { str_arr_destroy(gs.sample_ids, gs.nsid); }
                     if (NULL == (gs.sample_ids = hts_readlist(optarg, 0, &gs.nsid))) {
                         fprintf(stderr, "[E::%s] could not read sample-id file '%s'\n", __func__, optarg);
-                        goto fail;
+                        goto clean;
                     } else { break; }
             case 'p': gs.mthread = gs.nthread = atoi(optarg); break;
             case 'f':
@@ -479,7 +494,7 @@ int main(int argc, char **argv) {
                     if (gs.chroms) { str_arr_destroy(gs.chroms, gs.nchrom); gs.nchrom = 0; }
                     if (NULL == (gs.chroms = hts_readlist(optarg, 0, &gs.nchrom))) {
                         fprintf(stderr, "[E::%s] could not read chrom-list '%s'\n", __func__, optarg);
-                        goto fail;
+                        goto clean;
                     }  else { break; }
             case 2:  
                     if (gs.cell_tag) free(gs.cell_tag);
@@ -499,16 +514,17 @@ int main(int argc, char **argv) {
             case 14: 
                     if ((gs.rflag_require = bam_str2flag(optarg)) < 0) {
                         fprintf(stderr, "[E::%s] could not parse --inclFLAG '%s'\n", __func__, optarg);
-                        goto fail;
+                        goto clean;
                     } else { break; }
             case 15:
                     if ((gs.rflag_filter = bam_str2flag(optarg)) < 0) {
                         fprintf(stderr, "[E::%s] could not parse --exclFLAG '%s'\n", __func__, optarg);
-                        goto fail;
+                        goto clean;
                     } else { break; }
             case 16: gs.no_orphan = 0; break;
             case 17: gs.max_depth = atoi(optarg); break;
-            default:  fprintf(stderr,"Invalid option: '%c'\n", c); goto fail;													
+            case 18: gs.max_pileup = atoi(optarg); break;
+            default:  fprintf(stderr,"Invalid option: '%c'\n", c); goto clean;	
         }
     }
 
@@ -522,7 +538,7 @@ int main(int argc, char **argv) {
     if ((ret = check_args(&gs)) < 0) { 
         fprintf(stderr, "[E::%s] error global settings\n", __func__);
         if (ret == -1) { print_usage(stderr); }
-        goto fail;
+        goto clean;
     }
     fprintf(stderr, "[I::%s] global settings after checking:\n", __func__);
     gll_setting_print(stderr, &gs, "\t");
@@ -532,7 +548,7 @@ int main(int argc, char **argv) {
         NULL == (gs.out_mtx_oth = jf_init()) || NULL == (gs.out_samples = jf_init()) || \
         NULL == (gs.out_vcf_base = jf_init()) || (gs.is_genotype && NULL == (gs.out_vcf_cells = jf_init()))) {
         fprintf(stderr, "[E::%s] fail to create jfile_t.\n", __func__);
-        goto fail;
+        goto clean;
     }
     gs.out_mtx_ad->is_zip = 0; gs.out_mtx_ad->is_tmp = 0;
     gs.out_mtx_ad->fn = format_fn(join_path(gs.out_dir, CSP_OUT_MTX_AD), gs.out_mtx_ad->is_zip, s); ks_clear(s);
@@ -558,15 +574,15 @@ int main(int argc, char **argv) {
     kputs(CSP_MTX_HEADER, s);
     if (output_headers(gs.out_mtx_ad, "wb", ks_str(s), ks_len(s)) < 0) {   // output header to mtx_AD
         fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_mtx_ad->fn);
-        goto fail;
+        goto clean;
     }
     if (output_headers(gs.out_mtx_dp, "wb", ks_str(s), ks_len(s)) < 0) {   // output header to mtx_DP
         fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_mtx_dp->fn);
-        goto fail;
+        goto clean;
     }
     if (output_headers(gs.out_mtx_oth, "wb", ks_str(s), ks_len(s)) < 0) {  // output header to mtx_OTH
         fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_mtx_oth->fn);
-        goto fail;
+        goto clean;
     } ks_clear(s);
 
     if (use_barcodes(&gs)) {                     // output samples.
@@ -583,13 +599,13 @@ int main(int argc, char **argv) {
 
     if (output_headers(gs.out_samples, "wb", ks_str(s), ks_len(s)) < 0) {
         fprintf(stderr, "[E::%s] fail to write samples to '%s'\n", __func__, gs.out_samples->fn);
-        goto fail;
+        goto clean;
     } ks_clear(s);
     kputs(CSP_VCF_BASE_HEADER, s);             // output header to vcf base.
     kputs("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n", s);
     if (output_headers(gs.out_vcf_base, "wb", ks_str(s), ks_len(s)) < 0) {
         fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_vcf_base->fn);
-        goto fail;
+        goto clean;
     } ks_clear(s);
     if (gs.is_genotype) {
         kputs(CSP_VCF_CELLS_HEADER, s);           // output header to vcf cells.
@@ -607,12 +623,12 @@ int main(int argc, char **argv) {
             }
         } else {
             fprintf(stderr, "[E::%s] neither barcodes or sample IDs exist.\n", __func__);
-            goto fail;
+            goto clean;
         }
         kputc('\n', s);
         if (output_headers(gs.out_vcf_cells, "wb", ks_str(s), ks_len(s)) < 0) {
             fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_vcf_cells->fn);
-            goto fail;
+            goto clean;
         }
     }
 
@@ -639,31 +655,31 @@ int main(int argc, char **argv) {
             biallele_t **ale = NULL;
             if (NULL == (ale = (biallele_t**) calloc(1, sizeof(biallele_t*)))) {
                 fprintf(stderr, "[E::%s] out of space for biallele_t**!\n", __func__);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             }
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             } else { 
                 n = kv_size(gs.pl);
                 fprintf(stderr, "[I::%s] pileuping %ld candidate variants ...\n", __func__, n); 
             }
             if (NULL == (gs.targets = regidx_init(NULL, NULL, regidx_payload_free, sizeof(biallele_t*), NULL))) {
                 fprintf(stderr, "[E::%s] failed to init regidx for '%s'.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             } 
             for (i = 0; i < n; i++) {
                 snp = kv_A(gs.pl, i);
                 if (NULL == (*ale = biallele_init())) { 
                     fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 } else {
                     (*ale)->ref = snp->ref; (*ale)->alt = snp->alt;
                 }
                 if (regidx_push(gs.targets, snp->chr, snp->chr + strlen(snp->chr) - 1, snp->pos, snp->pos, ale) < 0) {
                     fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
                     free(ale); ale = NULL;    // FIXME!! *ale should be safely freed.
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 } 
             } free(ale); ale = NULL;
             snplist_destroy(gs.pl);
@@ -674,7 +690,7 @@ int main(int argc, char **argv) {
             }
             if (NULL == (gs.chroms = (char**) calloc(ntmp, sizeof(char*)))) {
                 fprintf(stderr, "[E::%s] failed to allocate space for gs.chroms\n", __func__);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             }
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
@@ -683,19 +699,19 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "[I::%s] mode 1a(-T): pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
                 if (run_mode1a_T(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1a(-T) failed.\n", __func__);
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 }
             } else { 
                 fprintf(stderr, "[I::%s] mode 1b(-T): pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
                 if (run_mode1b_T(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1b(-T) failed.\n", __func__);
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 }
             }
         } else {
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             } else {
                 fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, kv_size(gs.pl));
             }
@@ -703,13 +719,13 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "[I::%s] mode 1a: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
                 if (run_mode1a(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1a failed.\n", __func__);
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 } 
             } else { 
                 fprintf(stderr, "[I::%s] mode 1b: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
                 if (run_mode1b(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1b failed.\n", __func__);
-                    print_time = 1; goto fail;
+                    print_time = 1; goto clean;
                 } 
             }
         }
@@ -718,46 +734,50 @@ int main(int argc, char **argv) {
             fprintf(stderr, "[I::%s] mode 2a: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
             if (run_mode2a(&gs) < 0) {
                 fprintf(stderr, "[E::%s] running mode 2a failed.\n", __func__);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             }
         } else {
             fprintf(stderr, "[I::%s] mode 2b: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
             if (run_mode2b(&gs) < 0) {
                 fprintf(stderr, "[E::%s] running mode 2b failed.\n", __func__);
-                print_time = 1; goto fail;
+                print_time = 1; goto clean;
             }
         }
     } else {
         fprintf(stderr, "[E::%s] no proper mode to run, check input options.\n", __func__);
         print_usage(stderr);
-        goto fail;
+        goto clean;
     }
 
+    is_ok = 1;
+
+  clean:
     /* clean */
-    ks_free(s); s = NULL;
-    gll_setting_free(&gs);
-    fprintf(stderr, "[I::%s] All Done!\n", __func__);
-
-    /* calc time spent */
-    time(&end_time);
-    time_info = localtime(&end_time);
-    strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
-    fprintf(stderr, "[I::%s] end time: %s\n", __func__, time_str);
-    fprintf(stderr, "[I::%s] time spent: %ld seconds.\n", __func__, end_time - start_time);
-
-    return 0;
-
-  fail:
     if (s) { ks_free(s); }
     gll_setting_free(&gs);
-    if (print_time) {
+    if (is_ok)
+        fprintf(stderr, "[I::%s] All Done!\n", __func__);
+    else
         fprintf(stderr, "[E::%s] Quiting...\n", __func__);
+
+    /* command line */
+    fprintf(stderr, "[I::%s] CMD: %s", __func__, argv[0]);
+    for (i = 1; i < argc; i++)
+        fprintf(stderr, " %s", argv[i]);
+    fputc('\n', stderr);
+
+    /* calc time spent */
+    if (is_ok || print_time) {
         time(&end_time);
         time_info = localtime(&end_time);
         strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
         fprintf(stderr, "[I::%s] end time: %s\n", __func__, time_str);
         fprintf(stderr, "[I::%s] time spent: %ld seconds.\n", __func__, end_time - start_time);
     }
-    return 1;
+
+    if (is_ok)
+        return 0;
+    else
+        return 1;
 }
 
