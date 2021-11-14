@@ -164,7 +164,8 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file; 0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
+    fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file, ie., max value for REF+ALT+OTH;\n");
+    fprintf(fp, "                       0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
     fprintf(fp, "\n");
     fprintf(fp, "Note that the \"--maxFLAG\" option is now deprecated, please use \"--inclFLAG\" or \"--exclFLAG\"\n");

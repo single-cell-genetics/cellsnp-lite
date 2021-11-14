@@ -44,8 +44,9 @@
 // default including flag mask, reads with all flag mask bit unset would be filtered.
 #define CSP_INCL_FMASK  0
 // default max depth for one site of one bam file, 0 means highest possible value.
-// It will be used by csp_fetch and the bam_mplp_set_maxcnt() in csp_pileup.
+// (i.e., max value for REF+ALT+OTH)
 #define CSP_MAX_DEPTH   0
+// It will be used by csp_fetch and the bam_mplp_set_maxcnt() in csp_pileup.
 // if discard orphan reads
 #define CSP_NO_ORPHAN   1
 
