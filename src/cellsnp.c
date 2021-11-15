@@ -761,6 +761,7 @@ int main(int argc, char **argv) {
         fprintf(stderr, "[E::%s] Quiting...\n", __func__);
 
     /* command line */
+    fprintf(stderr, "[I::%s] Version: %s (htslib %s)\n", __func__, CSP_VERSION, hts_version());
     fprintf(stderr, "[I::%s] CMD: %s", __func__, argv[0]);
     for (i = 1; i < argc; i++)
         fprintf(stderr, " %s", argv[i]);
