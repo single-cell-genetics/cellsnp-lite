@@ -400,7 +400,7 @@ int main(int argc, char **argv) {
     global_settings gs;
     gll_set_default(&gs);
     kstring_t ks = KS_INITIALIZE, *s = &ks;
-    int i, c, k, ret, print_time = 0, print_skip_snp = 0;
+    int i, c, k, ret, print_info = 0, print_skip_snp = 0;
 
     struct option lopts[] = {
         {"help", no_argument, NULL, 'h'},
@@ -535,11 +535,12 @@ int main(int argc, char **argv) {
             case 16: gs.no_orphan = 0; break;
             case 17: gs.max_depth = atoi(optarg); break;
             case 18: gs.max_pileup = atoi(optarg); break;
-            default:  fprintf(stderr,"Invalid option: '%c'\n", c); goto clean;	
+            default: fprintf(stderr, "Invalid option: '%c'\n", c); goto clean;	
         }
     }
 
     fprintf(stderr, "[I::%s] start time: %s\n", __func__, time_str);
+    print_info = 1;
 
     /* check global settings */
   #if DEBUG
@@ -666,31 +667,31 @@ int main(int argc, char **argv) {
             biallele_t **ale = NULL;
             if (NULL == (ale = (biallele_t**) calloc(1, sizeof(biallele_t*)))) {
                 fprintf(stderr, "[E::%s] out of space for biallele_t**!\n", __func__);
-                print_time = 1; goto clean;
+                goto clean;
             }
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto clean;
+                goto clean;
             } else { 
                 n = kv_size(gs.pl);
                 fprintf(stderr, "[I::%s] pileuping %ld candidate variants ...\n", __func__, n); 
             }
             if (NULL == (gs.targets = regidx_init(NULL, NULL, regidx_payload_free, sizeof(biallele_t*), NULL))) {
                 fprintf(stderr, "[E::%s] failed to init regidx for '%s'.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto clean;
+                goto clean;
             } 
             for (i = 0; i < n; i++) {
                 snp = kv_A(gs.pl, i);
                 if (NULL == (*ale = biallele_init())) { 
                     fprintf(stderr, "[E::%s] failed to create biallele_t.\n", __func__);
-                    print_time = 1; goto clean;
+                    goto clean;
                 } else {
                     (*ale)->ref = snp->ref; (*ale)->alt = snp->alt;
                 }
                 if (regidx_push(gs.targets, snp->chr, snp->chr + strlen(snp->chr) - 1, snp->pos, snp->pos, ale) < 0) {
                     fprintf(stderr, "[E::%s] failed to push regidx.\n", __func__);
                     free(ale); ale = NULL;    // FIXME!! *ale should be safely freed.
-                    print_time = 1; goto clean;
+                    goto clean;
                 } 
             } free(ale); ale = NULL;
             snplist_destroy(gs.pl);
@@ -701,7 +702,7 @@ int main(int argc, char **argv) {
             }
             if (NULL == (gs.chroms = (char**) calloc(ntmp, sizeof(char*)))) {
                 fprintf(stderr, "[E::%s] failed to allocate space for gs.chroms\n", __func__);
-                print_time = 1; goto clean;
+                goto clean;
             }
             for (gs.nchrom = 0; gs.nchrom < ntmp; gs.nchrom++) {
                 gs.chroms[gs.nchrom] = strdup(tmp[gs.nchrom]);
@@ -710,19 +711,19 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "[I::%s] mode 1a(-T): pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
                 if (run_mode1a_T(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1a(-T) failed.\n", __func__);
-                    print_time = 1; goto clean;
+                    goto clean;
                 }
             } else { 
                 fprintf(stderr, "[I::%s] mode 1b(-T): pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
                 if (run_mode1b_T(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1b(-T) failed.\n", __func__);
-                    print_time = 1; goto clean;
+                    goto clean;
                 }
             }
         } else {
             if (get_snplist(gs.snp_list_file, &gs.pl, &ret, print_skip_snp) <= 0 || ret < 0) {
                 fprintf(stderr, "[E::%s] get SNP list from '%s' failed.\n", __func__, gs.snp_list_file);
-                print_time = 1; goto clean;
+                goto clean;
             } else {
                 fprintf(stderr, "[I::%s] fetching %ld candidate variants ...\n", __func__, kv_size(gs.pl));
             }
@@ -730,13 +731,13 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "[I::%s] mode 1a: fetch given SNPs in %d single cells.\n", __func__, gs.nbarcode); 
                 if (run_mode1a(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1a failed.\n", __func__);
-                    print_time = 1; goto clean;
+                    goto clean;
                 } 
             } else { 
                 fprintf(stderr, "[I::%s] mode 1b: fetch given SNPs in %d bulk samples.\n", __func__, gs.nsid);
                 if (run_mode1b(&gs) < 0) {
                     fprintf(stderr, "[E::%s] running mode 1b failed.\n", __func__);
-                    print_time = 1; goto clean;
+                    goto clean;
                 } 
             }
         }
@@ -745,13 +746,13 @@ int main(int argc, char **argv) {
             fprintf(stderr, "[I::%s] mode 2a: pileup %d whole chromosomes in %d single cells.\n", __func__, gs.nchrom, gs.nbarcode);
             if (run_mode2a(&gs) < 0) {
                 fprintf(stderr, "[E::%s] running mode 2a failed.\n", __func__);
-                print_time = 1; goto clean;
+                goto clean;
             }
         } else {
             fprintf(stderr, "[I::%s] mode 2b: pileup %d whole chromosomes in %d sample(s).\n", __func__, gs.nchrom, gs.nin);
             if (run_mode2b(&gs) < 0) {
                 fprintf(stderr, "[E::%s] running mode 2b failed.\n", __func__);
-                print_time = 1; goto clean;
+                goto clean;
             }
         }
     } else {
@@ -766,20 +767,20 @@ int main(int argc, char **argv) {
     /* clean */
     if (s) { ks_free(s); }
     gll_setting_free(&gs);
-    if (is_ok)
-        fprintf(stderr, "[I::%s] All Done!\n", __func__);
-    else
-        fprintf(stderr, "[E::%s] Quiting...\n", __func__);
+    if (print_info) {
+        if (is_ok)
+            fprintf(stderr, "[I::%s] All Done!\n", __func__);
+        else
+            fprintf(stderr, "[E::%s] Quiting...\n", __func__);
 
-    /* command line */
-    fprintf(stderr, "[I::%s] Version: %s (htslib %s)\n", __func__, CSP_VERSION, hts_version());
-    fprintf(stderr, "[I::%s] CMD: %s", __func__, argv[0]);
-    for (i = 1; i < argc; i++)
-        fprintf(stderr, " %s", argv[i]);
-    fputc('\n', stderr);
+        /* command line */
+        fprintf(stderr, "[I::%s] Version: %s (htslib %s)\n", __func__, CSP_VERSION, hts_version());
+        fprintf(stderr, "[I::%s] CMD: %s", __func__, argv[0]);
+        for (i = 1; i < argc; i++)
+            fprintf(stderr, " %s", argv[i]);
+        fputc('\n', stderr);
 
-    /* calc time spent */
-    if (is_ok || print_time) {
+        /* calc time spent */
         time(&end_time);
         time_info = localtime(&end_time);
         strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", time_info);
