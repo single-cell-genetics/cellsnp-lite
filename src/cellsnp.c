@@ -153,7 +153,7 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       missing REFs in the input VCF for Mode 1.\n");
     fprintf(fp, "  --chrom STR          The chromosomes to use, comma separated [1 to %d]\n", CSP_NCHROM);
     fprintf(fp, "  --cellTAG STR        Tag for cell barcodes, turn off with None [%s]\n", CSP_CELL_TAG);
-    fprintf(fp, "  --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,\n");
+    fprintf(fp, "  --UMItag STR         Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes is inputted,\n");
     fprintf(fp, "                       otherwise use None. None mode means no UMI but read counts [%s]\n", CSP_UMI_TAG);
     fprintf(fp, "  --minCOUNT INT       Minimum aggragated count [%d]\n", CSP_MIN_COUNT);
     fprintf(fp, "  --minMAF FLOAT       Minimum minor allele frequency [%.2f]\n", CSP_MIN_MAF);
@@ -300,7 +300,7 @@ static int check_args(global_settings *gs) {
     if (gs->umi_tag) {
         if (0 == strcmp(gs->umi_tag, "Auto")) {
             if (gs->barcodes) {
-                free(gs->umi_tag); gs->umi_tag = strdup("UR"); 
+                free(gs->umi_tag); gs->umi_tag = strdup("UB"); 
             } else {
                 free(gs->umi_tag); gs->umi_tag = NULL;
             }

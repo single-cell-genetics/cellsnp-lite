@@ -119,7 +119,7 @@ struct _gll_settings {
     char **chroms;      // Pointer to the array of the chromosomes to use.
     int nchrom;            // Num of chromosomes.
     char *cell_tag;        // Tag for cell barcodes, NULL means no cell tags.
-    char *umi_tag;         // Tag for UMI: UR, NULL. NULL means no UMI but read counts.
+    char *umi_tag;         // Tag for UMI: UB, NULL. NULL means no UMI but read counts.
     int nthread;           // Num of threads to be used.
     threadpool tp;         // Pointer to thread pool.
     int mthread;           // Num of threads that user specified.
