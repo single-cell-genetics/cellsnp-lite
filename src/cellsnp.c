@@ -449,7 +449,8 @@ int main(int argc, char **argv) {
         {"maxdepth", required_argument, NULL, 17},
         {"maxPILEUP", required_argument, NULL, 18},
         {"maxPileup", required_argument, NULL, 18},
-        {"maxpileup", required_argument, NULL, 18}
+        {"maxpileup", required_argument, NULL, 18},
+        {NULL, 0, NULL, 0}
     };
     if (1 == argc) { print_usage(stderr); goto clean; }
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:f:", lopts, NULL)) != -1) {
