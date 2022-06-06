@@ -245,7 +245,7 @@ static int csp_pileup_core(void *args) {
     mp_aux_t **data = NULL;
     int ndat = 0;                 // num of elements in array of mp_aux_t data.
 
-    int tid, max_depth;
+    int tid;
     int pos;
     int i, r, ret;
     size_t msnp, nsnp, unit = 200000;
@@ -368,7 +368,6 @@ static int csp_pileup_core(void *args) {
     /* pileup each SNP. 
     */
     // init mpileup 
-    max_depth = INT_MAX;
     if (gs->max_depth > (1 << 20) / (float) nfs) {
         fprintf(stderr, "[W::%s] Combined max depth is above 1M. Potential memory hog!\n", __func__);
     }
@@ -390,7 +389,7 @@ static int csp_pileup_core(void *args) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto clean;
         }
-        bam_mplp_set_maxcnt(mp_iter, max_depth);
+        bam_mplp_set_maxcnt(mp_iter, gs->max_pileup);
 
         // As each query region is a chrom, so no need to call bam_mplp_init_overlaps() here?
         /* begin mpileup */

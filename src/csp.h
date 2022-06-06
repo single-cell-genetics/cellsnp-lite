@@ -43,9 +43,13 @@
 #define CSP_EXCL_FMASK_NOUMI  (BAM_FUNMAP | BAM_FSECONDARY | BAM_FQCFAIL | BAM_FDUP)
 // default including flag mask, reads with all flag mask bit unset would be filtered.
 #define CSP_INCL_FMASK  0
-// default max depth for one site of one bam file, 0 means highest possible value.
-// It will be used by csp_fetch and the bam_mplp_set_maxcnt() in csp_pileup.
+// default max depth for one site of one bam file (excluding those filtered reads),
+// avoids excessive memory usage; 0 means highest possible value.
 #define CSP_MAX_DEPTH   0
+// default max pileup for one site of one bam file(including those filtered reads),
+// avoids excessive memory usage; 0 means highest possible value.
+// It will be used the bam_mplp_set_maxcnt() in csp_pileup.
+#define CSP_MAX_PILEUP  0
 // if discard orphan reads
 #define CSP_NO_ORPHAN   1
 
@@ -115,7 +119,7 @@ struct _gll_settings {
     char **chroms;      // Pointer to the array of the chromosomes to use.
     int nchrom;            // Num of chromosomes.
     char *cell_tag;        // Tag for cell barcodes, NULL means no cell tags.
-    char *umi_tag;         // Tag for UMI: UR, NULL. NULL means no UMI but read counts.
+    char *umi_tag;         // Tag for UMI: UB, NULL. NULL means no UMI but read counts.
     int nthread;           // Num of threads to be used.
     threadpool tp;         // Pointer to thread pool.
     int mthread;           // Num of threads that user specified.
@@ -133,6 +137,7 @@ struct _gll_settings {
     int rflag_filter;   // excluding flag mask, reads with any flag mask bit set would be filtered.
     int rflag_require;  // including flag mask, reads with all flag mask bit unset would be filtered.
     int max_depth;      // max depth for one site of one file, 0 means highest possible value.
+    int max_pileup;     // max pileup for one site of one file, 0 means highest possible value.
     int no_orphan;     // 0 or 1. 1: donot use orphan reads; 0: use orphan reads.
 };
 
