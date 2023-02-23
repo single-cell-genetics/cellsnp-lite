@@ -185,6 +185,9 @@ version you are using):
   https://broadinstitute.github.io/picard/explain-flags.html
     
 
+**--chrom STR** The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
+
+
 Notes
 -----
 
