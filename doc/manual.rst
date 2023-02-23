@@ -138,7 +138,7 @@ version you are using):
 
 .. code-block:: html
 
-  Version: 1.2.2 (htslib 1.11-79-g53d7277)
+  Version: 1.2.3 (htslib 1.11-79-g53d7277)
   Usage:   cellsnp-lite [options]
   
   Options:
@@ -168,7 +168,7 @@ version you are using):
                          missing REFs in the input VCF for Mode 1.
     --chrom STR          The chromosomes to use, comma separated [1 to 22]
     --cellTAG STR        Tag for cell barcodes, turn off with None [CB]
-    --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,
+    --UMItag STR         Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes are inputted,
                          otherwise use None. None mode means no UMI but read counts [Auto]
     --minCOUNT INT       Minimum aggragated count [20]
     --minMAF FLOAT       Minimum minor allele frequency [0.00]
@@ -180,7 +180,10 @@ version you are using):
                          (when use UMI) or UNMAP,SECONDARY,QCFAIL,DUP (otherwise)]
     --minLEN INT         Minimum mapped length for read filtering [30]
     --minMAPQ INT        Minimum MAPQ for read filtering [20]
-    --maxDEPTH INT       Maximum depth for one site of one file; 0 means highest possible value [0]
+    --maxPILEUP INT      Maximum pileup for one site of one file (including those filtered reads),
+                         avoids excessive memory usage; 0 means highest possible value [0]
+    --maxDEPTH INT       Maximum depth for one site of one file (excluding those filtered reads),
+                         avoids excessive memory usage; 0 means highest possible value [0]
     --countORPHAN        If use, do not skip anomalous read pairs.
   
   Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG"
@@ -190,19 +193,21 @@ version you are using):
 
 Some Details:
 
-**-b, --barcodeFile FILE** A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
+``-b, --barcodeFile FILE`` A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
 
-**-f, --refseq FILE** Faidx indexed reference sequence file. If set, the real (genomic) ref extracted from this file would be used for Mode 2 or for the missing REFs in the input VCF for Mode 1. Without this option, cellsnp-lite mode 2 would take the allele with the highest count as REF and the second highest as ALT, with little input information about the actual (genomic) reference. This is different from mode 1, which uses the REF and ALT alleles specified in the input VCF.
+``-f, --refseq FILE`` Faidx indexed reference sequence file. If set, the real (genomic) ref extracted from this file would be used for Mode 2 or for the missing REFs in the input VCF for Mode 1. Without this option, cellsnp-lite mode 2 would take the allele with the highest count as REF and the second highest as ALT, with little input information about the actual (genomic) reference. This is different from mode 1, which uses the REF and ALT alleles specified in the input VCF.
 
-**--chrom STR** The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
+``--chrom STR`` The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
 
-**--UMItag STR** Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc, please set --UMItag None**. Otherwise, all pileup counts will be zero.
+``--UMItag STR`` Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes are inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc**, please set ``--UMItag None``. Otherwise, all pileup counts will be zero.
 
-**--minMAF FLOAT** Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum between the allele frequencies of REF and ALT for a given SNP site. Here, both allele frequencies are derived from aggregated read counts from all cells (i.e., total_REF_read / total_reads, or total_ALT_read / total_reads). This parameter can be used for SNP filtering.
+``--minMAF FLOAT`` Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum between the allele frequencies of REF and ALT for a given SNP site. Here, both allele frequencies are derived from aggregated read counts from all cells (i.e., total_REF_read / total_reads, or total_ALT_read / total_reads). This parameter can be used for SNP filtering.
 
 
 Notes
 -----
+
+Since v1.2.3, ``UB``, instead of ``UR``, is used as default UMI tag when barcodes are given.
 
 The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly
 caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed

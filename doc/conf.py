@@ -22,7 +22,7 @@ copyright = '2020, Xianjie Huang'
 author = 'Xianjie Huang'
 
 # The full version, including alpha/beta/rc tags
-release = 'v1.2.2'
+release = 'v1.2.3'
 
 
 # -- General configuration ---------------------------------------------------

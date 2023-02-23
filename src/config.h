@@ -10,7 +10,7 @@
 #define DEVELOP 0
 
 #define CSP_NAME "cellsnp-lite"
-#define CSP_VERSION "1.2.2"
+#define CSP_VERSION "1.2.3"
 #define CSP_AUTHOR "hxj5<hxj5@hku.hk>"
 
 #define JF_ZIP_TYPE         2  // 1, gzip; 2, bgzip.
