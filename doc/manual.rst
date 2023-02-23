@@ -115,6 +115,18 @@ This mode requires inputting one or multiple BAM/SAM/CRAM file(s) of bulk or sma
 Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``, or ``chrMT``.
 
 
+Output
+------
+cellsnp-lite outputs at least 5 files listed below (with ``--gzip``):
+
+* ``cellSNP.base.vcf.gz``: a VCF file listing genotyped SNPs and aggregated AD & DP infomation (without GT).
+* ``cellSNP.samples.tsv``: a TSV file listing cell barcodes or sample IDs.
+* ``cellSNP.tag.AD.mtx``: a file in "Matrix Market exchange formats", containing the allele depths of the alternative (ALT) alleles.
+* ``cellSNP.tag.DP.mtx``: a file in "Matrix Market exchange formats", containing the sum of allele depths of the reference and alternative alleles (REF + ALT).
+* ``cellSNP.tag.OTH.mtx``: a file in "Matrix Market exchange formats", containing the sum of allele depths of all the alleles other than REF and ALT.
+
+If ``--genotype`` option was specified, then cellsnp-lite would output the ``cellSNP.cells.vcf.gz`` file, a VCF file listing genotyped SNPs and AD & DP & genotype (GT) information for each cell or sample.
+
 
 Full parameters
 ---------------
