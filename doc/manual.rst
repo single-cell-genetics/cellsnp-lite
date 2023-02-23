@@ -138,7 +138,7 @@ version you are using):
 
 .. code-block:: html
 
-  Version: 1.2.2 (htslib 1.11-79-g53d7277)
+  Version: 1.2.3 (htslib 1.11-79-g53d7277)
   Usage:   cellsnp-lite [options]
   
   Options:
@@ -168,7 +168,7 @@ version you are using):
                          missing REFs in the input VCF for Mode 1.
     --chrom STR          The chromosomes to use, comma separated [1 to 22]
     --cellTAG STR        Tag for cell barcodes, turn off with None [CB]
-    --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes are inputted,
+    --UMItag STR         Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes are inputted,
                          otherwise use None. None mode means no UMI but read counts [Auto]
     --minCOUNT INT       Minimum aggragated count [20]
     --minMAF FLOAT       Minimum minor allele frequency [0.00]
@@ -180,7 +180,10 @@ version you are using):
                          (when use UMI) or UNMAP,SECONDARY,QCFAIL,DUP (otherwise)]
     --minLEN INT         Minimum mapped length for read filtering [30]
     --minMAPQ INT        Minimum MAPQ for read filtering [20]
-    --maxDEPTH INT       Maximum depth for one site of one file; 0 means highest possible value [0]
+    --maxPILEUP INT      Maximum pileup for one site of one file (including those filtered reads),
+                         avoids excessive memory usage; 0 means highest possible value [0]
+    --maxDEPTH INT       Maximum depth for one site of one file (excluding those filtered reads),
+                         avoids excessive memory usage; 0 means highest possible value [0]
     --countORPHAN        If use, do not skip anomalous read pairs.
   
   Note that the "--maxFLAG" option is now deprecated, please use "--inclFLAG" or "--exclFLAG"
@@ -203,6 +206,8 @@ Some Details:
 
 Notes
 -----
+
+Since v1.2.3, ``UB``, instead of ``UR``, is used as default UMI tag when barcodes are given.
 
 The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly
 caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed

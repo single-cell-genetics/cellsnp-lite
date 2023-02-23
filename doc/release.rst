@@ -2,6 +2,17 @@
 History
 =======
 
+Release v1.2.3 (23/02/2023)
+===========================
+* use UB instead of UR as default UMI tag when barcodes are given.
+* add --maxPILEUP and update --maxDEPTH.
+* fix the segmentation fault of getopt_long when given unrecognized 
+  cmdline parameters.
+* allow more cmdline options in lower case.
+* print CMD, VERSION and global settings.
+* improve logging output.
+* update manual according to issues (till Feb 23, 2023).
+
 Release v1.2.2 (03/11/2021)
 ===========================
 * add -f/--refseq so that the real (genomic) ref could be extracted from
