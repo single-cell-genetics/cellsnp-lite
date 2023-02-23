@@ -185,7 +185,13 @@ version you are using):
   https://broadinstitute.github.io/picard/explain-flags.html
     
 
+Some Details:
+
+**-b, --barcodeFile FILE** A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
+
 **--chrom STR** The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
+
+**--UMItag STR** Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc, please set --UMItag None**. Otherwise, all pileup counts will be zero.
 
 
 Notes
