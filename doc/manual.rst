@@ -168,7 +168,7 @@ version you are using):
                          missing REFs in the input VCF for Mode 1.
     --chrom STR          The chromosomes to use, comma separated [1 to 22]
     --cellTAG STR        Tag for cell barcodes, turn off with None [CB]
-    --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted,
+    --UMItag STR         Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes are inputted,
                          otherwise use None. None mode means no UMI but read counts [Auto]
     --minCOUNT INT       Minimum aggragated count [20]
     --minMAF FLOAT       Minimum minor allele frequency [0.00]
@@ -190,15 +190,15 @@ version you are using):
 
 Some Details:
 
-**-b, --barcodeFile FILE** A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
+``-b, --barcodeFile FILE`` A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
 
-**-f, --refseq FILE** Faidx indexed reference sequence file. If set, the real (genomic) ref extracted from this file would be used for Mode 2 or for the missing REFs in the input VCF for Mode 1. Without this option, cellsnp-lite mode 2 would take the allele with the highest count as REF and the second highest as ALT, with little input information about the actual (genomic) reference. This is different from mode 1, which uses the REF and ALT alleles specified in the input VCF.
+``-f, --refseq FILE`` Faidx indexed reference sequence file. If set, the real (genomic) ref extracted from this file would be used for Mode 2 or for the missing REFs in the input VCF for Mode 1. Without this option, cellsnp-lite mode 2 would take the allele with the highest count as REF and the second highest as ALT, with little input information about the actual (genomic) reference. This is different from mode 1, which uses the REF and ALT alleles specified in the input VCF.
 
-**--chrom STR** The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
+``--chrom STR`` The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
 
-**--UMItag STR** Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc, please set --UMItag None**. Otherwise, all pileup counts will be zero.
+``--UMItag STR`` Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes are inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc**, please set ``--UMItag None``. Otherwise, all pileup counts will be zero.
 
-**--minMAF FLOAT** Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum between the allele frequencies of REF and ALT for a given SNP site. Here, both allele frequencies are derived from aggregated read counts from all cells (i.e., total_REF_read / total_reads, or total_ALT_read / total_reads). This parameter can be used for SNP filtering.
+``--minMAF FLOAT`` Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum between the allele frequencies of REF and ALT for a given SNP site. Here, both allele frequencies are derived from aggregated read counts from all cells (i.e., total_REF_read / total_reads, or total_ALT_read / total_reads). This parameter can be used for SNP filtering.
 
 
 Notes
