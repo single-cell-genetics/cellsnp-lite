@@ -4,7 +4,7 @@ Manual
 Quick usage
 -----------
 
-Once installed, check all arguments by type ``cellsnp-lite -h``. 
+Once installed, check all arguments by typing ``cellsnp-lite -h``. 
 There are two modes of cellsnp-lite:
 
 Mode 1: pileup with given SNPs
@@ -21,7 +21,9 @@ Mode 1a: droplet-based single cells
 
 Use both ``-R`` and ``-b`` to pileup droplet-based dataset (e.g., 10x Genomics) with given SNPs.
 
-Require: a single BAM/SAM/CRAM file, e.g., from cellranger, a list of cell barcodes,
+Require: a single BAM/SAM/CRAM file, e.g., from CellRanger; a list of cell barcodes,
+e.g., ``barcodes.tsv`` file in the CellRanger directory, 
+``outs/filtered_gene_bc_matrices/``; 
 a VCF file for common SNPs. This mode is recommended comparing to mode 2, if a
 list of common SNP is known, e.g., human (see `Candidate_SNPs`_)
 
@@ -114,27 +116,6 @@ Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``
 
 
 
-Notes
------
-
-The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly
-caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed
-to be opened by system for single process), which is typically 1024. Specifically, in the
-case of ``M`` input files and ``N`` threads, cellsnp-lite would open in total about ``M*N`` files.
-So the issue would more likely happen when large M or N is given. In order to fix it, cellsnp-lite
-would firstly try to increase the limit to the max possible value (which is typically 4096) and
-then use a fail-retry strategy to auto detect the most suitable number of threads (which could
-be smaller than the original nthreads specified by user).
-
-The command line option ``--maxFLAG`` is now deprecated (since v1.0.0), please use ``--inclFLAG`` and
-``--exclFLAG`` instead, which are more flexible for reads filtering. You could refer to
-the explain_flags_ page to easily aggregate and convert all flag bits into one integer.
-One example is that the default exclFLAG value (without using UMIs) is 1796, which is
-calculated by adding four flag bits: UNMAP (4), SECONDARY (256), QCFAIL (512) and DUP (1024).
-
-.. _RLIMIT_NOFILE: https://man7.org/linux/man-pages/man2/getrlimit.2.html
-.. _explain_flags: https://broadinstitute.github.io/picard/explain-flags.html
-
 Full parameters
 ---------------
 Here is a list of full parameters for setting (``cellsnp-lite -V`` always give the 
@@ -191,3 +172,26 @@ version you are using):
   instead. You can easily aggregate and convert the flag mask bits to an integer by refering to:
   https://broadinstitute.github.io/picard/explain-flags.html
     
+
+Notes
+-----
+
+The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly
+caused by exceeding the `RLIMIT_NOFILE`_ resource limit (ie. the max number of files allowed
+to be opened by system for single process), which is typically 1024. Specifically, in the
+case of ``M`` input files and ``N`` threads, cellsnp-lite would open in total about ``M*N`` files.
+So the issue would more likely happen when large M or N is given. In order to fix it, cellsnp-lite
+would firstly try to increase the limit to the max possible value (which is typically 4096) and
+then use a fail-retry strategy to auto detect the most suitable number of threads (which could
+be smaller than the original nthreads specified by user).
+
+The command line option ``--maxFLAG`` is now deprecated (since v1.0.0), please use ``--inclFLAG`` and
+``--exclFLAG`` instead, which are more flexible for reads filtering. You could refer to
+the explain_flags_ page to easily aggregate and convert all flag bits into one integer.
+One example is that the default exclFLAG value (without using UMIs) is 1796, which is
+calculated by adding four flag bits: UNMAP (4), SECONDARY (256), QCFAIL (512) and DUP (1024).
+
+.. _RLIMIT_NOFILE: https://man7.org/linux/man-pages/man2/getrlimit.2.html
+.. _explain_flags: https://broadinstitute.github.io/picard/explain-flags.html
+
+
