@@ -71,6 +71,9 @@ Mode 2: pileup whole chromosome(s) without given SNPs
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space and speed up inference
 when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
 
+For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 
+(replace the ellipsis).
+
 .. note::
    This mode may output false positive SNPs, for example somatic variants or falses caused by
    RNA editing. These false SNPs are probably not consistent in all cells within one individual, hence
