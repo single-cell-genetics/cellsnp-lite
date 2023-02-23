@@ -189,6 +189,8 @@ Some Details:
 
 **-b, --barcodeFile FILE** A plain file listing all effective cell barcode, e.g., the ``barcodes.tsv`` file in the CellRanger directory, ``outs/filtered_gene_bc_matrices/``.
 
+**-f, --refseq FILE** Faidx indexed reference sequence file. If set, the real (genomic) ref extracted from this file would be used for Mode 2 or for the missing REFs in the input VCF for Mode 1. Without this option, cellsnp-lite mode 2 would take the allele with the highest count as REF and the second highest as ALT, with little input information about the actual (genomic) reference. This is different from mode 1, which uses the REF and ALT alleles specified in the input VCF.
+
 **--chrom STR** The chromosomes to use, comma separated. For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to specify it to 1,2,...,19 (replace the ellipsis).
 
 **--UMItag STR** Tag for UMI: UR, Auto, None. For Auto mode, use UR if barcodes is inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc, please set --UMItag None**. Otherwise, all pileup counts will be zero.
