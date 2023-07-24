@@ -80,7 +80,12 @@
 #define CSP_MTX_HEADER "%%MatrixMarket matrix coordinate integer general\n"           \
     "%\n"
 
-#define CSP_VCF_BASE_HEADER "##fileformat=VCFv4.2\n"
+#define CSP_VCF_BASE_HEADER "##fileformat=VCFv4.2\n"			\
+    "##FILTER=<ID=PASS,Description=\"All filters passed\">\n"		\
+    "##FILTER=<ID=.,Description=\"Filter info not available\">\n"	\
+    "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"total counts for ALT and REF\">\n" 	\
+    "##INFO=<ID=AD,Number=1,Type=Integer,Description=\"total counts for ALT\">\n"		\
+    "##INFO=<ID=OTH,Number=1,Type=Integer,Description=\"total counts for other bases from REF and ALT\">\n"
 
 #if CSP_FIT_MULTI_SMP
     #define TP_EUNDEF       1        // error that undefined
