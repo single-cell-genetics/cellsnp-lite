@@ -133,7 +133,7 @@ struct _gll_settings {
     int tp_max_open;       // Max num of open files for one process
     int min_count;     // Minimum aggragated count.
     double min_maf;    // Minimum minor allele frequency.
-    int double_gl;     // 0 or 1. 1: keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5. 0: not keep.
+    int doublet_gl;    // 0 or 1. 1: keep doublet GT likelihood, i.e., GT=0.5 and GT=1.5. 0: not keep.
     int min_len;       // Minimum mapped length for read filtering.
     int min_mapq;      // Minimum MAPQ for read filtering.
     /* max_flag is deprecated. use rflag_filter and rflag_require instead.
