@@ -62,7 +62,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         fprintf(fp, "%scell-tag = %s, umi-tag = %s\n", prefix, gs->cell_tag, gs->umi_tag);
         fprintf(fp, "%snthreads = %d, tp_max_open = %d\n", prefix, gs->nthread, gs->tp_max_open);
         fprintf(fp, "%smthreads = %d, tp_errno = %d, tp_ntry = %d\n", prefix, gs->mthread, gs->tp_errno, gs->tp_ntry);
-        fprintf(fp, "%smin_count = %d, min_maf = %.2f, double_gl = %d\n", prefix, gs->min_count, gs->min_maf, gs->double_gl);
+        fprintf(fp, "%smin_count = %d, min_maf = %.2f, doublet_gl = %d\n", prefix, gs->min_count, gs->min_maf, gs->doublet_gl);
         fprintf(fp, "%smin_len = %d, min_mapq = %d\n", prefix, gs->min_len, gs->min_mapq);
         //fprintf(fp, "%smax_flag = %d\n", prefix, gs->max_flag);
         fprintf(fp, "%srflag_filter = %d, rflag_require = %d\n", prefix, gs->rflag_filter, gs->rflag_require);
@@ -279,7 +279,7 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
                         plp->qmat[j][k] += mplp->qvec[k];
                 }
             }
-            if (qual_matrix_to_geno(plp->qmat, plp->bc, mplp->ref_idx, mplp->alt_idx, gs->double_gl, plp->gl, &plp->ngl) < 0)
+            if (qual_matrix_to_geno(plp->qmat, plp->bc, mplp->ref_idx, mplp->alt_idx, gs->doublet_gl, plp->gl, &plp->ngl) < 0)
                 return -1;
         }
     }

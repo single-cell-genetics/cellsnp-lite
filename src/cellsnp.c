@@ -100,7 +100,7 @@ static void gll_set_default(global_settings *gs) {
         gs->nthread = CSP_NTHREAD; gs->tp = NULL; gs->tp_max_open = TP_MAX_OPEN;
         gs->mthread = CSP_NTHREAD; gs->tp_errno = 0; gs->tp_ntry = 0;
         gs->min_count = CSP_MIN_COUNT; gs->min_maf = CSP_MIN_MAF; 
-        gs->double_gl = 0;
+        gs->doublet_gl = 0;
 
         // Read Filtering
         gs->min_len = CSP_MIN_LEN; gs->min_mapq = CSP_MIN_MAPQ;
@@ -434,7 +434,9 @@ int main(int argc, char **argv) {
         {"minMAF", required_argument, NULL, 5},
         {"minMaf", required_argument, NULL, 5},
         {"minmaf", required_argument, NULL, 5},
-        {"doubleGL", no_argument, NULL, 6},
+        {"doubletGL", no_argument, NULL, 6},
+        {"doubletGl", no_argument, NULL, 6},
+        {"doubletgl", no_argument, NULL, 6},
         {"minLEN", required_argument, NULL, 8},
         {"minLen", required_argument, NULL, 8},
         {"minlen", required_argument, NULL, 8},
@@ -515,7 +517,7 @@ int main(int argc, char **argv) {
                     gs.umi_tag = strdup(optarg); break;
             case 4: gs.min_count = atoi(optarg); break;
             case 5: gs.min_maf = atof(optarg); break;
-            case 6: gs.double_gl = 1; break;
+            case 6: gs.doublet_gl = 1; break;
             case 8: gs.min_len = atoi(optarg); break;
             case 9: gs.min_mapq = atoi(optarg); break;
             //case 10: gs.max_flag = atoi(optarg); break;
