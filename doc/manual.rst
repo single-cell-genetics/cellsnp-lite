@@ -201,7 +201,7 @@ Some Details:
 
 ``--UMItag STR`` Tag for UMI: UB, Auto, None. For Auto mode, use UB if barcodes are inputted, otherwise use None. None mode means no UMI but read counts. **For data without UMI, such as bulk RNA-seq, scDNA-seq, scATAC-seq, SMART-seq etc**, please set ``--UMItag None``. Otherwise, all pileup counts will be zero.
 
-``--minMAF FLOAT`` Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum between the allele frequencies of REF and ALT for a given SNP site. Here, both allele frequencies are derived from aggregated read counts from all cells (i.e., total_REF_read / total_reads, or total_ALT_read / total_reads). This parameter can be used for SNP filtering.
+``--minMAF FLOAT`` Minimum minor allele frequency. The parameter minMAF is minimum minor allele frequency, which is the minimum frequency of the allele with second highest read or UMI count for a given SNP site. This parameter can be used for SNP filtering. See issue #77, #90, #93 for detailed discussions.
 
 
 Notes
