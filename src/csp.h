@@ -87,6 +87,12 @@
     "##INFO=<ID=AD,Number=1,Type=Integer,Description=\"total counts for ALT\">\n"		\
     "##INFO=<ID=OTH,Number=1,Type=Integer,Description=\"total counts for other bases from REF and ALT\">\n"
 
+#define CSP_VCF_BASE_CONTIG "##contig=<ID=1>\n##contig=<ID=2>\n##contig=<ID=3>\n##contig=<ID=4>\n##contig=<ID=5>\n"        \
+    "##contig=<ID=6>\n##contig=<ID=7>\n##contig=<ID=8>\n##contig=<ID=9>\n##contig=<ID=10>\n"					\
+    "##contig=<ID=11>\n##contig=<ID=12>\n##contig=<ID=13>\n##contig=<ID=14>\n##contig=<ID=15>\n"				\
+    "##contig=<ID=16>\n##contig=<ID=17>\n##contig=<ID=18>\n##contig=<ID=19>\n##contig=<ID=20>\n"				\
+    "##contig=<ID=21>\n##contig=<ID=22>\n##contig=<ID=X>\n##contig=<ID=Y>\n"
+
 #if CSP_FIT_MULTI_SMP
     #define TP_EUNDEF       1        // error that undefined
     #define TP_EMFILE      (1 << 1)  // error that too many open files

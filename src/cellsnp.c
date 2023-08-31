@@ -616,6 +616,7 @@ int main(int argc, char **argv) {
         goto clean;
     } ks_clear(s);
     kputs(CSP_VCF_BASE_HEADER, s);             // output header to vcf base.
+    kputs(CSP_VCF_BASE_CONTIG, s);
     kputs("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n", s);
     if (output_headers(gs.out_vcf_base, "wb", ks_str(s), ks_len(s)) < 0) {
         fprintf(stderr, "[E::%s] fail to write header to '%s'\n", __func__, gs.out_vcf_base->fn);
