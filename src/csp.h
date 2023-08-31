@@ -81,6 +81,7 @@
     "%\n"
 
 #define CSP_VCF_BASE_HEADER "##fileformat=VCFv4.2\n"			\
+    "##source=cellSNP_v" CSP_VERSION "\n"                               \
     "##FILTER=<ID=PASS,Description=\"All filters passed\">\n"		\
     "##FILTER=<ID=.,Description=\"Filter info not available\">\n"	\
     "##INFO=<ID=DP,Number=1,Type=Integer,Description=\"total counts for ALT and REF\">\n" 	\
