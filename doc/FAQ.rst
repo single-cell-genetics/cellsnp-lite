@@ -3,7 +3,7 @@ FAQ
 ===
 
 Q1. No reads captured from bam file
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 A: If there is no read captured from the bam file, there can be multiple 
 reasons:
 
