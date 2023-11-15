@@ -1,11 +1,9 @@
 Install
 ===================
-
-cellsnp-lite is implemented in C. You can install it via conda_ or from this github repo.
+Cellsnp-lite is implemented in C. You can install it via conda_ or from this github repo.
 
 Install via conda (latest stable version)
 -----------------------------------------
-
 This is the recommended way to install cellsnp-lite. Lacking the potential issues of 
 dependency, it's simple and fast if conda is available on the machine.
 
@@ -36,14 +34,12 @@ or to a new environment:
 
 Install from this Github Repo (latest stable/dev version)
 ---------------------------------------------------------
-
 We recommend installing cellsnp-lite via conda, as described above. The method of compiling
 from source code (ie., installing from this repo) is described below:
 
 Step 0: install dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-cellsnp-lite mainly depends on `zlib`_ and `HTSlib`_ (v1.10.2+). Note that HTSlib 
+Cellsnp-lite mainly depends on `zlib`_ and `HTSlib`_ (v1.10.2+). Note that HTSlib 
 has some extra dependencies: ``liblzma``, ``libbz2``, ``libcurl``, and 
 ``libcrypto``. The whole list of dependencies of building cellsnp-lite is:
 
@@ -88,7 +84,6 @@ please use ``/home/<user>`` instead of ``~`` if needed.
 
 Possible issue
 **************
-
 Compilation in Step 1 prefers ``libhts.a`` than ``libhts.so`` for linking HTSlib. In rare
 cases that the libhts.a does not exist and libhts.so has to be used for linking, the 
 issue ``error while loading shared libraries: libhts.so.3`` could happen when running 
