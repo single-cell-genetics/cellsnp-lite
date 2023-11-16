@@ -17,9 +17,9 @@
 #' @return Void.
 #' @examples
 #' update_cellsnp_matrices(
-#'   in_dir = "./csp_mode1",
+#'   in_dir = "../../data/csp_mode1",
 #'   out_dir = "./updated_matrix",
-#'   filtered_vcf_file = "./csp_mode1.base.chr2.vcf.gz"
+#'   filtered_vcf_file = "../../data/csp_mode1.base.chr2.vcf.gz"
 #' )
 update_cellsnp_matrices <- function(
   in_dir,
