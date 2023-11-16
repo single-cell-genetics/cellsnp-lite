@@ -3,7 +3,6 @@ Manual
 
 Quick usage
 -----------
-
 Once installed, check all arguments by typing ``cellsnp-lite -h``. 
 There are two modes of cellsnp-lite:
 
@@ -18,7 +17,6 @@ called heterouzygous variants from ``Mode 2b`` on its own.
 
 Mode 1a: droplet-based single cells
 +++++++++++++++++++++++++++++++++++
-
 Use both ``-R`` and ``-b`` to pileup droplet-based dataset (e.g., 10x Genomics) with given SNPs.
 
 Require: a single BAM/SAM/CRAM file, e.g., from CellRanger; a list of cell barcodes,
@@ -46,7 +44,6 @@ duplicates for scRNA-seq data when UMItag is turned on.
 
 Mode 1b: well-based single cells or bulk
 ++++++++++++++++++++++++++++++++++++++++
-
 Use ``-R`` but not ``-b`` to pileup well-based dataset (e.g., SMART-seq2) with given SNPs.
 
 Require: one or multiple BAM/SAM/CRAM files (bulk or smart-seq), their according
@@ -67,7 +64,6 @@ RNA-seq.
 
 Mode 2: pileup whole chromosome(s) without given SNPs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Recommend filtering SNPs with <100UMIs or <10% minor alleles for saving space and speed up inference
 when pileup whole genome: ``--minMAF 0.1 --minCOUNT 100``.
 
@@ -83,7 +79,6 @@ For mode2, by default it runs on chr1 to 22 on human. For mouse, you need to spe
 
 Mode 2a: droplet based single cells without given SNPs
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 Don't use ``-R`` but use ``-b`` to pileup whole chromosome(s) without given SNPs 
 for droplet-based dataset (e.g., 10x Genomics).
 
@@ -104,7 +99,6 @@ Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``
 
 Mode 2b: well-based single cells or bulk without SNPs
 +++++++++++++++++++++++++++++++++++++++++++++++++++++
-
 Don't use ``-R`` and ``-b`` to pileup whole chromosome(s) without given SNPs 
 for well-based dataset (e.g., SMART-seq2).
 
@@ -120,7 +114,7 @@ Add ``--chrom`` if you only want to genotype specific chromosomes, e.g., ``1,2``
 
 Output
 ------
-cellsnp-lite outputs at least 5 files listed below (with ``--gzip``):
+Cellsnp-lite outputs at least 5 files listed below (with ``--gzip``):
 
 * ``cellSNP.base.vcf.gz``: a VCF file listing genotyped SNPs and aggregated AD & DP infomation (without GT).
 * ``cellSNP.samples.tsv``: a TSV file listing cell barcodes or sample IDs.
@@ -206,7 +200,6 @@ Some Details:
 
 Notes
 -----
-
 Since v1.2.3, ``UB``, instead of ``UR``, is used as default UMI tag when barcodes are given.
 
 The ``Too many open files`` issue has been fixed (since v1.2.0). The issue is commonly

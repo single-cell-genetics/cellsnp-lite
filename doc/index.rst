@@ -1,5 +1,5 @@
 Home
-========================================
+====
 
 .. toctree::
    :maxdepth: 2
@@ -8,7 +8,8 @@ Home
    install
    manual
    snp_list
-   citation
-   release
    FAQ
+   citation
+   acknowledgement
+   release
 
