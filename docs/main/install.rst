@@ -5,9 +5,14 @@
 
 Installation
 ============
+
 Cellsnp-lite depends on several external libraries such as htslib_.
 We highly recommend installing cellsnp-lite via conda_ to avoid potential
 issues regarding dependency.
+
+.. contents:: Contents
+   :depth: 2
+   :local:
 
 
 Install via conda (latest stable version)

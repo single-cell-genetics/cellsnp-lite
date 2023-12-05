@@ -8,6 +8,7 @@ Cellsnp-lite: Efficient Genotyping Bi-Allelic SNPs on Single Cells
 
 .. contents:: Contents
    :depth: 2
+   :local:
 
 
 .. _manual Quick Usage:
@@ -21,7 +22,7 @@ Cellsnp-lite has four modes to support different genotype inputs and sequencing
 platforms. They are summarised below:
 
 .. csv-table:: Cellsnp-lite Modes
-   :file: ../tables/cellsnp-lite_modes.csv
+   :file: /tables/cellsnp-lite_modes.csv
    :widths: 30, 70
    :header-rows: 1
 
@@ -372,7 +373,7 @@ Optional arguments
     This is different from mode 1, which uses the ``REF`` and ``ALT`` alleles
     specified in the input VCF.
 
-    See also: #28.
+    See also: issue #28.
 
 ``--genotype``
     If use, do genotyping in addition to counting.

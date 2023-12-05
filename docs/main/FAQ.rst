@@ -14,6 +14,7 @@ FAQ
 
 .. contents:: Contents
    :depth: 1
+   :local:
 
 
 Top Questions
@@ -62,7 +63,7 @@ for 10x scDNA-seq or scATAC-seq data.
 See :ref:`Processing other omics data <manual Advanced Usage Other Omics>` 
 for details and more options.
 
-See also: #26, #44.
+See also: issue #26, #44.
 
 
 Can cellsnp-lite be used for spatial transcriptomics data?
@@ -142,7 +143,7 @@ to extract the real (genomic) reference allele from FASTA file as ``REF``,
 and assign the allele (other than ``REF``) with the highest UMI/read counts 
 as the ``ALT``.
 
-See also: #28.
+See also: issue #28.
 
 
 How to check the real reads cover an SNP in a cell?
@@ -248,7 +249,7 @@ By default, read will be filtered if
 See :ref:`Read Filtering <manual Full Parameters Read Filtering>` 
 in manual for details and more options.
 
-See also: #25.
+See also: issue #25.
 
 
 What is the computational efficiency of cellsnp-lite?
