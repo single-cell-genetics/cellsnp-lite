@@ -165,8 +165,6 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "                       (when use UMI) or %s (otherwise)]\n", tmp_filter_noumi);
     fprintf(fp, "  --minLEN INT         Minimum mapped length for read filtering [%d]\n", CSP_MIN_LEN);
     fprintf(fp, "  --minMAPQ INT        Minimum MAPQ for read filtering [%d]\n", CSP_MIN_MAPQ);
-    fprintf(fp, "  --maxPILEUP INT      Maximum pileup for one site of one file (including those filtered reads),\n");
-    fprintf(fp, "                       avoids excessive memory usage; 0 means highest possible value [%d]\n", CSP_MAX_PILEUP);
     fprintf(fp, "  --maxDEPTH INT       Maximum depth for one site of one file (excluding those filtered reads),\n");
     fprintf(fp, "                       avoids excessive memory usage; 0 means highest possible value [%d]\n", CSP_MAX_DEPTH);
     fprintf(fp, "  --countORPHAN        If use, do not skip anomalous read pairs.\n");
@@ -459,9 +457,9 @@ int main(int argc, char **argv) {
         {"maxDEPTH", required_argument, NULL, 17},
         {"maxDepth", required_argument, NULL, 17},
         {"maxdepth", required_argument, NULL, 17},
-        {"maxPILEUP", required_argument, NULL, 18},
-        {"maxPileup", required_argument, NULL, 18},
-        {"maxpileup", required_argument, NULL, 18},
+        //{"maxPILEUP", required_argument, NULL, 18},
+        //{"maxPileup", required_argument, NULL, 18},
+        //{"maxpileup", required_argument, NULL, 18},
         {NULL, 0, NULL, 0}
     };
     if (1 == argc) { print_usage(stderr); goto clean; }

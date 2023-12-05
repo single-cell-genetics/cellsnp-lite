@@ -389,7 +389,7 @@ static int csp_pileup_core(void *args) {
             fprintf(stderr, "[E::%s] failed to create mp_iter for chrom %s.\n", __func__, a[n]);
             goto clean;
         }
-        bam_mplp_set_maxcnt(mp_iter, gs->max_pileup);
+        bam_mplp_set_maxcnt(mp_iter, gs->max_depth);
 
         // As each query region is a chrom, so no need to call bam_mplp_init_overlaps() here?
         /* begin mpileup */
