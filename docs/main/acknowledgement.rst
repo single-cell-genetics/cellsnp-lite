@@ -1,14 +1,16 @@
-Acknowledgement
-===============
+..
+   Acknowledgement
+   ===============
+
 
 Cellsnp-lite heavily depends on htslib_ for accessing high-throughput
-sequencing data. Besides, it also depends on klib_
-(the ``kvec.h`` file) for dynamic array usage and C-Thread-Pool_ (the
-``thpool.h`` and ``thpool.c`` files) for thread pool management.
+sequencing data.
+In addition, it uses the ``kvec.h`` file (from klib_) for dynamic array
+usage and the ``thpool.{h,c}`` files (from C-Thread-Pool_) for
+thread pool management.
 
 
 .. _C-Thread-Pool: https://github.com/Pithikos/C-Thread-Pool
 .. _htslib: https://github.com/samtools/htslib
 .. _klib: https://github.com/attractivechaos/klib   
-
 

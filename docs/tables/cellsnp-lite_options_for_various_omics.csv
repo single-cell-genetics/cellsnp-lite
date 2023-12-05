@@ -1,0 +1,6 @@
+Platform,Features,Options,Notes
+10x scRNA-seq (3' or 5'),has both cell and UMI tags,--cellTAG CB --UMItag UB,N.A.
+10x scDNA-seq,has only cell tag,--cellTAG CB --UMItag None,N.A.
+10x scATAC-seq,has only cell tag,--cellTAG CB --UMItag None,N.A.
+SMART-seq2,has none of cell or UMI tags,--cellTAG None --UMItag None,N.A.
+Bulk RNA-seq,has none of cell or UMI tags,--cellTAG None --UMItag None,N.A.
