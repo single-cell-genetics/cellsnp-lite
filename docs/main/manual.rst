@@ -265,7 +265,7 @@ General options
     than indexing/jumping (like ``-T`` in samtools/bcftools mpileup).
 
 ``-b, --barcodeFile FILE`` 
-    A plain file listing all effective cell barcode, e.g., the 
+    A plain file listing all effective cell barcodes, e.g., the 
     ``barcodes.tsv`` file in the CellRanger directory
     ``outs/filtered_gene_bc_matrices/``.
 
