@@ -31,7 +31,14 @@ release = 'v1.2.3'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "sphinx.ext.autosectionlabel",
 ]
+
+# Make sure the target is unique
+# Manually adding an explicit target to each section and making sure is unique
+# is a big task! Fortunately, Sphinx includes an extension to help us with 
+# that problem, autosectionlabel.
+autosectionlabel_prefix_document = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -40,6 +47,11 @@ templates_path = ['_templates']
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
+
+# Enable numref
+# The numref role is used to reference numbered elements of your documentation.
+# For example, tables and images.
+numfig = True
 
 
 # -- Options for HTML output -------------------------------------------------
