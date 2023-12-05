@@ -23,7 +23,6 @@ platforms. They are summarised below:
 
 .. csv-table:: Cellsnp-lite Modes
    :file: /tables/cellsnp-lite_modes.csv
-   :widths: 30, 70
    :header-rows: 1
 
 Note, Mode 2b + 1a is an internal alternative to Mode 2a.
@@ -209,7 +208,6 @@ We list options for some common omics data:
 
 .. csv-table:: Cellsnp-lite Options for Various Omics
    :file: ../tables/cellsnp-lite_options_for_various_omics.csv
-   :widths: 30, 70
    :header-rows: 1
 
 If your data is not from platforms above, please choose proper ``--cellTAG``
