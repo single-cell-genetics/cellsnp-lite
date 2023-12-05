@@ -207,7 +207,7 @@ Otherwise, please turn it off with ``--UMItag None``.
 We list options for some common omics data:
 
 .. csv-table:: Cellsnp-lite Options for Various Omics
-   :file: ../tables/cellsnp-lite_options_for_various_omics.csv
+   :file: /tables/cellsnp-lite_options_for_various_omics.csv
    :header-rows: 1
 
 If your data is not from platforms above, please choose proper ``--cellTAG``
