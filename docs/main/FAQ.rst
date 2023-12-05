@@ -9,17 +9,11 @@
    How does the SNP-filtering options work?
 
 
-.. toctree::
-   :maxdepth: 1
-   :caption: FAQs:
+FAQ
+===
 
-   Top Questions
-   Input and Output
-   Running Mode
-   Pileup and Genotype Results
-   About Implementation
-   Command Line Options
-   Downstream Demultiplexing with Vireo
+.. contents:: Contents
+   :depth: 1
 
 
 Top Questions

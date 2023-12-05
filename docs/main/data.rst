@@ -3,6 +3,9 @@
    ====
 
 
+Data
+====
+
 .. _data List of common SNPs:
 
 List of candidate SNPs

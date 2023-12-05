@@ -6,15 +6,8 @@
 Cellsnp-lite: Efficient Genotyping Bi-Allelic SNPs on Single Cells
 ==================================================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   Quick Usage (for Single-Cell or Bulk RNA-seq Data)
-   Advanced Usage
-   Full Parameters
-   Input
-   Output
+.. contents:: Contents
+   :depth: 2
 
 
 .. _manual Quick Usage:
