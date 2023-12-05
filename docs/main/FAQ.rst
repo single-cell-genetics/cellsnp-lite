@@ -13,7 +13,7 @@ FAQ
 ===
 
 .. contents:: Contents
-   :depth: 1
+   :depth: 2
    :local:
 
 
