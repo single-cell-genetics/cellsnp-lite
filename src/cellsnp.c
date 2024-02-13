@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
     if (1 == argc) { print_usage(stderr); goto clean; }
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:f:", lopts, NULL)) != -1) {
         switch (c) {
-            case 'h': print_usage(stderr); goto clean;
+            case 'h': is_ok = 1; print_usage(stdout); goto clean;
             case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto clean;
             case 's': 
                     if (gs.in_fns) { str_arr_destroy(gs.in_fns, gs.nin); }
