@@ -460,7 +460,7 @@ int main(int argc, char **argv) {
     while ((c = getopt_long(argc, argv, "hVs:S:O:R:T:b:i:I:p:f:", lopts, NULL)) != -1) {
         switch (c) {
             case 'h': is_ok = 1; print_usage(stdout); goto clean;
-            case 'V': printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto clean;
+            case 'V': is_ok = 1; printf("%s %s (htslib %s)\n", CSP_NAME, CSP_VERSION, hts_version()); goto clean;
             case 's': 
                     if (gs.in_fns) { str_arr_destroy(gs.in_fns, gs.nin); }
                     if (NULL == (gs.in_fns = hts_readlist(optarg, 0, &gs.nin)) || gs.nin <= 0) {
