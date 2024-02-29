@@ -7,4 +7,5 @@ The "csp_utils.R" is an R script. It contains several functions:
   `OTH` given a VCF file storing a list of SNPs that passed filtering.
 
 This script has been mentioned in issue 90 and 96 (till 2023/11/16).
+For the latest version of this script, please see ``../post_hoc/csp_utils.R``.
 
