@@ -56,9 +56,11 @@ Unmatched chromosome names
     records with ``samtools view -h``.
 
     Notably, *cellsnp-lite* would internally remove the "chr"
-    prefix (if available) for both BAM and VCF records after loading them.
-    Therefore, users do not need to tweak the chromosome names in the two
-    files if they only differ in the "chr" prefix.
+    prefix (if available) of all chromosome names, including the names
+    specified by ``--chrom`` option and the ones in the input BAM and
+    VCF records.
+    Therefore, users do not need to tweak the chromosome names in the option
+    and the two files if they only differ in the "chr" prefix.
 
 
 Input and Output
