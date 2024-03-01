@@ -47,6 +47,19 @@ Unmatched cell barcodes
     including the possible suffix (e.g., ``-1``).
     See also issue #44.
 
+Unmatched chromosome names
+    the input chromosome names, either in the input VCF file or specified
+    by ``--chrom`` option, should match the ``@SQ``
+    records in the SAM/BAM header, especially for mitochondrial chromosome,
+    which has multiple names, such as ``chrM`` and ``chrMT``.
+    Please use the right chromosome names, you may check the ``@SQ`` 
+    records with ``samtools view -h``.
+
+    Notably, *cellsnp-lite* would internally remove the "chr"
+    prefix (if available) for both BAM and VCF records after loading them.
+    Therefore, users do not need to tweak the chromosome names in the two
+    files if they only differ in the "chr" prefix.
+
 
 Input and Output
 ----------------

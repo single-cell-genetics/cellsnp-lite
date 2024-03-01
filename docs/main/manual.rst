@@ -304,7 +304,13 @@ Optional arguments
 
     **Chromosome names and order**
 
-    For chromosome names: *cellsnp-lite* would internally remove the "chr" 
+    For chromosome names: 
+    the chromosome names specified by this option should match the ``@SQ``
+    records in the SAM/BAM header, especially for mitochondrial chromosome,
+    which has multiple names, such as ``chrM`` and ``chrMT``.
+    You may check the ``@SQ`` records with ``samtools view -h``.
+
+    Notably, *cellsnp-lite* would internally remove the "chr" 
     prefix (if available) for both BAM and VCF records after loading them.
     Therefore, users do not need to tweak the chromosome names in the two 
     files if they only differ in the "chr" prefix.
