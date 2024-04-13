@@ -37,7 +37,7 @@ Cellsnp-lite has following features:
   input, including RNA-seq, DNA-seq, ATAC-seq, either in bulk or single cells.
 * **Simplified user interface** that supports parallel computing, cell barcode
   and UMI tags.
-* **High efficiency** in terms of running speed and memory usage with highly
+* **High efficiency** in terms of running speed and memory usage, with highly
   concordant results compared to existing methods.
 
 For details of the tool, please checkout our paper:

@@ -14,3 +14,6 @@ of how to load cellsnp-lite output, subset SNPs, and the save the subset data.
 Specifically, this example shows how to filter SNPs whose aggregated AD is 
 less than `minAD` (issue 108).
 
+The `csp_utils.py` and `csp_utils.R` are the python and R scripts containing
+several functions used for processing the input and output of cellsnp-lite.
+
