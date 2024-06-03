@@ -1,12 +1,13 @@
-
 ## TODO List
 
 ### Input
+-	Wrap codes into functions which open BAM and their index files.
 
 
 ### Output
 - Output VCF header according to input BAM header.
 - Output optionally qual values/letters to mtx file.
+
 
 ### Implementation
 - Add fetch and pileup sub-commands?
@@ -23,7 +24,15 @@
   * as the linear searching assume that the BAM has been sortted by start pos,
     then how to deal with the partly aligned reads and one read in paired 
     reads aligned to query chrom.
+
 - Try multi-process (process pool) for multi input samples.
+
+- Pileup SNPs within specific genomic regions
+  * this feature should be useful when there are only a few target regions.
+  * it can improve the overall running efficiency, particularly for mode 2 
+    (or mode 1-T), e.g., by spliting all chromosomes equally based on their 
+    lengths to make full advantage of multi-threading, as now only one thread 
+    is used when only one chrom is inputted (e.g., chrom M).
 
 
 ### Data Structure
@@ -54,7 +63,8 @@
 ### Reads operations
 - Max per base quality
   * Add `--max-base-qual` option to set max per base quality for genotyping;
-  * in htslib, per base qualities are stored in the Phred scale with no +33 offset.
+  * in htslib, per base qualities are stored in the `Phred` scale with no 
+    `+33` offset.
   * `get_qual_vector()` in `mplp.c`.
 
 - UMI collapsing
@@ -65,19 +75,35 @@
 - Deal with the problem that some UMIs have the letter 'N'.
 
 
+### General running operations
+- Improve logging
+  * add time str to show_progress (percentage of processed SNPs) so that 
+    we can know how long it has been from the last (output file) update.
+
+
 ### Docs
+-	Add tutorials 
+  * add `Post-hoc Analysis` notebooks such as “how to post-filtering SNPs”. 
+  * to use files outside the root source directory of sphinx (readthedocs),
+    refer to the 
+    [conf.py](https://github.com/single-cell-genetics/vireo/blob/master/doc/conf.py)
+    in vireo repo for copying notebooks during building time. 
+  * see also: issue 90 and 108.
+
 
 ### Tests
 - Write test scripts for some key functions.
 
 
 ## Discussion
+
+### Cmdline options
 Cellsnp-lite now only considers biallele (related to -f/--refseq).
 It may have unexpected results affected by `OTH` (other) alleles.
 We may only consider the `REF` and `ALT` alleles (either specified or 
 inferred), but not `OTH` alleles, when calculating `MAF`.
 
-#### Case 1
+**Case 1**
 In mode 1, the output could contain Homozygous SNV even with `--minMAF 0.3`.
 For example, assuming one input SNV has `REF/ALT - 'A'/'C'`, 
 while the two real alleles are `'C'/'G'` with AF 0.6/0.4, 
@@ -88,6 +114,21 @@ while the real genotype should be `1/2` (as two alt alleles `'C','G'`).
 However, SNVs of this kind are not so many in practice?
 In a recent case, only 158 out of 133k SNVs.
 
-#### Case 2
+**Case 2**
 A SNP with `AD=9;DP=9;OTH=1;` will not be filtered when 
 `minMAF=0.1; minCOUNT=10`.
+
+
+### Multi-threading by spliting input BAM files
+Processing well-based data with multiple threads could lead to the
+`too many files open` issue when the number of input cells (BAM files) is 
+large.
+One possible solution to address the issue is to split input cells instead of
+splitting SNPs/Chromosomes when using multi-threading.
+However, its implementation is non-trivial because
+
+- there will be too large intermediate results (and IO operations will be 
+  heavy) as whether one SNP is filtered or not is not determined until all 
+  files are processed; 
+- users could merge small BAM files to reduce the number of files, and add
+  tags, e.g., `RG` or `CB`, to distinguish the read source.
