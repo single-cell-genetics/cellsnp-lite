@@ -161,8 +161,8 @@ as the ``ALT``.
 See also: issue #28.
 
 
-How to check the real reads cover an SNP in a cell?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+How to check the real reads covering an SNP in a cell?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 You can extract the reads by *samtools* and then view them in *IGV*.
 
 To extract reads covering a SNP and output to a BAM file 
@@ -350,9 +350,9 @@ You may use ``bcftools merge`` to make a combined VCF for all donors.
 See also: issue #21, #100, #106.
 
 
+
 .. _Arora et al, 2023: https://doi.org/10.1038/s41467-023-40271-4 
 .. _human SNP list: https://sourceforge.net/projects/cellsnp/files/SNPlist/
 .. _MQuad: https://github.com/single-cell-genetics/MQuad
 .. _Numbat: https://github.com/kharchenkolab/numbat
 .. _vireo Mito tutorial: https://vireosnp.readthedocs.io/en/latest/vireoSNP_clones.html
-
