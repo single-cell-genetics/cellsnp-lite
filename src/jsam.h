@@ -1,6 +1,6 @@
-/* jsam.h - BAM/SAM/CRAM file API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jsam.h - sequence alignment file operations.
+
+
 #ifndef SZ_JSAM_H
 #define SZ_JSAM_H
 
@@ -76,4 +76,3 @@ extern const char csp_nt5_str[5];
 char* get_bam_aux_str(bam1_t *b, const char tag[2]);
 
 #endif
-

@@ -1,6 +1,6 @@
-/* jstring.h - String operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jstring.h - string operations.
+
+
 #ifndef SZ_JSTRING_H
 #define SZ_JSTRING_H
 
@@ -37,4 +37,3 @@ void str_arr_destroy(char **a, const int n);
 int str_arr_join(char **a, const int n, int c, kstring_t *s);
 
 #endif
-

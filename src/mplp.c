@@ -1,6 +1,5 @@
-/* mplp.c - Pileup and MPileup operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// mplp.c - pileup and mpileup operations.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -395,4 +394,3 @@ int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *f
     if (fs_oth->is_tmp) jf_putc('\n', fs_oth);
     return 0; 
 }
-

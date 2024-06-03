@@ -1,6 +1,5 @@
-/* csp_pileup.c - cellsnp pileup method
- * Author: Xianejie Huang <hxj5@hku.hk>
- */
+// csp_pileup.c - cellsnp pileup method.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -884,4 +883,3 @@ int csp_pileup(global_settings *gs) {
     return -1;
   #endif
 }
-

@@ -1,6 +1,6 @@
-/* jmempool.h - Memory management API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jmempool.h - memory management.
+
+
 #ifndef SZ_JMEMPOOL_H
 #define SZ_JMEMPOOL_H
 
@@ -136,4 +136,3 @@ The jmempool_##name##_t
 #define jmempool_A(name, p, i) jmempool_A_##name(p, i)
 
 #endif
-

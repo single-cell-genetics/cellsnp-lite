@@ -1,6 +1,6 @@
-/* mplp.h - Pileup and MPileup operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// mplp.h - pileup and mpileup operations.
+
+
 #ifndef CSP_MPLP_H
 #define CSP_MPLP_H
 
@@ -326,4 +326,3 @@ void mtx_tag_fs_destroy(mtx_tag_fs *p) {
 #endif
 
 #endif
-
