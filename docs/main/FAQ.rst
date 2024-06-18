@@ -326,7 +326,7 @@ See also: issue #77, #90, #93.
 
 
 Downstream Demultiplexing with Vireo
-------------------------------------
+------------------------------------ 
 
 Cellsnp-lite output not working with Vireo using mitochondrial SNPs?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -351,8 +351,38 @@ See also: issue #21, #100, #106.
 
 
 
+Downstream Clonal Substructure Discovery with MQuad
+---------------------------------------------------
+
+What is the recommended pipeline for SMART-seq2 data?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+For SMART-seq2 data, cellsnp-lite supports multiple BAM files as input, 
+so there is no need to merge all FASTQ files to generate single BAM file.
+
+Specifically, one BAM file (and corresponding .bai index file) should be 
+generated per FASTQ (pairs, Read 1&2), e.g, with STAR. 
+Then cellsnp-lite can be run with the ``-S`` option, which will pileup every 
+well (cell) in one go. 
+The "-S" option requires a plain file listing BAM files, each per line.
+
+Notably, as SMART-seq2 reads have no cell barcode and UMI tag, you may need to
+specify ``--cellTAG None`` and ``--UMItag None`` in cellsnp-lite. 
+Additionally, the ``—gzip`` option can be used to output zipped VCF file(s).
+
+The output of cellsnp-lite ("-S" option) run on SMART-seq2 data will be 
+in the same format as 10x scRNA-seq, i.e., the three ``SNP x cell`` count 
+matrices in the output folder are already "pooled" from all input 
+wells (cells), each row is SNP and column is cell.
+
+Therefore, the downstream processing (after running cellsnp-lite "-S") should 
+be similar to 10x scRNA-seq data, such as running MQuad with the cellsnp folder
+(three “pooled” matrices) and then using vireo for clonal reconstruction (see
+`vireo Mito tutorial`_ for details).
+
+
+
 .. _Arora et al, 2023: https://doi.org/10.1038/s41467-023-40271-4 
 .. _human SNP list: https://sourceforge.net/projects/cellsnp/files/SNPlist/
 .. _MQuad: https://github.com/single-cell-genetics/MQuad
 .. _Numbat: https://github.com/kharchenkolab/numbat
-.. _vireo Mito tutorial: https://vireosnp.readthedocs.io/en/latest/vireoSNP_clones.html
+.. _vireo Mito tutorial: https://vireosnp.readthedocs.io/en/latest/vireoSNP_clones-mkn45.html

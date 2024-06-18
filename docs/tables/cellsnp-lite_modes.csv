@@ -1,5 +1,5 @@
 Mode,SNPs,Bam files,Platform,Notes
 Mode 1a,Given,Pooled one,"10x scRNA-seq, scDNA-seq, scATAC-seq",Set ``--UMItag None`` for scDNA-seq and scATAC-seq data
-Mode 1b,Given,Each per cell,"SMART-seq2, bulk RNA-seq",N.A.
+Mode 1b,Given,Each per cell,"SMART-seq2, bulk RNA-seq",Set ``--cellTAG None --UMItag None``
 Mode 2a,To detect,Pooled one,"10x scRNA-seq, scDNA-seq, scATAC-seq",Set ``--UMItag None`` for scDNA-seq and scATAC-seq data
-Mode 2b,To detect,Each per cell,"SMART-seq2, bulk RNA-seq",N.A.
+Mode 2b,To detect,Each per cell,"SMART-seq2, bulk RNA-seq",Set ``--cellTAG None --UMItag None``

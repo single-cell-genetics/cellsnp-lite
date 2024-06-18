@@ -627,6 +627,9 @@ Otherwise, *cellsnp-lite* would take the allele with the highest count
 as ``REF`` and the second highest as ``ALT``.
 
 
+Implementation
+--------------
+
 About Genotyping
 ~~~~~~~~~~~~~~~~
 Cellsnp-lite performs genotyping only if the ``--genotype`` option is 
