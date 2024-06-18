@@ -354,8 +354,8 @@ See also: issue #21, #100, #106.
 Downstream Clonal Substructure Discovery with MQuad
 ---------------------------------------------------
 
-What is the recommended pipeline for SMART-seq2 data?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+What is the recommended pipeline for SMART-seq2 data (MQuad)?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 For SMART-seq2 data, cellsnp-lite supports multiple BAM files as input, 
 so there is no need to merge all FASTQ files to generate single BAM file.
 

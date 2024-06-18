@@ -555,16 +555,18 @@ Cellsnp-lite outputs at least 5 files listed below
     A TSV file listing cell barcodes or sample IDs.
 
 ``cellSNP.tag.AD.mtx``
-    A file in "Matrix Market exchange formats", containing the allele depths 
-    of the alternative (``ALT``) alleles.
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats", 
+    containing the allele depths of the alternative (``ALT``) alleles.
 
 ``cellSNP.tag.DP.mtx``
-    A file in "Matrix Market exchange formats", containing the sum of 
-    allele depths of the reference and alternative alleles (``REF`` + ``ALT``).
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats",
+    containing the sum of allele depths of the reference and 
+    alternative alleles (``REF`` + ``ALT``).
 
 ``cellSNP.tag.OTH.mtx``
-    A file in "Matrix Market exchange formats", containing the sum of 
-    allele depths of all the alleles other than ``REF`` and ``ALT``.
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats",
+    containing the sum of allele depths of all the alleles 
+    other than ``REF`` and ``ALT``.
 
 Note, an additional VCF file ``cellSNP.cells.vcf.gz`` would be outputed 
 if ``--genotype`` option was specified. 
