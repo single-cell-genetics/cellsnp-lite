@@ -1,4 +1,5 @@
-//biods.h
+// biods.h - data structure for bioseq.
+
 
 #ifndef __BIODS_H__
 #define __BIODS_H__
@@ -11,4 +12,3 @@ JMEMPOOL_INIT(str, char*, pool_str_free, pool_str_reset)
 typedef jmempool_t(str) pool_str_t;
 
 #endif
-

@@ -1,6 +1,6 @@
-/* csp.h - Utils
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// csp.h - utils.
+
+
 #ifndef CSP_CSP_H
 #define CSP_CSP_H
 
@@ -294,4 +294,3 @@ int csp_fetch(global_settings *gs);
 int csp_pileup(global_settings *gs);
 
 #endif
-

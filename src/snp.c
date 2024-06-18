@@ -1,6 +1,5 @@
-/* snp.c - SNP operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// snp.c - SNP operations.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -113,4 +112,3 @@ size_t get_snplist_from_vcf(const char *fn, snplist_t *pl, int *ret, int print_s
 biallele_t* biallele_init(void) { return (biallele_t*) calloc(1, sizeof(biallele_t)); }
 void biallele_destroy(biallele_t *p) { if (p) { free(p); } }
 void biallele_reset(biallele_t *p) {}
-

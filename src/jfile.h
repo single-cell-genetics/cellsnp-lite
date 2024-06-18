@@ -1,6 +1,6 @@
-/* jfile.h - File operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jfile.h - file operations.
+
+
 #ifndef SZ_JFILE_H
 #define SZ_JFILE_H
 
@@ -164,4 +164,3 @@ int remove_file(char *fn);
 int remove_files(char **fn, const int n);
 
 #endif
-

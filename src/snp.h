@@ -1,6 +1,6 @@
-/* snp.h - SNP operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// snp.h - SNP operations.
+
+
 #ifndef CSP_SNP_H
 #define CSP_SNP_H
 
@@ -54,4 +54,3 @@ void biallele_destroy(biallele_t *p);
 void biallele_reset(biallele_t *p);
 
 #endif
-

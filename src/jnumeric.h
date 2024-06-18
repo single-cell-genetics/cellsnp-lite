@@ -1,6 +1,6 @@
-/* jnumeric.h - Numeric operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jnumeric.h - numeric operations.
+
+
 #ifndef SZ_JNUMERIC_H
 #define SZ_JNUMERIC_H
 
@@ -98,4 +98,3 @@ int main(void) {
 #define join_arr_to_str(name, a, n, c, fmt, s) join_arr_to_str_##name(a, n, c, fmt, s)
 
 #endif
-

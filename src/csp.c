@@ -1,6 +1,5 @@
-/* csp.c - Utils
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// csp.c - utils.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -444,4 +443,3 @@ int rewrite_mtx(jfile_t *fs, size_t ns, int nsmp, size_t nr) {
     return ret;
 #undef TMP_BUFSIZE
 }
-

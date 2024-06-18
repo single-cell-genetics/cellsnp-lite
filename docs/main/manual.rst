@@ -388,6 +388,10 @@ Optional arguments
     which contains the genotypes (e.g., "0/0", "1/0", "1/1") in single cells. 
     Please add this option for outputing the file.
 
+    For genotyping, cellsnp-lite uses the error model as presented in 
+    *Table 1* of `Jun et al., 2012`_.
+    See also: issue #109.
+
 ``--gzip``
     If use, the output VCF files will be zipped into ``BGZF`` format.
     Otherwise, the output VCF files would be plain files.
@@ -489,7 +493,8 @@ required inputs for each mode of *cellsnp-lite*.
 ``Sequence alignments``
     BAM/CRAM file(s), specified via ``-s`` or ``-S``.
 
-    Note that these files should be indexed, e.g., with ``samtools index``.
+    Note that these files should have index files, e.g., the ``.bai`` or 
+    ``.csi`` files, which you may generate with ``samtools index``.
 
 ``A list of SNPs``
     VCF file, specified via ``-R`` or ``-T``.
@@ -550,16 +555,18 @@ Cellsnp-lite outputs at least 5 files listed below
     A TSV file listing cell barcodes or sample IDs.
 
 ``cellSNP.tag.AD.mtx``
-    A file in "Matrix Market exchange formats", containing the allele depths 
-    of the alternative (``ALT``) alleles.
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats", 
+    containing the allele depths of the alternative (``ALT``) alleles.
 
 ``cellSNP.tag.DP.mtx``
-    A file in "Matrix Market exchange formats", containing the sum of 
-    allele depths of the reference and alternative alleles (``REF`` + ``ALT``).
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats",
+    containing the sum of allele depths of the reference and 
+    alternative alleles (``REF`` + ``ALT``).
 
 ``cellSNP.tag.OTH.mtx``
-    A file in "Matrix Market exchange formats", containing the sum of 
-    allele depths of all the alleles other than ``REF`` and ``ALT``.
+    A *SNP x cell* sparse matrix in "Matrix Market exchange formats",
+    containing the sum of allele depths of all the alleles 
+    other than ``REF`` and ``ALT``.
 
 Note, an additional VCF file ``cellSNP.cells.vcf.gz`` would be outputed 
 if ``--genotype`` option was specified. 
@@ -621,3 +628,34 @@ UMI/read count will be assigned as ``ALT``.
 Otherwise, *cellsnp-lite* would take the allele with the highest count
 as ``REF`` and the second highest as ``ALT``.
 
+
+Implementation
+--------------
+
+About Genotyping
+~~~~~~~~~~~~~~~~
+Cellsnp-lite performs genotyping only if the ``--genotype`` option is 
+specified.
+
+For genotyping in single cells, *cellsnp-lite* first needs to know the 
+``REF`` and ``ALT`` alleles.
+These two alleles can be either specified by users (``-R`` option in mode 1),
+or *de novo* inferred from data (in mode 2).
+After that, *cellsnp-lite* will perform genotyping, to select the genotype 
+with the maximum likelihood in each single cell, with the error model as 
+presented in *Table 1* in `Jun et al., 2012`_.
+
+Specifically, to account for sequencing errors in genotyping, the error model
+uses a parameter :math:`e` indicating occurrence of "Base Calling Error Event".
+Likihood can be simply treated as possibility.
+For each SNP, the likelihoods of three genotypes ("0/0", "1/0", "1/1") are 
+calculated by aggregating the information provided by all bases/alleles 
+(from pileup all supporting reads/UMIs) and their corresponding sequencing 
+qualities (reflecting probability of sequencing error), modified from 
+*Equation 1* in `Jun et al., 2012`_. 
+The final reported genotype is the one with maximum likelihood.
+See also issue #109.
+
+
+
+.. _Jun et al., 2012: https://doi.org/10.1016/j.ajhg.2012.09.004

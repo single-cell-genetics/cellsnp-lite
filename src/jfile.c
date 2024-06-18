@@ -1,6 +1,5 @@
-/* jfile.c - File operatoins API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jfile.c - file operations.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -243,4 +242,3 @@ int remove_files(char **fn, const int n) {
     }
     return j;
 }
-

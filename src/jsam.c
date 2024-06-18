@@ -1,6 +1,6 @@
-/* jsam.c - BAM/SAM/CRAM file API/routine
- * Author: Xianjie Huang <hxj5@hku.hk>
- */
+// jsam.c - sequence alignment file operations.
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,4 +43,3 @@ char* get_bam_aux_str(bam1_t *b, const char tag[2]) {
     if (NULL == (data = bam_aux_get(b, tag))) { return NULL; }
     return bam_aux2Z(data);
 }
-

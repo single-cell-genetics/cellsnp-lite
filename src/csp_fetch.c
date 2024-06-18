@@ -1,6 +1,5 @@
-/* csp_fetch.c - cellsnp fetch method
- * Author: Xianejie Huang <hxj5@hku.hk>
- */
+// csp_fetch.c - cellsnp fetch method.
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -671,4 +670,3 @@ int csp_fetch(global_settings *gs) {
     return -1;
   #endif
 }
-
