@@ -4,11 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "htslib/vcf.h"
 #include "htslib/sam.h"
-#include "kvec.h"
+#include "htslib/vcf.h"
 #include "jstring.h"
+#include "kvec.h"
 #include "snp.h"
+
 
 /* 
 * SNP List API

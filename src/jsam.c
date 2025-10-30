@@ -4,9 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "htslib/sam.h"
-#include "htslib/kstring.h"
 #include "htslib/hts.h"
+#include "htslib/kstring.h"
+#include "htslib/sam.h"
 #include "jsam.h"
 
 /* 

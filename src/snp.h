@@ -7,6 +7,7 @@
 #include "htslib/sam.h"
 #include "kvec.h"
 
+
 /* 
 * SNP List API
 */

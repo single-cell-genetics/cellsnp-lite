@@ -4,15 +4,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "htslib/sam.h"
-#include "htslib/kstring.h"
-#include "htslib/faidx.h"
 #include "config.h"
-#include "mplp.h"
-#include "jfile.h"
-#include "jstring.h"
-#include "jsam.h"
 #include "csp.h"
+#include "htslib/faidx.h"
+#include "htslib/kstring.h"
+#include "htslib/sam.h"
+#include "jfile.h"
+#include "jsam.h"
+#include "jstring.h"
+#include "mplp.h"
+
 
 /*
  * Global settings

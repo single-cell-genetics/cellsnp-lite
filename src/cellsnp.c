@@ -10,28 +10,29 @@
  */
 
 
+#include <getopt.h>
+#include <libgen.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <string.h>
-#include <unistd.h>
-#include <limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <sys/resource.h>
-#include <libgen.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
-#include "thpool.h"
-#include "htslib/sam.h"
-#include "htslib/regidx.h"
-#include "htslib/hts.h"
+#include <unistd.h>
 #include "config.h"
 #include "csp.h"
+#include "htslib/hts.h"
+#include "htslib/regidx.h"
+#include "htslib/sam.h"
 #include "jfile.h"
 #include "jsam.h"
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
+#include "thpool.h"
+
 
 // Set default values for global_settings structure.
 // Internal use only!

@@ -5,12 +5,12 @@
 #define CSP_CSP_H
 
 #include <stdio.h>
-#include "htslib/sam.h"
+#include "config.h"
 #include "htslib/kstring.h"
 #include "htslib/regidx.h"
-#include "config.h"
-#include "mplp.h"
+#include "htslib/sam.h"
 #include "jfile.h"
+#include "mplp.h"
 #include "snp.h"
 #include "thpool.h"
 

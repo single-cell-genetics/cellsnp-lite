@@ -1,23 +1,24 @@
 // csp_pileup.c - cellsnp pileup method.
 
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
-#include "thpool.h"
-#include "htslib/sam.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include "config.h"
 #include "csp.h"
+#include "htslib/sam.h"
 #include "jfile.h"
 #include "jsam.h"
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
+#include "thpool.h"
 
 #if CSP_FIT_MULTI_SMP
     #include <errno.h>
 #endif
+
 
 /* auxiliary data used by @func mp_func. */
 typedef struct {
