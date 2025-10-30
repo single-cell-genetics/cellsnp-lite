@@ -4,9 +4,10 @@
 #ifndef SZ_JSAM_H
 #define SZ_JSAM_H
 
-#include "htslib/sam.h"
-#include "htslib/kstring.h"
 #include "htslib/hts.h"
+#include "htslib/kstring.h"
+#include "htslib/sam.h"
+
 
 /* 
 * BAM/SAM/CRAM File API 

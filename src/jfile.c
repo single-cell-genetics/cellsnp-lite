@@ -1,16 +1,17 @@
 // jfile.c - file operations.
 
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 #include <unistd.h>
 #include <zlib.h>
-#include "htslib/kstring.h"  // do not use "kstring.h" as it's different from "htslib/kstring.h"
-#include "htslib/bgzf.h"
 #include "config.h"
+#include "htslib/bgzf.h"
+#include "htslib/kstring.h"  // do not use "kstring.h" as it's different from "htslib/kstring.h"
 #include "jfile.h"
+
 
 /*
  * File structure with simple output buffer (Support bgzip)

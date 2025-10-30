@@ -6,15 +6,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "htslib/sam.h"
-#include "htslib/kstring.h"
-#include "htslib/khash.h"
+#include "biods.h"
+#include "config.h"
 #include "htslib/faidx.h"
-#include "kvec.h"
+#include "htslib/khash.h"
+#include "htslib/kstring.h"
+#include "htslib/sam.h"
 #include "jfile.h"
 #include "jmempool.h"
-#include "config.h"
-#include "biods.h"
+#include "kvec.h"
+
 
 /*
 * Pileup and MPileup API

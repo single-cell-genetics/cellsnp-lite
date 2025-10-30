@@ -27,7 +27,7 @@ such as:
 #. Donor deconvolution in multiplexed single-cell RNA-seq data 
    (e.g., with vireo_). 
 #. Allele-specific CNV analysis in single-cell or spatial transcriptomics data
-   (e.g., with Numbat_ or XClone_).
+   (e.g., with Numbat_, XClone_, or CalicoST_).
 #. Clonal substructure discovery using single cell mitochondrial variants 
    (e.g., with MQuad_).
 
@@ -85,10 +85,11 @@ thread pool management.
 
 
 .. _C-Thread-Pool: https://github.com/Pithikos/C-Thread-Pool
+.. _CalicoST: https://github.com/raphael-group/CalicoST
 .. _conda: https://docs.conda.io/en/latest/
 .. _FAQ.rst: https://github.com/single-cell-genetics/cellsnp-lite/blob/master/docs/main/FAQ.rst
 .. _htslib: https://github.com/samtools/htslib
-.. _install from this github repo: https://cellsnp-lite.readthedocs.io/en/latest/install.html#install-from-this-github-repo-latest-stable-dev-version
+.. _install from this github repo: https://cellsnp-lite.readthedocs.io/en/latest/main/install.html#install-from-this-github-repo-latest-stable-dev-version
 .. _issue: https://github.com/single-cell-genetics/cellsnp-lite/issues
 .. _klib: https://github.com/attractivechaos/klib
 .. _MQuad: https://github.com/single-cell-genetics/MQuad

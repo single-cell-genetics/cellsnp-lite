@@ -7,7 +7,7 @@ dnl - github:htslib https://github.com/samtools/htslib/blob/550c6b1b98414ef60eeb
 dnl - github:samtools https://github.com/samtools/samtools/blob/develop/configure.ac
 
 AC_PREREQ([2.63])
-AC_INIT([cellsnp-lite], [1.2.3], [xianjie5@connect.hku.hk])
+AC_INIT([cellsnp-lite], [1.2.4], [xianjie5@connect.hku.hk])
 
 dnl Use subdir-objects option so that the source files in subdir `src`
 dnl could be compiled successfully

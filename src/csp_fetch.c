@@ -1,23 +1,24 @@
 // csp_fetch.c - cellsnp fetch method.
 
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
-#include "thpool.h"
-#include "htslib/sam.h"
 #include "config.h"
 #include "csp.h"
+#include "htslib/sam.h"
 #include "jfile.h"
-#include "jsam.h"
 #include "jnumeric.h"
+#include "jsam.h"
 #include "jstring.h"
 #include "mplp.h"
 #include "snp.h"
+#include "thpool.h"
 
 #if CSP_FIT_MULTI_SMP
     #include <errno.h>
 #endif
+
 
 /*!@func
 @abstract    Pileup one read obtained by sam_itr_next().

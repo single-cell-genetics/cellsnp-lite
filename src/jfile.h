@@ -4,13 +4,14 @@
 #ifndef SZ_JFILE_H
 #define SZ_JFILE_H
 
-#include <stdlib.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <zlib.h>
-#include "htslib/kstring.h"        // do not use "kstring.h" as it's different from "htslib/kstring.h"
-#include "htslib/bgzf.h"
 #include "config.h"
+#include "htslib/bgzf.h"
+#include "htslib/kstring.h"        // do not use "kstring.h" as it's different from "htslib/kstring.h"
+
 
 /*
  * File structure with simple output buffer (Support bgzip)

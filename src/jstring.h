@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include "htslib/kstring.h"        // do not use "kstring.h" as it's different from "htslib/kstring.h"
 
+
 /*
 * String Functions
  */

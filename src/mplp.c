@@ -1,19 +1,20 @@
 // mplp.c - pileup and mpileup operations.
 
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
-#include "htslib/sam.h"
-#include "htslib/kstring.h"
+#include "config.h"
 #include "htslib/khash.h"
-#include "kvec.h"
-#include "jnumeric.h"
+#include "htslib/kstring.h"
+#include "htslib/sam.h"
 #include "jfile.h"
 #include "jmempool.h"
-#include "config.h"
+#include "jnumeric.h"
+#include "kvec.h"
 #include "mplp.h"
+
 
 /*
 * Pileup and MPileup API
