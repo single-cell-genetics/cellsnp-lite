@@ -67,6 +67,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         //fprintf(fp, "%smax_flag = %d\n", prefix, gs->max_flag);
         fprintf(fp, "%srflag_filter = %d, rflag_require = %d\n", prefix, gs->rflag_filter, gs->rflag_require);
         fprintf(fp, "%smax_depth = %d, max_pileup = %d, no_orphan = %d\n", prefix, gs->max_depth, gs->max_pileup, gs->no_orphan);
+        fprintf(fp, "%scache_size = %d\n", prefix, gs->cache_size);
     }
 }
 
