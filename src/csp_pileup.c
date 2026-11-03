@@ -363,6 +363,8 @@ static int csp_pileup_core(void *args) {
         fprintf(stderr, "[E::%s] Out of memory allocating csp_pileup_t struct.\n", __func__); 
         goto clean; 
     }
+    // pileup->b only borrows records owned by the htslib pileup buffer, so it must not own one.
+    bam_destroy1(pileup->b); pileup->b = NULL;
 
     /* create bam_mplp_* & mp_aux_t data structures */
     if (NULL == (data = (mp_aux_t**) malloc(nfs * sizeof(mp_aux_t*)))) {
@@ -487,6 +489,7 @@ static int csp_pileup_core(void *args) {
         }
         for (i = 0; i < ndat; i++) 
             mp_aux_reset(data[i]);
+        bam_mplp_destroy(mp_iter); mp_iter = NULL;
 
       #if VERBOSE
         fprintf(stderr, "[I::%s][Thread-%d] has pileup-ed in total %ld SNPs for chrom %s\n", __func__, d->i, nsnp, a[n]);
@@ -518,10 +521,8 @@ static int csp_pileup_core(void *args) {
     }
     if (mp_plp) free(mp_plp);
     if (mp_n) free(mp_n);
-    // do not free mp_iter here, otherwise will lead to double free error!!!
-    // seems bam_mplp_* will free the mp_iter by default.
-    //bam_mplp_destroy(mp_iter);   
-    if (pileup) csp_pileup_destroy(pileup);
+    if (mp_iter) bam_mplp_destroy(mp_iter);
+    if (pileup) { pileup->b = NULL; csp_pileup_destroy(pileup); }
     if (mplp) { csp_mplp_destroy(mplp); }
     if (itr) { regitr_destroy(itr); }
     return n;
