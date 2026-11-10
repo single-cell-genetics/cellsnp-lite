@@ -66,7 +66,7 @@ static void gll_set_default(global_settings *gs) {
         gs->rflag_filter = -1; gs->rflag_require = CSP_INCL_FMASK;
         gs->max_depth = CSP_MAX_DEPTH; gs->max_pileup = CSP_MAX_PILEUP;
         gs->no_orphan = CSP_NO_ORPHAN;
-        gs->cache_size = CSP_CACHE_SIZE;
+        gs->cache_size = -1;
     }
 }
 
@@ -104,8 +104,8 @@ static void print_usage(FILE *fp) {
     fprintf(fp, "  --gzip               If use, the output files will be zipped into BGZF format.\n");
     fprintf(fp, "  --printSkipSNPs      If use, the SNPs skipped when loading VCF will be printed.\n");
     fprintf(fp, "  -p, --nproc INT      Number of threads [%d]\n", CSP_NTHREAD);
-    fprintf(fp, "  --cacheSIZE INT      Total BGZF block cache in MB for -R, shared by all threads and\n");
-    fprintf(fp, "                       input files; 0 disables it [%d]\n", CSP_CACHE_SIZE);
+    fprintf(fp, "  --cacheSIZE INT      Cap in MB on the total BGZF block cache for -R over all threads and\n");
+    fprintf(fp, "                       input files; 0 disables it [no cap, %d MB per thread per file]\n", CSP_CACHE_SIZE);
     fprintf(fp, "  -f, --refseq FILE    Faidx indexed reference sequence file. If set, the real (genomic)\n");
     fprintf(fp, "                       ref extracted from this file would be used for Mode 2 or for the\n");
     fprintf(fp, "                       missing REFs in the input VCF for Mode 1.\n");
@@ -305,7 +305,7 @@ static int check_args(global_settings *gs) {
     }
 
     // check cache size
-    if (gs->cache_size < 0) {
+    if (gs->cache_size < -1) {
         fprintf(stderr, "[E::%s] --cacheSIZE should be >= 0.\n", __func__);
         return -1;
     }
