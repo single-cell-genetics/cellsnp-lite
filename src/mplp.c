@@ -148,6 +148,7 @@ void csp_plp_reset(csp_plp_t *p) {
         for (i = 0; i < 5; i++) { list_qu_reset(p->qu[i]); }
         memset(p->qmat, 0, sizeof(p->qmat));
         p->ngl = 0;
+        p->is_touched = 0;
         if (p->hug) { map_ug_reset(p->hug); }
     }
 }
@@ -241,6 +242,7 @@ void csp_mplp_destroy(csp_mplp_t *p) {
     if (p) {
         if (p->hsg) { map_sg_destroy(p->hsg); }
         if (p->hsg_iter) { free(p->hsg_iter); }
+        if (p->touched) { free(p->touched); }
         if (p->pu) { jmempool_destroy(umi_unit, p->pu); }
         if (p->pl) { jmempool_destroy(list_umiunit, p->pl); }
         if (p->su) { jmempool_destroy(str, p->su); }
@@ -254,7 +256,10 @@ void csp_mplp_reset(csp_mplp_t *p) {
         memset(p->bc, 0, sizeof(p->bc));
         p->tc = p->ad = p->dp = p->oth = 0;
         p->nr_ad = p->nr_dp = p->nr_oth = 0;
-        if (p->hsg) { map_sg_reset_val(p->hsg); }
+        int i;
+        for (i = 0; i < p->ntouched; i++)
+            csp_plp_reset(kh_val(p->hsg, p->hsg_iter[p->touched[i]]));
+        p->ntouched = 0;
         if (p->pu) { jmempool_reset(umi_unit, p->pu); }
         if (p->pl) { jmempool_reset(list_umiunit, p->pl); }
         if (p->su) { jmempool_reset(str, p->su); }
@@ -305,6 +310,8 @@ int csp_mplp_set_sg(csp_mplp_t *p, char **s, const int n) {
     if (NULL == p->hsg && NULL == (p->hsg = kh_init(sample_group))) 
         return -1;
     if (NULL == p->hsg_iter && NULL == (p->hsg_iter = (khiter_t*) malloc(sizeof(khiter_t) * n))) 
+        return -1;
+    if (NULL == p->touched && NULL == (p->touched = (int*) malloc(sizeof(int) * n))) 
         return -1;
     for (i = 0; i < n; i++) {
         if (s[i]) { 
@@ -378,10 +385,18 @@ int csp_mplp_str_mtx_tmp(csp_mplp_t *mplp, kstring_t *ks_ad, kstring_t *ks_dp, k
     return 0; 
 }
 
+static int cmp_int(const void *a, const void *b) {
+    int x = *(const int*) a, y = *(const int*) b;
+    return (x > y) - (x < y);
+}
+
 int csp_mplp_to_mtx(csp_mplp_t *mplp, jfile_t *fs_ad, jfile_t *fs_dp, jfile_t *fs_oth, size_t idx) {
     csp_plp_t *plp;
-    int i;
-    for (i = 1; i <= mplp->nsg; i++) {
+    int i, j;
+    // untouched sample groups are all zero and never written; sort to keep the column order.
+    qsort(mplp->touched, mplp->ntouched, sizeof(int), cmp_int);
+    for (j = 0; j < mplp->ntouched; j++) {
+        i = mplp->touched[j] + 1;
         plp = kh_val(mplp->hsg, mplp->hsg_iter[i - 1]);
         if (plp->ad)
             fs_ad->is_tmp ? jf_printf(fs_ad, "%d\t%ld\n", i, plp->ad) : jf_printf(fs_ad, "%ld\t%d\t%ld\n", idx, i, plp->ad);

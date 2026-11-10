@@ -155,6 +155,8 @@ typedef struct {
     double gl[5];        // Array of GL: loglikelihood. 
     int ngl;             // Num of valid elements in the array @p gl.
     map_ug_t *hug;       // Pointer of hash table that stores stat info of UMI groups.
+    int idx;             // Index of this sample group in csp_mplp_t::hsg_iter.
+    int is_touched;      // Whether any read was pushed since the last reset.
 } csp_plp_t;
 
 csp_plp_t* csp_plp_init(void); 
@@ -185,14 +187,6 @@ typedef khash_t(sample_group) map_sg_t;
         kh_destroy(sample_group, h);					\
     }								\
 }
-#define map_sg_reset_val(h) {					\
-    if (h) {							\
-        khiter_t __k;						\
-        for (__k = kh_begin(h); __k != kh_end(h); __k++) {		\
-            if (kh_exist(h, __k)) csp_plp_reset(kh_val(h, __k)); 	\
-        }								\
-    }									\
-}
 
 typedef pool_str_t pool_ps_t;
 
@@ -215,6 +209,8 @@ typedef struct {
     map_sg_t *hsg;             // HashMap that stores the stat info of all sample groups.
     khiter_t *hsg_iter;        // The iter in the array is in the same order of sg names.
     int nsg;                   // Size of @p hsg_iter.
+    int *touched;              // Indices of sample groups with reads at this pos; only these need stat/reset/output.
+    int ntouched;              // Num of valid elements in @p touched.
     pool_uu_t *pu;             // Pool of umi_unit_t structures.
     pool_ul_t *pl;             // Pool of list_uu_t structures.
     pool_ps_t *su;             // Pool of UMI strings.

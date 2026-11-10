@@ -15,5 +15,10 @@
 
 #define JF_ZIP_TYPE         2  // 1, gzip; 2, bgzip.
 #define CSP_FIT_MULTI_SMP   1  // nthread auto fit multi samples? 0, no; 1, yes.
+/* Pileup mode (-T and mode 2) with multiple threads and unlimited --maxDEPTH splits each chrom into
+   chunks of this length, so a single large chrom no longer runs on one thread. */
+#ifndef CSP_PILEUP_CHUNK
+#define CSP_PILEUP_CHUNK 10000000
+#endif
 
 #endif

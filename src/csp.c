@@ -67,6 +67,7 @@ void gll_setting_print(FILE *fp, global_settings *gs, char *prefix) {
         //fprintf(fp, "%smax_flag = %d\n", prefix, gs->max_flag);
         fprintf(fp, "%srflag_filter = %d, rflag_require = %d\n", prefix, gs->rflag_filter, gs->rflag_require);
         fprintf(fp, "%smax_depth = %d, max_pileup = %d, no_orphan = %d\n", prefix, gs->max_depth, gs->max_pileup, gs->no_orphan);
+        fprintf(fp, "%scache_size = %d\n", prefix, gs->cache_size);
     }
 }
 
@@ -127,6 +128,7 @@ int csp_mplp_prepare(csp_mplp_t *mplp, global_settings *gs) {
                 return -1;
             }
         }
+        plp->idx = i;
         if (use_umi(gs)) {
             plp->hug = kh_init(umi_group);
             if (NULL == plp->hug) {
@@ -193,6 +195,10 @@ int csp_mplp_push(csp_pileup_t *pileup, csp_mplp_t *mplp, int sid, global_settin
     } else if (use_sid(gs)) { 
         plp = kh_val(mplp->hsg, mplp->hsg_iter[sid]);
     } else { return -1; }  // should not come here!
+    if (! plp->is_touched) {
+        plp->is_touched = 1;
+        mplp->touched[mplp->ntouched++] = plp->idx;
+    }
     if (use_umi(gs)) {
         u = kh_get(umi_group, plp->hug, pileup->umi);
         if (u == kh_end(plp->hug)) {
@@ -227,8 +233,9 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     char *ref = NULL;
     hts_pos_t len;
 
-    for (i = 0; i < mplp->nsg; i++) {
-        plp = kh_val(mplp->hsg, mplp->hsg_iter[i]);
+    // untouched sample groups have no reads, so their counts stay zero and their VCF fields are printed as missing.
+    for (i = 0; i < mplp->ntouched; i++) {
+        plp = kh_val(mplp->hsg, mplp->hsg_iter[mplp->touched[i]]);
         for (j = 0; j < 5; j++) { 
             plp->tc += plp->bc[j]; 
             mplp->bc[j] += plp->bc[j];
@@ -262,8 +269,8 @@ int csp_mplp_stat(csp_mplp_t *mplp, global_settings *gs) {
     mplp->dp = mplp->bc[mplp->ref_idx] + mplp->ad;
     mplp->oth = mplp->tc - mplp->dp;
 
-    for (i = 0; i < mplp->nsg; i++) {
-        plp = kh_val(mplp->hsg, mplp->hsg_iter[i]);
+    for (i = 0; i < mplp->ntouched; i++) {
+        plp = kh_val(mplp->hsg, mplp->hsg_iter[mplp->touched[i]]);
         if ((plp->ad = plp->bc[mplp->alt_idx]))
             mplp->nr_ad++;
         if ((plp->dp = plp->bc[mplp->ref_idx] + plp->ad))

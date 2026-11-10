@@ -281,6 +281,12 @@ static size_t csp_fetch_core(void *args) {
             nfp++;
         }
     }
+    int64_t cache = (int64_t) CSP_CACHE_SIZE * 1024 * 1024;
+    // gs->nthread is an upper bound on the threads actually running, so the total stays within --cacheSIZE.
+    if (gs->cache_size >= 0)
+        cache = min2(cache, (int64_t) gs->cache_size * 1024 * 1024 / ((int64_t) gs->nthread * nfp));
+    for (i = 0; i < nfp; i++)
+        hts_set_cache_size(fp[i], (int) cache);
 
     /* prepare mplp for pileup. */
   #if CSP_FIT_MULTI_SMP

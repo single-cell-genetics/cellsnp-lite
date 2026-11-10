@@ -52,6 +52,9 @@
 #define CSP_MAX_PILEUP  0
 // if discard orphan reads
 #define CSP_NO_ORPHAN   1
+// default BGZF block cache in MB per input file per thread in fetch mode.
+// Neighbouring SNPs re-query the same blocks, so without it every SNP re-inflates them.
+#define CSP_CACHE_SIZE  256
 
 // if the tmp files to be zipped: 0: no, 1: yes.
 #define CSP_TMP_ZIP 1
@@ -151,6 +154,7 @@ struct _gll_settings {
     int max_depth;      // max depth for one site of one file, 0 means highest possible value.
     int max_pileup;     // max pileup for one site of one file, 0 means highest possible value.
     int no_orphan;     // 0 or 1. 1: donot use orphan reads; 0: use orphan reads.
+    int cache_size;    // cap in MB on the total fetch-mode cache over all threads and input files; -1 means no cap.
 };
 
 #define use_barcodes(gs) ((gs)->cell_tag)
@@ -227,6 +231,7 @@ typedef struct {
     hts_itr_t ***iter;     
     int niter, nitr;       // niter: Size of @p iter; nitr: Size of one element of @p iter.
     size_t m, n;           // m: Total size; n: pos of next element; for snp-list or chrom-list.
+    hts_pos_t beg, end;    // Pileup mode: only positions in [beg, end) of the chroms are output.
     int i;                 // Id of the thread data.
     int ret;               // Running state of the thread.
     size_t ns, nr_ad, nr_dp, nr_oth;   // ns: Num of SNPs that passed all filters; nr_*: Num of records for each output matrix file.
